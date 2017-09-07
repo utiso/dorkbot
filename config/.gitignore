@@ -1,0 +1,4 @@
+*
+!.gitignore
+!dorkbot.ini.example
+!blacklist.txt.example
