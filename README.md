@@ -98,7 +98,7 @@ Requirements: [Arachni](http://www.arachni-scanner.com/)
 Options:
 * arachni_dir - arachni base directory containing bin/arachni and bin/arachni_reporter (default: tools/arachni/)
 * report_dir - directory to save arachni scan binary and JSON scan report output (default: reports/)
-* checks - which vulnerability checks to perform (default: active/\*,-csrf,-unvalidated_redirect,-source_code_disclosure,-response_splitting,-no_sql_injection_differential
+* checks - space-delimited list of vulnerability checks to perform (default: "active/\* -csrf -unvalidated_redirect -source_code_disclosure -response_splitting -no_sql_injection_differential")
 
 ### wapiti ###
 Scan targets with Wapiti command-line scanner.

@@ -24,7 +24,7 @@ def run(options, url):
         report_dir = os.path.join(dorkbot_dir, "reports")
 
     if "checks" in options:
-        checks = options["checks"]
+        checks = options["checks"].replace(" ", ",")
     else:
         checks = "active/*,-csrf,-unvalidated_redirect,-source_code_disclosure,-response_splitting,-no_sql_injection_differential"
 
