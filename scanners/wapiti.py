@@ -24,7 +24,7 @@ def run(options, url):
 
     url_base = url.split('?', 1)[0]
     url_hash = hashlib.md5(url.encode("utf-8")).hexdigest()
-    url_quoted = "'"+url.replace("'", "%27")+"'"
+    url_quoted = " '"+url.replace("'", "%27")+"'"
 
     report_base = os.path.join(report_dir, url_hash)
     report = report_base+".json"
@@ -42,7 +42,7 @@ def run(options, url):
             " --output " + report + \
             " "
 
-        scan_cmd = wapiti_cmd + scan_options + url_quoted + " 2>"+report_base+".stderr"
+        scan_cmd = wapiti_cmd + url_quoted + scan_options + " 2>"+report_base+".stderr"
         ret = call(scan_cmd, shell=True)
 
         if ret == 0 and os.path.isfile(report_base+".stderr"):
