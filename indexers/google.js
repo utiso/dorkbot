@@ -31,131 +31,69 @@ var html = '' +
 var page = require('webpage').create();
 page.setContent(html, address);
 page.onConsoleMessage = function(msg) { console.log(msg); }
-page.onError = function(msg) {
-    //console.log('Error: ' + msg);
-    phantom.exit();
-}
-//page.onLoadFinished = function() { page.evaluate(getResults); }
+page.onError = function(msg) { console.log(msg); }
 
-function getResults() {
-  var previousPage = 0;
-  var intervalId = setInterval(function() {
-    function getNumPages() {
-        var gsc_cursor_page = document.getElementsByClassName('gsc-cursor-page');
-        var numPages = gsc_cursor_page.length;
-        return numPages;
-    }
-
-    function getCurrentPage() {
-        var gsc_cursor_current_page = document.getElementsByClassName('gsc-cursor-current-page');
-        var currentPage = parseInt(gsc_cursor_current_page[0].innerHTML);
-        return currentPage;
-    }
-
-    function goToPage(pageNum) {
-        previousPage = pageNum - 1;
-        var gsc_cursor_page = document.getElementsByClassName('gsc-cursor-page');
-        var targetPage = gsc_cursor_page[pageNum-1];
-//        try {
-            targetPage.click();
-//        } catch (e) {
-//            console.log('Could not click: ' + e.message);
-//            throw(e);
-//        }
-    }
-
-    function printLinks() {
-        var gs_title = document.getElementsByClassName('gs-title');
-        for (var link = 0; link+5 < gs_title.length; link++) {
-            if (gs_title[link].tagName === 'A') {
-                console.log(gs_title[link].href);
-                link+=2;
-            }
-        }
-    }
-
-    var pageTimeout = 10000;
-
-    function loadPage(isPageLoaded, beginPrintLinks) {
-        var loaded = false;
-        var start = new Date().getTime();
-        var id = setInterval(function() {
-	    if (new Date().getTime() - start > pageTimeout && loaded == false) {
-	        clearInterval(id);
-	        throw "page timeout";
-	    }
-            else if (loaded == true) {
-                clearInterval(id);
-                beginPrintLinks();
-            }
-            else {
-                loaded = isPageLoaded();
-            }
-        }, 100);
-    }
-
-    loadPage(function() {
-        return ( function() {
-            var currentPage = getCurrentPage();
-            return currentPage != previousPage;
-
-        } ) ();
-    }, function() {
-        var numPages = getNumPages();
-        var currentPage = getCurrentPage();
-
-        if (currentPage > numPages) {
-            console.log('No more pages..');
-            clearInterval(intervalId);
-            phantom.exit();
-            return;
-        }
-        else if (currentPage != previousPage) {
-            //console.log('Page ' + currentPage + ' of ' + numPages);
-            printLinks();
-        }
-
-        goToPage(currentPage+1);
+function getNumPages() {
+   return page.evaluate(function() {
+        return document.getElementsByClassName('gsc-cursor-page').length;
     });
-  }, 100);
 }
 
-var searchTimeout = 15000;
+function getCurrentPage() {
+    return page.evaluate(function() {
+        var page = document.getElementsByClassName('gsc-cursor-current-page');
+        if (page.length == 0) { return -1; }
+        else { return parseInt(page[0].innerHTML); }
+    });
+}
 
-function loadSearch(isSearchLoaded, beginReadResults) {
-    var loaded = false;
+function hasResults() {
+    return page.evaluate(function() {
+        var results = document.getElementsByClassName('gsc-webResult');
+        if (results.length == 2 && results[1].innerText == 'No Results\n') { return false; }
+        else { return true; }
+    });
+}
+
+function printLinks() {
+    page.evaluate(function() {
+        var results = document.getElementsByClassName('gsc-webResult');
+        for (var i = 1; i < results.length; i++) {
+            result = results[i].getElementsByTagName('a');
+            console.log(result[0]);
+        }
+    });
+}
+
+function goToPage(desiredPage) {
+    var pageTimeout = 10000;
     var start = new Date().getTime();
     var id = setInterval(function() {
-        if (new Date().getTime() - start > searchTimeout && loaded == false) {
-            clearInterval(id);
-            page.evaluate(function () { throw "search timeout"; });
+        if (new Date().getTime() - start > pageTimeout) {
+            console.error('Timed out while waiting for results to load.');
+            phantom.exit(1);
         }
-        else if (loaded == true) {
-            clearInterval(id);
-            beginReadResults();
-        }
+        else if (hasResults() == false) { phantom.exit(0); }
         else {
-            loaded = isSearchLoaded();
+            var currentPage = getCurrentPage();
+
+            if (currentPage == desiredPage) {
+                clearInterval(id);
+                printLinks();
+                if (desiredPage != getNumPages()) { goToPage(desiredPage + 1); }
+                else { phantom.exit(0); }
+            }
+
+            else if (currentPage != -1) {
+                page.evaluate(function(desiredPage) {
+                    var pages = document.getElementsByClassName('gsc-cursor-page');
+                    var pageToClick = pages[desiredPage - 1];
+                    pageToClick.click();
+                }, desiredPage);
+            }
         }
-    }, 100);
+    }, 50);
 }
 
-loadSearch(function() {
-    return page.evaluate(function() {
-        var currentPage = document.getElementsByClassName('gsc-cursor-current-page');
-        return currentPage.length != 0;
-
-        });
-    }, function() {
-        page.evaluate(getResults);
-});
-
-/*
-page.onLoadFinished = function() {
-  setTimeout(function() {
-    console.log('test');
-    page.render('page.png');
-  }, 2000);
-}
-*/
+goToPage(1);
 
