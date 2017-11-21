@@ -8,7 +8,7 @@ dorkbot is a modular command-line tool for performing vulnerability scans agains
 * *Indexers* - modules that issue a search query and return the results as targets
 * *Scanners* - modules that perform a vulnerability scan against each target
 
-Targets are stored in a local database upon being indexed. Once scanned, any vulnerabilities found by the chosen scanner are written to a standard JSON report file. Indexing and scanning processes can be run separately or combined in a single command.
+Targets are stored in a local database file upon being indexed. Once scanned, any vulnerabilities found by the chosen scanner are written to a standard JSON report file. Indexing and scanning processes can be run separately or combined in a single command.
 
 Usage
 =====
@@ -44,18 +44,22 @@ Platform
 Python 2.7.x / 3.x (Linux / Mac OS / Windows)
 (requires [python-dateutil](https://pypi.python.org/pypi/python-dateutil))
 
+Tools
+=====
+* [PhantomJS](http://phantomjs.org/)
+* [Arachni](http://www.arachni-scanner.com/)
+* [Wapiti](http://wapiti.sourceforge.net/)
+
+As needed, dorkbot will search for tools in the following order:
+* Directory specified via relevant module option
+* Located in dorkbot's *tools* directory, with the subdirectory named after the tool
+* Available in the user's PATH (e.g. installed system-wide)
+
 Quickstart
 ==========
-1. Download [PhantomJS](http://phantomjs.org/) and either [Arachni](http://www.arachni-scanner.com/) or [Wapiti](http://wapiti.sourceforge.net/) for your platform, and make sure you have installed any required dependencies for each.
-1. Extract each tool into the tools directory and rename the directory after the tool (dorkbot/tools/phantomjs/, dorkbot/tools/arachni/, etc).
-1. Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
-1. Install python-dateutil (e.g.: pip install python-dateutil)
-
-
-Example: use arachni to scan php pages that contain the string "id" in the url:
-<pre>
-$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id" -s arachni
-</pre>
+Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
+<pre>$ sudo apt install python-dateutil phantomjs wapiti</pre>
+<pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id" -s wapiti</pre>
 
 Indexer Modules
 ===============
