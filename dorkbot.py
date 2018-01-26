@@ -94,8 +94,11 @@ def get_targets(db):
         c.close()
         return targets
     except sqlite3.OperationalError as e:
-        print("ERROR fetching targets - %s" % e, file=sys.stderr)
-        sys.exit(1)
+        if "no such table: targets" in str(e):
+            sys.exit(0)
+        else:
+            print("ERROR fetching targets - %s" % e, file=sys.stderr)
+            sys.exit(1)
 
 def get_blacklist(blacklist_file):
     pattern = "$^"

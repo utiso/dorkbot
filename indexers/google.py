@@ -23,26 +23,29 @@ def run(options):
     else:
         phantomjs_path = ""
 
-    if "domain" in options:
-        domain = options["domain"]
-    else:
-        domain = ""
+    phantomjs_cmd = os.path.join(phantomjs_path, "phantomjs")
 
-    results = get_results(phantomjs_path, options["engine"], options["query"], domain)
+    indexer_dir = os.path.dirname(os.path.abspath(__file__))
+    if "domain" in options: domain = options["domain"]
+    else: domain = ""
+
+    index_cmd = [phantomjs_cmd]
+    index_cmd += ["--ignore-ssl-errors=true"]
+    index_cmd += [os.path.join(indexer_dir, "google.js")]
+    index_cmd += [options["engine"]]
+    index_cmd += [options["query"]]
+    if domain: index_cmd += [domain]
+
+    try:
+        results = get_results(index_cmd)
+    except OSError as e:
+        if "No such file or directory" in e:
+            print("Could not execute phantomjs. If not in PATH, then download and unpack as /path/to/dorkbot/tools/phantomjs/ or set phantomjs_dir option to correct directory.", file=sys.stderr)
+            sys.exit(1)
+
     return results
 
-def get_results(phantomjs_path, engine, query, domain):
-    indexer_dir = os.path.dirname(os.path.abspath(__file__))
-
-    index_cmd = []
-    index_cmd.append(os.path.join(phantomjs_path, "phantomjs"))
-    index_cmd.append("--ignore-ssl-errors=true")
-    index_cmd.append(os.path.join(indexer_dir, "google.js"))
-    index_cmd.append(engine)
-    index_cmd.append(query)
-    if domain:
-        index_cmd.append(domain)
-
+def get_results(index_cmd):
     output = subprocess.check_output(index_cmd)
 
     results = []
