@@ -42,7 +42,7 @@ def run(options, url):
         report_stderr_f = open(report_stderr, "a")
         try:
             ret = call(scan_cmd, cwd=wapiti_path, stderr=report_stderr_f)
-            if ret != 0: return
+            if ret != 0: sys.exit(1)
         except OSError as e:
             if "No such file or directory" in e:
                 print("Could not execute wapiti. If not in PATH, then download and unpack as /path/to/dorkbot/tools/wapiti/ or set wapiti_dir option to correct directory.", file=sys.stderr)
