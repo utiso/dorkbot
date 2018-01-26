@@ -28,51 +28,49 @@ def run(options, url):
     else:
         checks = "active/*,-csrf,-unvalidated_redirect,-source_code_disclosure,-response_splitting,-no_sql_injection_differential"
 
-    url_base = url.split('?', 1)[0].replace("(", "%28").replace(")", "%29")
+    url_base = url.split("?", 1)[0].replace("(", "%28").replace(")", "%29")
     url_hash = hashlib.md5(url.encode("utf-8")).hexdigest()
-    url_quoted = "'"+url.replace("'", "%27")+"'"
+    report = os.path.join(report_dir, url_hash + ".bin")
+    report_stderr = os.path.join(report_dir, url_hash + ".stderr")
+    report_json = os.path.join(report_dir, url_hash + ".json")
 
-    report_base = os.path.join(report_dir, url_hash)
-    report = report_base+".bin"
+    scan_cmd = [arachni_cmd]
+    scan_cmd += ["--report-save-path", report]
+    scan_cmd += ["--timeout", "00:30:00"]
+    scan_cmd += ["--http-request-concurrency", "1"]
+    scan_cmd += ["--http-request-queue-size", "25"]
+    scan_cmd += ["--http-response-max-size", "100000"]
+    scan_cmd += ["--scope-page-limit", "1"]
+    scan_cmd += ["--output-only-positives"]
+    scan_cmd += ["--scope-auto-redundant", "2"]
+    scan_cmd += ["--scope-include-pattern", url_base]
+    scan_cmd += ["--checks", checks]
+    scan_cmd += ["--plugin", "autothrottle"]
+    scan_cmd += ["--browser-cluster-ignore-images"]
+    scan_cmd += [url]
 
-    if os.path.isfile(report) or os.path.isfile(report_base+".stderr"):
+    report_cmd = [arachni_reporter_cmd]
+    report_cmd += ["--reporter", "json:outfile="+report_json]
+    report_cmd += [report]
+
+    if os.path.isfile(report) or os.path.isfile(report_stderr):
         print("Skipping (found report file): " + url)
+
     else:
         print("Scanning: " + url)
-        scan_options = \
-            " --report-save-path " + report + \
-            " --timeout 00:30:00" + \
-            " --http-request-concurrency 1" + \
-            " --http-request-queue-size 25" + \
-            " --http-response-max-size 100000" + \
-            " --scope-page-limit 1" + \
-            " --output-only-positives" + \
-            " --scope-auto-redundant 2" + \
-            " --scope-include-pattern " + "\""+url_base+"\"" + \
-            " --checks " + checks + \
-            " --plugin autothrottle" + \
-            " --browser-cluster-ignore-images" + \
-            " "
+        report_stderr_f = open(report_stderr, "a")
+        ret = call(scan_cmd, cwd=arachni_path, stderr=report_stderr_f)
+        if ret != 0: return
+        ret = call(report_cmd, cwd=arachni_path, stderr=report_stderr_f)
+        if ret != 0: return
+        if os.path.isfile(report_stderr):
+            report_stderr_f.close()
+            os.remove(report_stderr)
 
-        scan_cmd = arachni_cmd + scan_options + url_quoted + " 2>"+report_base+".stderr"
-        ret = call(scan_cmd, shell=True)
-
-        if ret == 0 and os.path.isfile(report_base+".stderr"):
-            os.remove(report_base+".stderr")
-
-        report_options = \
-            " --reporter json:outfile="+report_base+".json" + \
-            " "
-
-        report_cmd = arachni_reporter_cmd + report_options + report
-        call(report_cmd, shell=True)
-
-        with open(report_base+".json", encoding="utf-8") as data_file:    
+        with open(report_json, encoding="utf-8") as data_file:    
             contents = data_file.read()
             data = json.loads(contents)
-
             vulns = []
-
             for issue in data["issues"]:
                 vuln = {}
                 vuln["vulnerability"] = issue["check"]["shortname"]
@@ -92,8 +90,6 @@ def run(options, url):
                     vuln["poc"] = issue["page"]["dom"]["url"].replace("%3Cxss", "%3Cimg+src=xyz+onerror=alert(150)%3E%3Cxss")
                 else:
                     vuln["poc"] = issue["page"]["dom"]["url"]
-
                 vulns.append(vuln)
-
             return vulns
 

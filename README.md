@@ -58,8 +58,10 @@ As needed, dorkbot will search for tools in the following order:
 Quickstart
 ==========
 Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
-<pre>$ sudo apt install python-dateutil phantomjs wapiti</pre>
-<pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id" -s wapiti</pre>
+Download either Arachni or Wapiti, unpack it into the tools directory, and rename the subdirectory to *arachni* or *wapiti* as appropriate.
+<pre>$ sudo apt install python-dateutil phantomjs</pre>
+<pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id"</pre>
+<pre>$ ./dorkbot.py -s arachni</pre> OR <pre>$ ./dorkbot.py -s wapiti</pre>
 
 Indexer Modules
 ===============
