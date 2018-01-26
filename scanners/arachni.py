@@ -62,22 +62,22 @@ def run(options, url):
         report_stderr_f = open(report_stderr, "a")
         try:
             ret = call(scan_cmd, cwd=arachni_path, stderr=report_stderr_f)
+            if ret != 0: return
         except OSError as e:
             if "No such file or directory" in e:
                 print("Could not execute arachni. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
                 report_stderr_f.close()
                 os.remove(report_stderr)
                 sys.exit(1)
-        if ret != 0: return
         try:
             ret = call(report_cmd, cwd=arachni_path, stderr=report_stderr_f)
+            if ret != 0: return
         except OSError as e:
             if "No such file or directory" in e:
                 print("Could not execute arachni_reporter. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
                 report_stderr_f.close()
                 os.remove(report_stderr)
                 sys.exit(1)
-        if ret != 0: return
         if os.path.isfile(report_stderr):
             report_stderr_f.close()
             os.remove(report_stderr)
