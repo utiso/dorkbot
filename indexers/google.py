@@ -17,7 +17,7 @@ def run(options):
     dorkbot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 
     if "phantomjs_dir" in options:
-        phantomjs_path = os.path.join(os.path.normcase(options["phantomjs_dir"]), "bin")
+        phantomjs_path = os.path.join(os.path.abspath(options["phantomjs_dir"]), "bin")
     elif os.path.isdir(os.path.join(dorkbot_dir, "tools", "phantomjs", "bin")):
         phantomjs_path = os.path.join(dorkbot_dir, "tools", "phantomjs", "bin")
     else:

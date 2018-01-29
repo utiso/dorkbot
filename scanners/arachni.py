@@ -10,7 +10,7 @@ def run(options, url):
     dorkbot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 
     if "arachni_dir" in options:
-        arachni_path = os.path.join(os.path.normcase(options["arachni_dir"]), "bin")
+        arachni_path = os.path.join(os.path.abspath(options["arachni_dir"]), "bin")
     elif os.path.isdir(os.path.join(dorkbot_dir, "tools", "arachni", "bin")):
         arachni_path = os.path.join(dorkbot_dir, "tools", "arachni", "bin")
     else:
@@ -20,7 +20,7 @@ def run(options, url):
     arachni_reporter_cmd = os.path.join(arachni_path, "arachni_reporter")
 
     if "report_dir" in options:
-        report_dir = os.path.normcase(options["report_dir"])
+        report_dir = os.path.abspath(options["report_dir"])
     else:
         report_dir = os.path.join(dorkbot_dir, "reports")
 

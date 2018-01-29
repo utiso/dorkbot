@@ -10,7 +10,7 @@ def run(options, url):
     dorkbot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 
     if "wapiti_dir" in options:
-        wapiti_path = os.path.join(os.path.normcase(options["wapiti_dir"]), "bin")
+        wapiti_path = os.path.join(os.path.abspath(options["wapiti_dir"]), "bin")
     elif os.path.isdir(os.path.join(dorkbot_dir, "tools", "wapiti", "bin")):
         wapiti_path = os.path.join(dorkbot_dir, "tools", "wapiti", "bin")
     else:
@@ -19,7 +19,7 @@ def run(options, url):
     wapiti_cmd = os.path.join(wapiti_path, "wapiti")
 
     if "report_dir" in options:
-        report_dir = os.path.normcase(options["report_dir"])
+        report_dir = os.path.abspath(options["report_dir"])
     else:
         report_dir = os.path.join(dorkbot_dir, "reports")
 
