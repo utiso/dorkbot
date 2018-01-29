@@ -37,7 +37,7 @@ def run(options, url):
 
     scan_cmd = [arachni_cmd]
     scan_cmd += ["--report-save-path", report]
-    scan_cmd += ["--timeout", "00:30:00"]
+    scan_cmd += ["--timeout", "00:10:00"]
     scan_cmd += ["--http-request-concurrency", "1"]
     scan_cmd += ["--http-request-queue-size", "25"]
     scan_cmd += ["--http-response-max-size", "100000"]
