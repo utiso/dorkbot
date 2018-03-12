@@ -6,7 +6,6 @@ try:
 except ImportError:
     import configparser
 import datetime
-from dateutil import tz
 import hashlib
 import importlib
 import json
@@ -164,9 +163,17 @@ def scan(db, scanner, scanner_options, vulndir, blacklist_file):
         else:
             results = scanner_module.run(options, url)
             if results:
+                class UTC(datetime.tzinfo):
+                    def utcoffset(self, dt):
+                        return datetime.timedelta(0)
+                    def tzname(self, dt):
+                        return "UTC"
+                    def dst(self, dt):
+                        return datetime.timedelta(0)
+
                 vulns = {}
                 vulns['vulnerabilities'] = results
-                vulns['date'] = str(datetime.datetime.now(tz=tz.tzlocal()).replace(microsecond=0))
+                vulns['date'] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
                 vulns['url'] = url
                 url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
                 with open(os.path.join(vulndir, url_md5 + "-" + scanner + ".json"), 'w') as outfile:

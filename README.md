@@ -42,7 +42,6 @@ optional arguments:
 Platform
 ========
 Python 2.7.x / 3.x (Linux / Mac OS / Windows)
-(requires [python-dateutil](https://pypi.python.org/pypi/python-dateutil))
 
 Tools
 =====
@@ -59,7 +58,7 @@ Quickstart
 ==========
 Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
 Download either Arachni or Wapiti, unpack it into the tools directory, and rename the subdirectory to *arachni* or *wapiti* as appropriate.
-<pre>$ sudo apt install python-dateutil phantomjs</pre>
+<pre>$ sudo apt install phantomjs</pre>
 <pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id"</pre>
 <pre>$ ./dorkbot.py -s arachni</pre> OR <pre>$ ./dorkbot.py -s wapiti</pre>
 
