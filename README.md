@@ -14,8 +14,8 @@ Usage
 =====
 <pre>
 usage: dorkbot.py [-h] [-c CONFIG] [-b BLACKLIST] [-d DATABASE] [-i INDEXER]
-                  [-l] [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS] [-s SCANNER]
-                  [-v VULNDIR]
+                  [-l] [-n TARGET_COUNT] [-o INDEXER_OPTIONS]
+                  [-p SCANNER_OPTIONS] [-s SCANNER] [-v VULNDIR]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -29,6 +29,8 @@ optional arguments:
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
   -l, --list            List targets in database
+  -n TARGET_COUNT, --target-count TARGET_COUNT
+                        Number of targets to list / scan
   -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
                         Indexer-specific options (opt1=val1,opt2=val2,..)
   -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS

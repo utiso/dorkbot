@@ -21,7 +21,8 @@ def main():
         "config": os.path.join(dorkbot_dir, "config", "dorkbot.ini"),
         "blacklist": os.path.join(dorkbot_dir, "config", "blacklist.txt"),
         "database": os.path.join(dorkbot_dir, "databases", "dorkbot.db"),
-        "vulndir": os.path.join(dorkbot_dir, "vulnerabilities")
+        "vulndir": os.path.join(dorkbot_dir, "vulnerabilities"),
+        "count": "-1"
     }
 
     initial_parser = argparse.ArgumentParser(
@@ -47,6 +48,9 @@ def main():
         help="Indexer module to use")
     parser.add_argument("-l", "--list", action="store_true", \
         help="List targets in database")
+    parser.add_argument("-n", "--target-count", \
+        default=default_options["count"], \
+        help="Number of targets to list / scan")
     parser.add_argument("-o", "--indexer-options", \
         help="Indexer-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-p", "--scanner-options", \
@@ -58,17 +62,19 @@ def main():
 
     args = parser.parse_args(other_args)
 
+    target_count = int(args.target_count)
+
     if args.list or args.indexer or args.scanner:
         db = load_database(args.database)
 
         if args.list:
-            list(db)
+            list(db, target_count)
 
         if args.indexer:
             index(db, args.indexer, args.indexer_options)
 
         if args.scanner:
-            scan(db, args.scanner, args.scanner_options, args.vulndir, args.blacklist)
+            scan(db, args.scanner, args.scanner_options, args.vulndir, args.blacklist, target_count)
 
         db.close()
     else:
@@ -82,10 +88,13 @@ def load_database(database_file):
         print("ERROR loading database - %s" % e, file=sys.stderr)
         sys.exit(1)
 
-def get_targets(db):
+def get_targets(db, count):
     try:
+        sql = "SELECT url, query FROM targets"
+        if count >= 0:
+            sql += " LIMIT %d" % count
         c = db.cursor()
-        c.execute("SELECT url, query FROM targets")
+        c.execute(sql)
         rows = c.fetchall()
         targets = []
         for row in rows:
@@ -107,8 +116,8 @@ def get_blacklist(blacklist_file):
 
     return re.compile(pattern)
 
-def list(db):
-    for target in get_targets(db):
+def list(db, count):
+    for target in get_targets(db, count):
         print(target)
 
 def index(db, indexer, indexer_options):
@@ -142,7 +151,7 @@ def index(db, indexer, indexer_options):
     db.commit()
     c.close()
 
-def scan(db, scanner, scanner_options, vulndir, blacklist_file):
+def scan(db, scanner, scanner_options, vulndir, blacklist_file, count):
     for _, module, _ in pkgutil.iter_modules(["scanners"]):
         importlib.import_module("scanners.%s" % module)
 
@@ -156,29 +165,39 @@ def scan(db, scanner, scanner_options, vulndir, blacklist_file):
     if scanner_options:
         options = dict(option.split("=") for option in scanner_options.split(","))
 
-    for url in get_targets(db):
+    scanned = 0
+    for url in get_targets(db, -1):
+        if count >= 0 and scanned >= count:
+            break
+
         blacklist = get_blacklist(blacklist_file)
         if blacklist.match(url):
             print("Skipping (blacklisted): %s" % url)
-        else:
-            results = scanner_module.run(options, url)
-            if results:
-                class UTC(datetime.tzinfo):
-                    def utcoffset(self, dt):
-                        return datetime.timedelta(0)
-                    def tzname(self, dt):
-                        return "UTC"
-                    def dst(self, dt):
-                        return datetime.timedelta(0)
+            continue
 
-                vulns = {}
-                vulns['vulnerabilities'] = results
-                vulns['date'] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
-                vulns['url'] = url
-                url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
-                with open(os.path.join(vulndir, url_md5 + "-" + scanner + ".json"), 'w') as outfile:
-                    json.dump(vulns, outfile, indent=4, sort_keys=True)
-                    print("Vulnerabilities found. Report saved to: %s" % outfile.name)
+        results = scanner_module.run(options, url)
+        if results == False:
+            continue
+        else:
+            scanned += 1
+
+        if results:
+            class UTC(datetime.tzinfo):
+                def utcoffset(self, dt):
+                    return datetime.timedelta(0)
+                def tzname(self, dt):
+                    return "UTC"
+                def dst(self, dt):
+                    return datetime.timedelta(0)
+
+            vulns = {}
+            vulns['vulnerabilities'] = results
+            vulns['date'] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
+            vulns['url'] = url
+            url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
+            with open(os.path.join(vulndir, url_md5 + "-" + scanner + ".json"), 'w') as outfile:
+                json.dump(vulns, outfile, indent=4, sort_keys=True)
+                print("Vulnerabilities found. Report saved to: %s" % outfile.name)
 
 if __name__ == "__main__":
     main()

@@ -56,7 +56,7 @@ def run(options, url):
 
     if os.path.isfile(report) or os.path.isfile(report_stderr):
         print("Skipping (found report file): " + url)
-
+        return False
     else:
         print("Scanning: " + url)
         report_stderr_f = open(report_stderr, "a")
