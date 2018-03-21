@@ -5,6 +5,10 @@ try:
     import ConfigParser as configparser
 except ImportError:
     import configparser
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 import datetime
 import hashlib
 import importlib
@@ -16,6 +20,28 @@ import sqlite3
 import sys
 
 def main():
+    args, parser = get_args_parser()
+
+    if args.flush or args.list or args.indexer or args.scanner:
+        db = load_database(args.database)
+        if args.flush:
+            flush_fingerprints(db)
+        if args.list:
+            list_targets(db)
+        if args.indexer:
+            for _, module, _ in pkgutil.iter_modules(["indexers"]):
+                importlib.import_module("indexers.%s" % module)
+            index(db, args.indexer, parse_options(args.indexer_options))
+        if args.scanner:
+            for _, module, _ in pkgutil.iter_modules(["scanners"]):
+                importlib.import_module("scanners.%s" % module)
+            scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count))
+        db.close()
+
+    else:
+        parser.print_usage()
+
+def get_args_parser():
     dorkbot_dir = os.path.dirname(os.path.abspath(__file__))
     default_options = {
         "config": os.path.join(dorkbot_dir, "config", "dorkbot.ini"),
@@ -44,13 +70,15 @@ def main():
         help="File containing (regex) patterns to blacklist from scans")
     parser.add_argument("-d", "--database", \
         help="SQLite3 database file")
+    parser.add_argument("-f", "--flush", action="store_true", \
+        help="Flush table of fingerprints of previously-scanned items")
     parser.add_argument("-i", "--indexer", \
         help="Indexer module to use")
     parser.add_argument("-l", "--list", action="store_true", \
         help="List targets in database")
     parser.add_argument("-n", "--target-count", \
         default=default_options["count"], \
-        help="Number of targets to list / scan")
+        help="Number of targets to scan")
     parser.add_argument("-o", "--indexer-options", \
         help="Indexer-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-p", "--scanner-options", \
@@ -61,46 +89,34 @@ def main():
         help="Directory to store vulnerability output reports")
 
     args = parser.parse_args(other_args)
-
-    target_count = int(args.target_count)
-
-    if args.list or args.indexer or args.scanner:
-        db = load_database(args.database)
-
-        if args.list:
-            list(db, target_count)
-
-        if args.indexer:
-            index(db, args.indexer, args.indexer_options)
-
-        if args.scanner:
-            scan(db, args.scanner, args.scanner_options, args.vulndir, args.blacklist, target_count)
-
-        db.close()
-    else:
-        parser.print_usage()
+    return args, parser
 
 def load_database(database_file):
     try:
         db = sqlite3.connect(os.path.expanduser(database_file))
+        c = db.cursor()
+        c.execute("CREATE TABLE IF NOT EXISTS targets (id INTEGER PRIMARY KEY, url TEXT UNIQUE)")
+        c.execute("CREATE TABLE IF NOT EXISTS fingerprints (id INTEGER PRIMARY KEY, fingerprint TEXT UNIQUE, scanned TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)")
+        c.close()
         return db
     except sqlite3.OperationalError as e:
         print("ERROR loading database - %s" % e, file=sys.stderr)
         sys.exit(1)
 
-def get_targets(db, count):
+def flush_fingerprints(db):
+    c = db.cursor()
+    c.execute("DELETE FROM fingerprints")
+    c.close()
+    db.commit()
+
+def list_targets(db):
     try:
-        sql = "SELECT url, query FROM targets"
-        if count >= 0:
-            sql += " LIMIT %d" % count
         c = db.cursor()
-        c.execute(sql)
+        c.execute("SELECT url FROM targets")
         rows = c.fetchall()
-        targets = []
         for row in rows:
-            targets.append(row[0] + "?" + row[1])
+            print(row[0])
         c.close()
-        return targets
     except sqlite3.OperationalError as e:
         if "no such table: targets" in str(e):
             sys.exit(0)
@@ -108,96 +124,130 @@ def get_targets(db, count):
             print("ERROR fetching targets - %s" % e, file=sys.stderr)
             sys.exit(1)
 
-def get_blacklist(blacklist_file):
-    pattern = "$^"
-    if os.path.isfile(blacklist_file):
-        with open(blacklist_file, 'r') as f:
-            pattern = '|'.join(f.read().splitlines())
-
-    return re.compile(pattern)
-
-def list(db, count):
-    for target in get_targets(db, count):
-        print(target)
-
-def index(db, indexer, indexer_options):
-    for _, module, _ in pkgutil.iter_modules(["indexers"]):
-        importlib.import_module("indexers.%s" % module)
-
+def index(db, indexer, options):
     try:
         indexer_module = sys.modules["indexers.%s" % indexer]
     except KeyError:
         print("ERROR: indexer module not found", file=sys.stderr)
         sys.exit(1)
 
-    options = dict()
-    if indexer_options:
-        options = dict(option.split("=") for option in indexer_options.split(","))
-
     results = indexer_module.run(options)
 
     c = db.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS targets (id INTEGER PRIMARY KEY, url TEXT UNIQUE, query TEXT)")
     for result in results:
-        url = result.geturl().decode('utf8')
+        url = result.geturl().decode("utf-8")
         print(url)
-        url_parts = url.split('?', 1)
-        if len(url_parts) == 1:
-            url_parts.append("")
         try:
-            c.execute("INSERT INTO targets (url, query) VALUES (?, ?)", url_parts)
+            c.execute("INSERT INTO targets (url) VALUES (?)", (url,))
         except sqlite3.IntegrityError:
             continue
     db.commit()
     c.close()
 
-def scan(db, scanner, scanner_options, vulndir, blacklist_file, count):
-    for _, module, _ in pkgutil.iter_modules(["scanners"]):
-        importlib.import_module("scanners.%s" % module)
-
+def scan(db, scanner, options, vulndir, blacklist, count):
     try:
         scanner_module = sys.modules["scanners.%s" % scanner]
     except KeyError:
         print("ERROR: scanner module not found", file=sys.stderr)
         sys.exit(1)
 
-    options = dict()
-    if scanner_options:
-        options = dict(option.split("=") for option in scanner_options.split(","))
-
+    deletable = []
     scanned = 0
-    for url in get_targets(db, -1):
-        if count >= 0 and scanned >= count:
+    c = db.cursor()
+    c.execute("SELECT id,url FROM targets")
+    while True:
+        row = c.fetchone()
+        if not row or (count >= 0 and scanned >= count):
             break
-
-        blacklist = get_blacklist(blacklist_file)
+        id_ = int(row[0])
+        url = row[1]
+        fingerprint = get_fingerprint(url)
+        if last_scanned(db, fingerprint):
+            print("Skipping (matches fingerprint of previous scan): %s" % url)
+            deletable.append(id_)
+            continue
         if blacklist.match(url):
             print("Skipping (blacklisted): %s" % url)
+            deletable.append(id_)
             continue
 
         results = scanner_module.run(options, url)
+        deletable.append(id_)
         if results == False:
             continue
-        else:
-            scanned += 1
-
         if results:
-            class UTC(datetime.tzinfo):
-                def utcoffset(self, dt):
-                    return datetime.timedelta(0)
-                def tzname(self, dt):
-                    return "UTC"
-                def dst(self, dt):
-                    return datetime.timedelta(0)
-
-            vulns = {}
-            vulns['vulnerabilities'] = results
-            vulns['date'] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
-            vulns['url'] = url
             url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
-            with open(os.path.join(vulndir, url_md5 + "-" + scanner + ".json"), 'w') as outfile:
-                json.dump(vulns, outfile, indent=4, sort_keys=True)
-                print("Vulnerabilities found. Report saved to: %s" % outfile.name)
+            filename = os.path.join(vulndir, url_md5 + "-" + scanner + ".json")
+            create_vuln_report(filename, url, results)
+        log_scan(db, fingerprint)
+        scanned += 1
+    for target in deletable:
+        c.execute("DELETE FROM targets where id=(?)", (target,))
+    c.close()
+    db.commit()
+
+def get_blacklist(blacklist_file):
+    pattern = "$^"
+    if os.path.isfile(blacklist_file):
+        with open(blacklist_file, "r") as f:
+            pattern = "|".join(f.read().splitlines())
+
+    return re.compile(pattern)
+
+def get_fingerprint(url):
+    url_parts = urlparse(url)
+    netloc = url_parts.netloc.encode("utf-8")
+    depth = str(url_parts.path.count("/"))
+    params = sorted([param.split("=")[0].encode("utf-8") for param in url_parts.query.split("&")])
+
+    fingerprint = "|".join((netloc, depth, ",".join(params)))
+
+    return fingerprint
+
+def parse_options(options_string):
+    options = dict()
+
+    if options_string:
+        options = dict(option.split("=") for option in options_string.split(","))
+
+    return options
+
+def last_scanned(db, fingerprint):
+    c = db.cursor()
+    c.execute("SELECT scanned FROM fingerprints WHERE fingerprint = (?)", (fingerprint,))
+    row = c.fetchone()
+    c.close()
+
+    if row:
+        return row[0]
+    else:
+        return False
+
+def create_vuln_report(filename, url, results):
+    vulns = {}
+    vulns["vulnerabilities"] = results
+    vulns["date"] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
+    vulns["url"] = url
+    with open(filename, "w") as outfile:
+        json.dump(vulns, outfile, indent=4, sort_keys=True)
+        print("Vulnerabilities found. Report saved to: %s" % outfile.name)
+
+def log_scan(db, fingerprint):
+    c = db.cursor()
+    try:
+        c.execute("INSERT INTO fingerprints (fingerprint) VALUES (?)", (fingerprint,))
+    except sqlite3.IntegrityError:
+        pass
+    ##db.commit()
+    c.close()
+
+class UTC(datetime.tzinfo):
+    def utcoffset(self, dt):
+        return datetime.timedelta(0)
+    def tzname(self, dt):
+        return "UTC"
+    def dst(self, dt):
+        return datetime.timedelta(0)
 
 if __name__ == "__main__":
     main()
