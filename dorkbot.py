@@ -196,9 +196,9 @@ def get_blacklist(blacklist_file):
 
 def get_fingerprint(url):
     url_parts = urlparse(url)
-    netloc = url_parts.netloc.encode("utf-8")
+    netloc = url_parts.netloc
     depth = str(url_parts.path.count("/"))
-    params = sorted([param.split("=")[0].encode("utf-8") for param in url_parts.query.split("&")])
+    params = sorted([param.split("=")[0] for param in url_parts.query.split("&")])
 
     fingerprint = "|".join((netloc, depth, ",".join(params)))
 
