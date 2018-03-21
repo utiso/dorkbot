@@ -27,7 +27,8 @@ def main():
         if args.flush:
             flush_fingerprints(db)
         if args.list:
-            list_targets(db)
+            for target in get_targets(db):
+                print(target)
         if args.indexer:
             for _, module, _ in pkgutil.iter_modules(["indexers"]):
                 importlib.import_module("indexers.%s" % module)
@@ -109,14 +110,13 @@ def flush_fingerprints(db):
     c.close()
     db.commit()
 
-def list_targets(db):
+def get_targets(db):
     try:
         c = db.cursor()
         c.execute("SELECT url FROM targets")
-        rows = c.fetchall()
-        for row in rows:
-            print(row[0])
+        targets = [row[0] for row in c.fetchall()]
         c.close()
+        return targets
     except sqlite3.OperationalError as e:
         if "no such table: targets" in str(e):
             sys.exit(0)
@@ -151,28 +151,22 @@ def scan(db, scanner, options, vulndir, blacklist, count):
         print("ERROR: scanner module not found", file=sys.stderr)
         sys.exit(1)
 
-    deletable = []
     scanned = 0
-    c = db.cursor()
-    c.execute("SELECT id,url FROM targets")
-    while True:
-        row = c.fetchone()
-        if not row or (count >= 0 and scanned >= count):
+    for url in get_targets(db):
+        if count >= 0 and scanned >= count:
             break
-        id_ = int(row[0])
-        url = row[1]
         fingerprint = get_fingerprint(url)
         if last_scanned(db, fingerprint):
             print("Skipping (matches fingerprint of previous scan): %s" % url)
-            deletable.append(id_)
+            delete_target(db, url)
             continue
         if blacklist.match(url):
             print("Skipping (blacklisted): %s" % url)
-            deletable.append(id_)
+            delete_target(db, url)
             continue
 
         results = scanner_module.run(options, url)
-        deletable.append(id_)
+        delete_target(db, url)
         if results == False:
             continue
         if results:
@@ -181,8 +175,10 @@ def scan(db, scanner, options, vulndir, blacklist, count):
             create_vuln_report(filename, url, results)
         log_scan(db, fingerprint)
         scanned += 1
-    for target in deletable:
-        c.execute("DELETE FROM targets where id=(?)", (target,))
+
+def delete_target(db, url):
+    c = db.cursor()
+    c.execute("DELETE FROM targets WHERE url=(?)", (url,))
     c.close()
     db.commit()
 
