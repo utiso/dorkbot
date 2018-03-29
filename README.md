@@ -13,8 +13,8 @@ Targets are stored in a local database file upon being indexed. Once scanned, an
 Usage
 =====
 <pre>
-usage: dorkbot.py [-h] [-c CONFIG] [-b BLACKLIST] [-d DATABASE] [-i INDEXER]
-                  [-l] [-n TARGET_COUNT] [-o INDEXER_OPTIONS]
+usage: dorkbot.py [-h] [-c CONFIG] [-b BLACKLIST] [-d DATABASE] [-f]
+                  [-i INDEXER] [-l] [-n TARGET_COUNT] [-o INDEXER_OPTIONS]
                   [-p SCANNER_OPTIONS] [-s SCANNER] [-v VULNDIR]
 
 optional arguments:
@@ -26,11 +26,13 @@ optional arguments:
                         scans
   -d DATABASE, --database DATABASE
                         SQLite3 database file
+  -f, --flush           Flush table of fingerprints of previously-scanned
+                        items
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
   -l, --list            List targets in database
   -n TARGET_COUNT, --target-count TARGET_COUNT
-                        Number of targets to list / scan
+                        Number of targets to scan
   -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
                         Indexer-specific options (opt1=val1,opt2=val2,..)
   -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
@@ -41,9 +43,9 @@ optional arguments:
                         Directory to store vulnerability output reports
 </pre>
 
-Platform
-========
-Python 2.7.x / 3.x (Linux / Mac OS / Windows)
+Requirements
+============
+Python 2.7.x / 3.x (cross-platform)
 
 Tools
 =====
