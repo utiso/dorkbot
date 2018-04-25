@@ -234,7 +234,7 @@ def log_scan(db, fingerprint):
         c.execute("INSERT INTO fingerprints (fingerprint) VALUES (?)", (fingerprint,))
     except sqlite3.IntegrityError:
         pass
-    ##db.commit()
+    db.commit()
     c.close()
 
 class UTC(datetime.tzinfo):
