@@ -81,6 +81,8 @@ def run(options, url):
         if os.path.isfile(report_stderr):
             report_stderr_f.close()
             os.remove(report_stderr)
+        if os.path.isfile(report):
+            os.remove(report)
 
         with open(report_json, encoding="utf-8") as data_file:    
             contents = data_file.read()
