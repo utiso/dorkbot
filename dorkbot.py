@@ -171,7 +171,7 @@ def scan(db, scanner, options, vulndir, blacklist, count):
             continue
         if results:
             url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
-            filename = os.path.join(vulndir, url_md5 + "-" + scanner + ".json")
+            filename = os.path.join(vulndir, url_md5 + ".json")
             create_vuln_report(filename, url, results)
         log_scan(db, fingerprint)
         scanned += 1
