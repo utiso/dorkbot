@@ -20,7 +20,8 @@ import sqlite3
 import sys
 
 def main():
-    args, parser = get_args_parser()
+    dorkbot_dir = os.path.dirname(os.path.abspath(__file__))
+    args, parser = get_args_parser(dorkbot_dir)
 
     if args.flush or args.list or args.indexer or args.scanner:
         db = load_database(args.database)
@@ -30,11 +31,11 @@ def main():
             for target in get_targets(db):
                 print(target)
         if args.indexer:
-            for _, module, _ in pkgutil.iter_modules(["indexers"]):
+            for _, module, _ in pkgutil.iter_modules([os.path.join(dorkbot_dir, "indexers")]):
                 importlib.import_module("indexers.%s" % module)
             index(db, args.indexer, parse_options(args.indexer_options))
         if args.scanner:
-            for _, module, _ in pkgutil.iter_modules(["scanners"]):
+            for _, module, _ in pkgutil.iter_modules([os.path.join(dorkbot_dir, "scanners")]):
                 importlib.import_module("scanners.%s" % module)
             scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count))
         db.close()
@@ -42,8 +43,7 @@ def main():
     else:
         parser.print_usage()
 
-def get_args_parser():
-    dorkbot_dir = os.path.dirname(os.path.abspath(__file__))
+def get_args_parser(dorkbot_dir):
     default_options = {
         "config": os.path.join(dorkbot_dir, "config", "dorkbot.ini"),
         "blacklist": os.path.join(dorkbot_dir, "config", "blacklist.txt"),
