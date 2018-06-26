@@ -14,7 +14,6 @@ import hashlib
 import importlib
 import json
 import os
-import pkgutil
 import re
 import sqlite3
 import sys
@@ -31,17 +30,23 @@ def main():
             for target in get_targets(db):
                 print(target)
         if args.indexer:
-            for _, module, _ in pkgutil.iter_modules([os.path.join(dorkbot_dir, "indexers")]):
-                importlib.import_module("indexers.%s" % module)
             index(db, args.indexer, parse_options(args.indexer_options))
         if args.scanner:
-            for _, module, _ in pkgutil.iter_modules([os.path.join(dorkbot_dir, "scanners")]):
-                importlib.import_module("scanners.%s" % module)
             scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count))
         db.close()
 
     else:
         parser.print_usage()
+
+def load_module(category, name):
+    module = "%s.%s" % (category, name)
+    try:
+        importlib.import_module(module)
+    except ImportError:
+        print("ERROR: module not found", file=sys.stderr)
+        sys.exit(1)
+
+    return sys.modules[module]
 
 def get_args_parser(dorkbot_dir):
     default_options = {
@@ -125,13 +130,9 @@ def get_targets(db):
             sys.exit(1)
 
 def index(db, indexer, options):
-    try:
-        indexer_module = sys.modules["indexers.%s" % indexer]
-    except KeyError:
-        print("ERROR: indexer module not found", file=sys.stderr)
-        sys.exit(1)
+    module = load_module("indexers", indexer)
 
-    results = indexer_module.run(options)
+    results = module.run(options)
 
     c = db.cursor()
     for result in results:
@@ -145,11 +146,7 @@ def index(db, indexer, options):
     c.close()
 
 def scan(db, scanner, options, vulndir, blacklist, count):
-    try:
-        scanner_module = sys.modules["scanners.%s" % scanner]
-    except KeyError:
-        print("ERROR: scanner module not found", file=sys.stderr)
-        sys.exit(1)
+    module = load_module("scanners", scanner)
 
     scanned = 0
     for url in get_targets(db):
@@ -165,7 +162,7 @@ def scan(db, scanner, options, vulndir, blacklist, count):
             delete_target(db, url)
             continue
 
-        results = scanner_module.run(options, url)
+        results = module.run(options, url)
         delete_target(db, url)
         if results == False:
             continue
