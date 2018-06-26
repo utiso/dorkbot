@@ -14,8 +14,9 @@ Usage
 =====
 <pre>
 usage: dorkbot.py [-h] [-c CONFIG] [-b BLACKLIST] [-d DATABASE] [-f]
-                  [-i INDEXER] [-l] [-n TARGET_COUNT] [-o INDEXER_OPTIONS]
-                  [-p SCANNER_OPTIONS] [-s SCANNER] [-v VULNDIR]
+                  [-i INDEXER] [--label LABEL] [-l] [-n TARGET_COUNT]
+                  [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS] [-s SCANNER]
+                  [-v VULNDIR]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -30,6 +31,7 @@ optional arguments:
                         items
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
+  --label LABEL         Label to add to vulnerability report
   -l, --list            List targets in database
   -n TARGET_COUNT, --target-count TARGET_COUNT
                         Number of targets to scan

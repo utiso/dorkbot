@@ -32,7 +32,7 @@ def main():
         if args.indexer:
             index(db, args.indexer, parse_options(args.indexer_options))
         if args.scanner:
-            scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count))
+            scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count), args.label)
         db.close()
 
     else:
@@ -80,6 +80,8 @@ def get_args_parser(dorkbot_dir):
         help="Flush table of fingerprints of previously-scanned items")
     parser.add_argument("-i", "--indexer", \
         help="Indexer module to use")
+    parser.add_argument("--label", \
+        help="Label to add to vulnerability report")
     parser.add_argument("-l", "--list", action="store_true", \
         help="List targets in database")
     parser.add_argument("-n", "--target-count", \
@@ -145,7 +147,7 @@ def index(db, indexer, options):
     db.commit()
     c.close()
 
-def scan(db, scanner, options, vulndir, blacklist, count):
+def scan(db, scanner, options, vulndir, blacklist, count, label):
     module = load_module("scanners", scanner)
 
     scanned = 0
@@ -169,7 +171,7 @@ def scan(db, scanner, options, vulndir, blacklist, count):
         if results:
             url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
             filename = os.path.join(vulndir, url_md5 + ".json")
-            create_vuln_report(filename, url, results)
+            create_vuln_report(filename, url, results, label)
         log_scan(db, fingerprint)
         scanned += 1
 
@@ -216,11 +218,15 @@ def last_scanned(db, fingerprint):
     else:
         return False
 
-def create_vuln_report(filename, url, results):
+def create_vuln_report(filename, url, results, label):
     vulns = {}
     vulns["vulnerabilities"] = results
     vulns["date"] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
     vulns["url"] = url
+    if label:
+        vulns["label"] = label
+    else:
+        vulns["label"] = ""
     with open(filename, "w") as outfile:
         json.dump(vulns, outfile, indent=4, sort_keys=True)
         print("Vulnerabilities found. Report saved to: %s" % outfile.name)
