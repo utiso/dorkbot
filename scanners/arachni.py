@@ -27,7 +27,7 @@ def run(options, url):
     if "checks" in options:
         checks = options["checks"].replace(" ", ",").replace("\"","")
     else:
-        checks = "active/*,-csrf,-unvalidated_redirect,-source_code_disclosure,-response_splitting,-no_sql_injection_differential"
+        checks = "active/*"
 
     url_base = url.split("?", 1)[0].replace("(", "%28").replace(")", "%29")
     url_hash = hashlib.md5(url.encode("utf-8")).hexdigest()
