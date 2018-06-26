@@ -97,16 +97,7 @@ def run(options, url):
                     vuln["method"] = issue["vector"]["method"]
                 else:
                     vuln["method"] = ""
-                if issue["check"]["shortname"] == "xss_script_context":
-                    vuln["poc"] = issue["page"]["dom"]["url"].replace("window.top._arachni_js_namespace_taint_tracer.log_execution_flow_sink()", "alert(150)")
-                elif issue["check"]["shortname"] == "xss_tag":
-                    vuln["poc"] = issue["page"]["dom"]["url"].replace("arachni_xss_in_tag", "autofocus+onfocus=alert(150)+onload=alert(150)+xss")
-                elif issue["check"]["shortname"] == "xss_path":
-                    vuln["poc"] = issue["page"]["dom"]["url"].replace("%3Cmy_tag", "%3Cimg+src=xyz+onerror=alert(150)%3E%3Cmy_tag")
-                elif issue["check"]["shortname"] == "xss":
-                    vuln["poc"] = issue["page"]["dom"]["url"].replace("%3Cxss", "%3Cimg+src=xyz+onerror=alert(150)%3E%3Cxss")
-                else:
-                    vuln["poc"] = issue["page"]["dom"]["url"]
+                vuln["poc"] = issue["page"]["dom"]["url"]
                 vulns.append(vuln)
             return vulns
 
