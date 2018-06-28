@@ -165,6 +165,8 @@ def scan(db, scanner, options, vulndir, blacklist, count, label):
             continue
 
         print("Scanning: %s" % url)
+        if "simulate" in options:
+            continue
         results = module.run(options, url)
         delete_target(db, url)
         if results:
@@ -202,7 +204,12 @@ def parse_options(options_string):
     options = dict()
 
     if options_string:
-        options = dict(option.split("=") for option in options_string.split(","))
+        for option in options_string.split(","):
+            if "=" in option:
+                key, value = option.split("=", 1)
+            else:
+                key, value = option, True
+            options.update({key:value})
 
     return options
 
