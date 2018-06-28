@@ -54,50 +54,45 @@ def run(options, url):
     report_cmd += ["--reporter", "json:outfile="+report_json]
     report_cmd += [report]
 
-    if os.path.isfile(report) or os.path.isfile(report_stderr):
-        print("Skipping (found report file): " + url)
-        return False
-    else:
-        print("Scanning: " + url)
-        report_stderr_f = open(report_stderr, "a")
-        try:
-            ret = call(scan_cmd, cwd=arachni_path, stderr=report_stderr_f)
-            if ret != 0: sys.exit(1)
-        except OSError as e:
-            if "No such file or directory" in e:
-                print("Could not execute arachni. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
-                report_stderr_f.close()
-                os.remove(report_stderr)
-                sys.exit(1)
-        try:
-            ret = call(report_cmd, cwd=arachni_path, stderr=report_stderr_f)
-            if ret != 0: sys.exit(1)
-        except OSError as e:
-            if "No such file or directory" in e:
-                print("Could not execute arachni_reporter. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
-                report_stderr_f.close()
-                os.remove(report_stderr)
-                sys.exit(1)
-        if os.path.isfile(report_stderr):
+    report_stderr_f = open(report_stderr, "a")
+    try:
+        ret = call(scan_cmd, cwd=arachni_path, stderr=report_stderr_f)
+        if ret != 0: sys.exit(1)
+    except OSError as e:
+        if "No such file or directory" in e:
+            print("Could not execute arachni. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
             report_stderr_f.close()
             os.remove(report_stderr)
-        if os.path.isfile(report):
-            os.remove(report)
+            sys.exit(1)
+    try:
+        ret = call(report_cmd, cwd=arachni_path, stderr=report_stderr_f)
+        if ret != 0: sys.exit(1)
+    except OSError as e:
+        if "No such file or directory" in e:
+            print("Could not execute arachni_reporter. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
+            report_stderr_f.close()
+            os.remove(report_stderr)
+            sys.exit(1)
+    if os.path.isfile(report_stderr):
+        report_stderr_f.close()
+        os.remove(report_stderr)
+    if os.path.isfile(report):
+        os.remove(report)
 
-        with open(report_json, encoding="utf-8") as data_file:    
-            contents = data_file.read()
-            data = json.loads(contents)
-            vulns = []
-            for issue in data["issues"]:
-                vuln = {}
-                vuln["vulnerability"] = issue["check"]["shortname"]
-                vuln["url"] = issue["referring_page"]["dom"]["url"]
-                vuln["parameter"] = issue["vector"]["affected_input_name"]
-                if "method" in issue["vector"]:
-                    vuln["method"] = issue["vector"]["method"]
-                else:
-                    vuln["method"] = ""
-                vuln["poc"] = issue["page"]["dom"]["url"]
-                vulns.append(vuln)
-            return vulns
+    with open(report_json, encoding="utf-8") as data_file:    
+        contents = data_file.read()
+        data = json.loads(contents)
+        vulns = []
+        for issue in data["issues"]:
+            vuln = {}
+            vuln["vulnerability"] = issue["check"]["shortname"]
+            vuln["url"] = issue["referring_page"]["dom"]["url"]
+            vuln["parameter"] = issue["vector"]["affected_input_name"]
+            if "method" in issue["vector"]:
+                vuln["method"] = issue["vector"]["method"]
+            else:
+                vuln["method"] = ""
+            vuln["poc"] = issue["page"]["dom"]["url"]
+            vulns.append(vuln)
+        return vulns
 

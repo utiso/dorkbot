@@ -164,6 +164,7 @@ def scan(db, scanner, options, vulndir, blacklist, count, label):
             delete_target(db, url)
             continue
 
+        print("Scanning: %s" % url)
         results = module.run(options, url)
         delete_target(db, url)
         if results == False:
