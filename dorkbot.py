@@ -167,8 +167,6 @@ def scan(db, scanner, options, vulndir, blacklist, count, label):
         print("Scanning: %s" % url)
         results = module.run(options, url)
         delete_target(db, url)
-        if results == False:
-            continue
         if results:
             url_md5 = hashlib.md5(url.encode("utf-8")).hexdigest()
             filename = os.path.join(vulndir, url_md5 + ".json")
