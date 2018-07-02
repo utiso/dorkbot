@@ -13,36 +13,26 @@ Targets are stored in a local database file upon being indexed. Once scanned, an
 Usage
 =====
 <pre>
-usage: dorkbot.py [-h] [-c CONFIG] [-b BLACKLIST] [-d DATABASE] [-f]
-                  [-i INDEXER] [--label LABEL] [-l] [-n TARGET_COUNT]
+usage: dorkbot.py [-h] [-c CONFIG] [-d DATABASE] [-f] [-i INDEXER] [-l]
                   [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS] [-s SCANNER]
-                  [-v VULNDIR]
 
 optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         Configuration file
-  -b BLACKLIST, --blacklist BLACKLIST
-                        File containing (regex) patterns to blacklist from
-                        scans
   -d DATABASE, --database DATABASE
                         SQLite3 database file
   -f, --flush           Flush table of fingerprints of previously-scanned
                         items
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
-  --label LABEL         Label to add to vulnerability report
   -l, --list            List targets in database
-  -n TARGET_COUNT, --target-count TARGET_COUNT
-                        Number of targets to scan
   -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
                         Indexer-specific options (opt1=val1,opt2=val2,..)
   -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
                         Scanner-specific options (opt1=val1,opt2=val2,..)
   -s SCANNER, --scanner SCANNER
                         Scanner module to use
-  -v VULNDIR, --vulndir VULNDIR
-                        Directory to store vulnerability output reports
 </pre>
 
 Requirements
@@ -101,6 +91,15 @@ Options: none
 
 Scanner Modules
 ===============
+### (general options) ###
+These options are applicable regardless of module chosen
+
+* blacklist - file containing (regex) patterns to blacklist from scans (default: config/blacklist.txt)
+* vulndir - directory to save vulnerability report (default: vulnerabilities/)
+* log - log file to append scan activity (default: prints to stdout)
+* label - friendly name field to include in vulnerability report
+* count - number of urls to scan, or -1 to scan all urls (default: -1)
+
 ### arachni ###
 Scan targets with Arachni command-line scanner.
 
