@@ -99,6 +99,7 @@ These options are applicable regardless of module chosen
 * log - log file to append scan activity (default: prints to stdout)
 * label - friendly name field to include in vulnerability report
 * count - number of urls to scan, or -1 to scan all urls (default: -1)
+* simulate - process blacklist / fingerprints but do not actually scan any urls
 
 ### arachni ###
 Scan targets with Arachni command-line scanner.
