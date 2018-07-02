@@ -22,29 +22,20 @@ def main():
     dorkbot_dir = os.path.dirname(os.path.abspath(__file__))
     args, parser = get_args_parser(dorkbot_dir)
 
-    if args.log:
-        log = open(os.path.abspath(args.log), "a")
-    else:
-        log = sys.stderr
-
     if args.flush or args.list or args.indexer or args.scanner:
         db = load_database(args.database)
         if args.flush:
             flush_fingerprints(db)
         if args.list:
-            for target in get_targets(db):
-                print(target)
+            for target in get_targets(db): print(target)
         if args.indexer:
             index(db, args.indexer, parse_options(args.indexer_options))
         if args.scanner:
-            scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count), args.label, log)
+            scan(db, args.scanner, parse_options(args.scanner_options))
         db.close()
 
     else:
         parser.print_usage()
-
-    if args.log:
-        log.close()
 
 def load_module(category, name):
     module = "%s.%s" % (category, name)
@@ -59,10 +50,7 @@ def load_module(category, name):
 def get_args_parser(dorkbot_dir):
     default_options = {
         "config": os.path.join(dorkbot_dir, "config", "dorkbot.ini"),
-        "blacklist": os.path.join(dorkbot_dir, "config", "blacklist.txt"),
         "database": os.path.join(dorkbot_dir, "databases", "dorkbot.db"),
-        "vulndir": os.path.join(dorkbot_dir, "vulnerabilities"),
-        "count": "-1"
     }
 
     initial_parser = argparse.ArgumentParser(
@@ -80,31 +68,20 @@ def get_args_parser(dorkbot_dir):
 
     parser = argparse.ArgumentParser(parents=[initial_parser])
     parser.set_defaults(**default_options)
-    parser.add_argument("-b", "--blacklist", \
-        help="File containing (regex) patterns to blacklist from scans")
     parser.add_argument("-d", "--database", \
         help="SQLite3 database file")
     parser.add_argument("-f", "--flush", action="store_true", \
         help="Flush table of fingerprints of previously-scanned items")
     parser.add_argument("-i", "--indexer", \
         help="Indexer module to use")
-    parser.add_argument("--label", \
-        help="Label to add to vulnerability report")
     parser.add_argument("-l", "--list", action="store_true", \
         help="List targets in database")
-    parser.add_argument("--log", \
-        help="Log file to append scan activity")
-    parser.add_argument("-n", "--target-count", \
-        default=default_options["count"], \
-        help="Number of targets to scan")
     parser.add_argument("-o", "--indexer-options", \
         help="Indexer-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-p", "--scanner-options", \
         help="Scanner-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-s", "--scanner", \
         help="Scanner module to use")
-    parser.add_argument("-v", "--vulndir", \
-        help="Directory to store vulnerability output reports")
 
     args = parser.parse_args(other_args)
     return args, parser
@@ -157,8 +134,35 @@ def index(db, indexer, options):
     db.commit()
     c.close()
 
-def scan(db, scanner, options, vulndir, blacklist, count, label, log):
+def scan(db, scanner, options):
     module = load_module("scanners", scanner)
+
+    dorkbot_dir = os.path.dirname(os.path.abspath(__file__))
+
+    if "blacklist" in options:
+        blacklist = get_blacklist(options["blacklist"])
+    else:
+        blacklist = get_blacklist(os.path.join(dorkbot_dir, "config", "blacklist.txt"))
+
+    if "vulndir" in options:
+        vulndir = options["vulndir"]
+    else:
+        vulndir = os.path.join(dorkbot_dir, "vulnerabilities")
+
+    if "count" in options:
+        count = int(options["count"])
+    else:
+        count = -1
+
+    if "label" in options:
+        label = options["label"]
+    else:
+        label = ""
+
+    if "log" in options:
+        log = open(os.path.abspath(options["log"]), "a")
+    else:
+        log = sys.stderr
 
     scanned = 0
     for url in get_targets(db):
@@ -185,6 +189,9 @@ def scan(db, scanner, options, vulndir, blacklist, count, label, log):
             create_vuln_report(filename, url, results, label)
         log_scan(db, fingerprint)
         scanned += 1
+
+    if "log" in options:
+        log.close()
 
 def delete_target(db, url):
     c = db.cursor()
@@ -239,10 +246,7 @@ def create_vuln_report(filename, url, results, label):
     vulns["vulnerabilities"] = results
     vulns["date"] = str(datetime.datetime.now(UTC()).replace(microsecond=0))
     vulns["url"] = url
-    if label:
-        vulns["label"] = label
-    else:
-        vulns["label"] = ""
+    vulns["label"] = label
     with open(filename, "w") as outfile:
         json.dump(vulns, outfile, indent=4, sort_keys=True)
         print("Vulnerabilities found. Report saved to: %s" % outfile.name)
