@@ -22,6 +22,11 @@ def main():
     dorkbot_dir = os.path.dirname(os.path.abspath(__file__))
     args, parser = get_args_parser(dorkbot_dir)
 
+    if args.log:
+        log = open(os.path.abspath(args.log), "a")
+    else:
+        log = sys.stderr
+
     if args.flush or args.list or args.indexer or args.scanner:
         db = load_database(args.database)
         if args.flush:
@@ -32,11 +37,14 @@ def main():
         if args.indexer:
             index(db, args.indexer, parse_options(args.indexer_options))
         if args.scanner:
-            scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count), args.label)
+            scan(db, args.scanner, parse_options(args.scanner_options), args.vulndir, get_blacklist(args.blacklist), int(args.target_count), args.label, log)
         db.close()
 
     else:
         parser.print_usage()
+
+    if args.log:
+        log.close()
 
 def load_module(category, name):
     module = "%s.%s" % (category, name)
@@ -84,6 +92,8 @@ def get_args_parser(dorkbot_dir):
         help="Label to add to vulnerability report")
     parser.add_argument("-l", "--list", action="store_true", \
         help="List targets in database")
+    parser.add_argument("--log", \
+        help="Log file to append scan activity")
     parser.add_argument("-n", "--target-count", \
         default=default_options["count"], \
         help="Number of targets to scan")
@@ -147,7 +157,7 @@ def index(db, indexer, options):
     db.commit()
     c.close()
 
-def scan(db, scanner, options, vulndir, blacklist, count, label):
+def scan(db, scanner, options, vulndir, blacklist, count, label, log):
     module = load_module("scanners", scanner)
 
     scanned = 0
@@ -156,15 +166,15 @@ def scan(db, scanner, options, vulndir, blacklist, count, label):
             break
         fingerprint = get_fingerprint(url)
         if last_scanned(db, fingerprint):
-            print("Skipping (matches fingerprint of previous scan): %s" % url)
+            print("Skipping (matches fingerprint of previous scan): %s" % url, file=log)
             delete_target(db, url)
             continue
         if blacklist.match(url):
-            print("Skipping (blacklisted): %s" % url)
+            print("Skipping (blacklisted): %s" % url, file=log)
             delete_target(db, url)
             continue
 
-        print("Scanning: %s" % url)
+        print("Scanning: %s" % url, file=log)
         if "simulate" in options:
             continue
         results = module.run(options, url)
