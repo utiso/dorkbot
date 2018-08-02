@@ -44,6 +44,7 @@ Tools
 * [PhantomJS](http://phantomjs.org/)
 * [Arachni](http://www.arachni-scanner.com/)
 * [Wapiti](http://wapiti.sourceforge.net/)
+* [cc.py](https://github.com/si9int/cc.py)
 
 As needed, dorkbot will search for tools in the following order:
 * Directory specified via relevant module option
@@ -81,6 +82,16 @@ Options:
 * **engine** - CSE id
 * **query** - search query
 * domain - limit searches to specified domain
+
+### cc.py ###
+Search for targets within commoncrawl.org results via cc.py.
+
+Requirements: [cc.py](https://github.com/si9int/cc.py)
+
+Options:
+* **domain** - pull all results for given domain or subdomain
+* year - limit results to data sets from given year (17 or 18, defaults to all)
+* filename - set temporary filename where results are stored before being put in db
 
 ### stdin ###
 Read targets from standard input, one per line.
