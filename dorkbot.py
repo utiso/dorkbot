@@ -106,7 +106,7 @@ def scan(db, scanner, args):
     report_dir = args.get("report_dir", default_report_dir)
     count = int(args.get("count", "-1"))
     label = args.get("label", "")
-    if "log" in args: log = open(os.path.abspath(args["log"]), "a")
+    if "log" in args: log = open(os.path.abspath(args["log"]), "a", 1)
     else: log = sys.stdout
 
     scanned = 0
