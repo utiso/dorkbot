@@ -30,7 +30,6 @@ def run(args):
 
     index_cmd = [os.path.join(cc_py_path, "cc.py")]
     if year: index_cmd += ["-y", year]
-    else: print("no year")
     index_cmd += ["-o", filename]
     index_cmd += [domain]
 
