@@ -129,6 +129,7 @@ def scan(db, scanner, args):
 
         print(target.starttime, "Scanning: %s" % target.url, file=log)
         db.delete_target(target.url)
+        db.add_fingerprint(target.fingerprint)
         results = scanner.run(args, target)
         scanned += 1
 
@@ -138,7 +139,6 @@ def scan(db, scanner, args):
 
         target.endtime = target.get_timestamp()
         target.write_report(report_dir, label, results)
-        db.add_fingerprint(target.fingerprint)
 
     if "log" in args: log.close()
 
