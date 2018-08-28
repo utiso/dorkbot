@@ -1,14 +1,14 @@
 dorkbot
 =======
 
-Scan Google search results for vulnerabilities.
+Scan Google (or other) search results for vulnerabilities.
 
-dorkbot is a modular command-line tool for performing vulnerability scans against a set of webpages returned by Google search queries in a given Google Custom Search Engine. It is broken up into two sets of modules:
+dorkbot is a modular command-line tool for performing vulnerability scans against sets of webpages returned by Google search queries or other supported sources. It is broken up into two sets of modules:
 
-* *Indexers* - modules that issue a search query and return the results as targets
+* *Indexers* - modules that return a list of targets
 * *Scanners* - modules that perform a vulnerability scan against each target
 
-Targets are stored in a local database file upon being indexed. Once scanned, any vulnerabilities found by the chosen scanner are written to a standard JSON report file. Indexing and scanning processes can be run separately or combined in a single command.
+Targets are stored in a local database file until they are scanned, at which point a standard JSON report is produced containing any vulnerabilities found. Indexing and scanning processes can be run separately or combined in a single command (up to one of each).
 
 Usage
 =====
@@ -90,8 +90,8 @@ Requirements: [cc.py](https://github.com/si9int/cc.py)
 
 Options:
 * **domain** - pull all results for given domain or subdomain
+* cc_py_dir - cc.py base directory containing the file cc.py (default: tools/cc.py/)
 * year - limit results to data sets from given year (17 or 18, defaults to all)
-* filename - set temporary filename where results are stored before being put in db
 
 ### stdin ###
 Read targets from standard input, one per line.
@@ -106,11 +106,11 @@ Scanner Modules
 These options are applicable regardless of module chosen
 
 * blacklist - file containing (regex) patterns to blacklist from scans (default: config/blacklist.txt)
-* vulndir - directory to save vulnerability report (default: vulnerabilities/)
+* report_dir - directory to save vulnerability report (default: reports/)
 * log - log file to append scan activity (default: prints to stdout)
 * label - friendly name field to include in vulnerability report
 * count - number of urls to scan, or -1 to scan all urls (default: -1)
-* simulate - process blacklist / fingerprints but do not actually scan any urls
+* random - scan urls in random order
 
 ### arachni ###
 Scan targets with Arachni command-line scanner.
@@ -119,8 +119,7 @@ Requirements: [Arachni](http://www.arachni-scanner.com/)
 
 Options:
 * arachni_dir - arachni base directory containing bin/arachni and bin/arachni_reporter (default: tools/arachni/)
-* report_dir - directory to save arachni scan binary and JSON scan report output (default: reports/)
-* checks - space-delimited list of vulnerability checks to perform (default: "active/\* -csrf -unvalidated_redirect -source_code_disclosure -response_splitting -no_sql_injection_differential")
+* checks - space-delimited list of vulnerability checks to perform (default: "active/\*")
 
 ### wapiti ###
 Scan targets with Wapiti command-line scanner.
@@ -129,5 +128,5 @@ Requirements: [Wapiti](http://wapiti.sourceforge.net/)
 
 Options:
 * wapiti_dir - wapiti base directory containing bin/wapiti (default: tools/wapiti/)
-* report_dir - directory to save wapiti JSON scan report (default: reports/)
+* modules - space-delimited list of modules to perform (default: "blindsql exec file permanentxss sql xss")
 

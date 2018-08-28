@@ -4,7 +4,7 @@ try:
 except ImportError:
     from urlparse import urlparse
 
-def run(options):
+def run(args):
     results = []
 
     for url in sys.stdin:

@@ -11,26 +11,26 @@ import json
 import sys
 import time
 
-def run(options):
+def run(args):
     required = ["key", "engine", "query"]
     for r in required:
-        if r not in options:
+        if r not in args:
             print ("ERROR: %s must be set" % r, file=sys.stderr)
             sys.exit(1)
 
-    results = get_results(options)
+    results = get_results(args)
     return results
 
-def get_results(options):
+def get_results(args):
     data = {}
-    data["key"] = options["key"]
-    data["cx"] = options["engine"]
-    data["q"] = options["query"]
+    data["key"] = args["key"]
+    data["cx"] = args["engine"]
+    data["q"] = args["query"]
     data["num"] = 10
     data["start"] = 1
 
-    if "domain" in options:
-        data["siteSearch"] = options["domain"]
+    if "domain" in args:
+        data["siteSearch"] = args["domain"]
 
     results = []
     while True:
@@ -40,14 +40,7 @@ def get_results(options):
             break
         results.extend(items)
 
-    unique_results_tuples = []
-    unique_results = []
-    for result in results:
-        if result.query and (result.netloc, result.path) not in unique_results_tuples:
-            unique_results_tuples.append((result.netloc, result.path))
-            unique_results.append(result)
-
-    return unique_results
+    return results
 
 def issue_request(data):
     url = "https://www.googleapis.com/customsearch/v1?" + urlencode(data)
