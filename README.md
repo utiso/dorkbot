@@ -120,6 +120,9 @@ Requirements: [Arachni](http://www.arachni-scanner.com/)
 Options:
 * arachni_dir - arachni base directory containing bin/arachni and bin/arachni_reporter (default: tools/arachni/)
 * checks - space-delimited list of vulnerability checks to perform (default: "active/\*")
+* timeout - maximum scan time in hours:minutes:seconds (default: disabled)
+* single-thread - set browser pool and max concurrency to one each
+* throttle - maximum requests per second (default: disabled)
 
 ### wapiti ###
 Scan targets with Wapiti command-line scanner.

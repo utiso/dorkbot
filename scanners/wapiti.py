@@ -25,7 +25,6 @@ def run(args, target):
     scan_cmd += ["--module", modules]
     scan_cmd += ["--scope", "page"]
     scan_cmd += ["--flush-session"]
-    ##scan_cmd += ["--timeout", "5"]
     scan_cmd += ["--format", "json"]
     scan_cmd += ["--output", report]
 

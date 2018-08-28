@@ -26,10 +26,13 @@ def run(args, target):
     scan_cmd += ["--output-only-positives"]
     scan_cmd += ["--scope-page-limit", "1"]
     scan_cmd += ["--scope-include-pattern", target.url.split("?", 1)[0]]
-    ##scan_cmd += ["--http-request-concurrency", "1"]
-    ##scan_cmd += ["--browser-cluster-pool-size", "1"]
-    ##scan_cmd += ["--plugin", "rate_limiter:requests_per_second=1"]
-    ##scan_cmd += ["--timeout", "01:00:00"]
+    if "timeout" in args:
+        scan_cmd += ["--timeout", args["timeout"]]
+    if "single-thread" in args:
+        scan_cmd += ["--http-request-concurrency", "1"]
+        scan_cmd += ["--browser-cluster-pool-size", "1"]
+    if "throttle" in args:
+        scan_cmd += ["--plugin", "rate_limiter:requests_per_second=%d" % int(args["throttle"])]
     scan_cmd += [target.url]
 
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]
