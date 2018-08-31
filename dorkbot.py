@@ -145,8 +145,9 @@ def scan(db, scanner, args):
 def get_blacklist(blacklist_file):
     pattern = "$^"
     try:
-        with open(blacklist_file, "r") as f:
-            pattern = "|".join(f.read().splitlines())
+        if os.path.isfile(blacklist_file):
+            with open(blacklist_file, "r") as f:
+                pattern = "|".join(f.read().splitlines())
         blacklist = re.compile(pattern)
     except Exception as e:
         print("ERROR reading blacklist - %s" % e, file=sys.stderr)
