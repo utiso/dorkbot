@@ -295,9 +295,9 @@ class Target:
         depth = str(url_parts.path.count("/"))
         params = []
         for param in url_parts.query.split("&"):
-            (name, value) = param.split("=", 1)
-            if value:
-                params.append(name)
+            split = param.split("=", 1)
+            if len(split) == 2 and split[1]:
+                params.append(split[0])
         fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
         return fingerprint
 
