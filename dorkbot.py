@@ -293,8 +293,12 @@ class Target:
         url_parts = urlparse(self.url)
         netloc = url_parts.netloc
         depth = str(url_parts.path.count("/"))
-        params = sorted([param.split("=")[0] for param in url_parts.query.split("&")])
-        fingerprint = "|".join((netloc, depth, ",".join(params)))
+        params = []
+        for param in url_parts.query.split("&"):
+            (name, value) = param.split("=", 1)
+            if value:
+                params.append(name)
+        fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
         return fingerprint
 
     def get_timestamp(self):
