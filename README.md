@@ -21,7 +21,7 @@ optional arguments:
   -c CONFIG, --config CONFIG
                         Configuration file
   -d DATABASE, --database DATABASE
-                        SQLite3 database file
+                        SQLite3 database file or postgresql:// URI
   -f, --flush           Flush table of fingerprints of previously-scanned
                         items
   -i INDEXER, --indexer INDEXER
@@ -38,6 +38,7 @@ optional arguments:
 Requirements
 ============
 Python 2.7.x / 3.x (cross-platform)
+[psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
 
 Tools
 =====

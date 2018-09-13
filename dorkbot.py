@@ -15,7 +15,6 @@ import importlib
 import json
 import os
 import re
-import sqlite3
 import sys
 
 def main():
@@ -169,15 +168,33 @@ def parse_options(options_string):
     return options
 
 class TargetDatabase:
-    def __init__(self, database_file):
+    def __init__(self, database):
+        if database.startswith("postgresql://"):
+            module_name = "psycopg2"
+        else:
+            module_name = "sqlite3"
+            database = os.path.expanduser(database)
+
+        self.module = importlib.import_module(module_name, package=None)
+
+        if self.module.paramstyle == "qmark":
+            self.param = "?"
+        else:
+            self.param = "%s"
+
         try:
-            self.db = sqlite3.connect(os.path.expanduser(database_file))
+            self.db = self.module.connect(database)
+        except self.module.Error as e:
+            print("ERROR loading database - %s" % e, file=sys.stderr)
+            sys.exit(1)
+
+        try:
             c = self.db.cursor()
             c.execute("CREATE TABLE IF NOT EXISTS targets (id INTEGER PRIMARY KEY, url TEXT UNIQUE)")
             c.execute("CREATE TABLE IF NOT EXISTS fingerprints (id INTEGER PRIMARY KEY, fingerprint TEXT UNIQUE, scanned TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)")
             self.db.commit()
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR loading database - %s" % e, file=sys.stderr)
             sys.exit(1)
        
@@ -187,7 +204,7 @@ class TargetDatabase:
             c.execute("SELECT url FROM targets")
             targets = [row[0] for row in c.fetchall()]
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR getting targets - %s" % e, file=sys.stderr)
             sys.exit(1)
 
@@ -199,7 +216,7 @@ class TargetDatabase:
             c.execute("SELECT url FROM targets LIMIT 1")
             row = c.fetchone()
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR getting next target - %s" % e, file=sys.stderr)
             sys.exit(1)
 
@@ -212,7 +229,7 @@ class TargetDatabase:
             c.execute("SELECT url FROM targets ORDER BY RANDOM() LIMIT 1")
             row = c.fetchone()
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR getting random target - %s" % e, file=sys.stderr)
             sys.exit(1)
 
@@ -222,32 +239,32 @@ class TargetDatabase:
     def add_target(self, url):
         try:
             c = self.db.cursor()
-            c.execute("INSERT INTO targets (url) VALUES (?)", (url,))
+            c.execute("INSERT INTO targets (url) VALUES (%s)" % self.param, (url,))
             self.db.commit()
             c.close()
-        except sqlite3.IntegrityError:
+        except self.module.IntegrityError:
             pass
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
 
     def delete_target(self, url):
         try:
             c = self.db.cursor()
-            c.execute("DELETE FROM targets WHERE url=(?)", (url,))
+            c.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
             self.db.commit()
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR deleting target - %s" % e, file=sys.stderr)
             sys.exit(1)
 
     def get_scanned(self, fingerprint):
         try:
             c = self.db.cursor()
-            c.execute("SELECT scanned FROM fingerprints WHERE fingerprint = (?)", (fingerprint,))
+            c.execute("SELECT scanned FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
             row = c.fetchone()
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR looking up fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
 
@@ -257,12 +274,12 @@ class TargetDatabase:
     def add_fingerprint(self, fingerprint):
         try:
             c = self.db.cursor()
-            c.execute("INSERT INTO fingerprints (fingerprint) VALUES (?)", (fingerprint,))
+            c.execute("INSERT INTO fingerprints (fingerprint) VALUES (%s)" % self.param, (fingerprint,))
             self.db.commit()
             c.close()
-        except sqlite3.IntegrityError:
+        except self.module.IntegrityError:
             pass
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR adding fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
 
@@ -272,7 +289,7 @@ class TargetDatabase:
             c.execute("DELETE FROM fingerprints")
             self.db.commit()
             c.close()
-        except sqlite3.Error as e:
+        except self.module.Error as e:
             print("ERROR flushing fingerprints - %s" % e, file=sys.stderr)
             sys.exit(1)
 
