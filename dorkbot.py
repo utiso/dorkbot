@@ -319,7 +319,7 @@ class Target:
         return fingerprint
 
     def get_timestamp(self):
-        return datetime.datetime.now(UTC()).replace(microsecond=0)
+        return datetime.datetime.now(UTC()).isoformat()
 
     def write_report(self, report_dir, label, vulnerabilities):
         vulns = {}
