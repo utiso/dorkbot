@@ -190,8 +190,8 @@ class TargetDatabase:
 
         try:
             c = self.db.cursor()
-            c.execute("CREATE TABLE IF NOT EXISTS targets (id INTEGER PRIMARY KEY, url TEXT UNIQUE)")
-            c.execute("CREATE TABLE IF NOT EXISTS fingerprints (id INTEGER PRIMARY KEY, fingerprint TEXT UNIQUE, scanned TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)")
+            c.execute("CREATE TABLE IF NOT EXISTS targets (url TEXT UNIQUE)")
+            c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint TEXT UNIQUE, scanned TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)")
             self.db.commit()
             c.close()
         except self.module.Error as e:
