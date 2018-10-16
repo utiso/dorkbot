@@ -94,6 +94,15 @@ Options:
 * cc_py_dir - cc.py base directory containing the file cc.py (default: tools/cc.py/)
 * year - limit results to data sets from given year (17 or 18, defaults to all)
 
+### bing_api ###
+Search for targets via Bing Web Search API.
+
+Requirements: none
+
+Options:
+* **key** - API key
+* **query** - search query
+
 ### stdin ###
 Read targets from standard input, one per line.
 
