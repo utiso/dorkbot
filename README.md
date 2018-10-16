@@ -84,7 +84,7 @@ Options:
 * **query** - search query
 * domain - limit searches to specified domain
 
-### cc.py ###
+### cc_py ###
 Search for targets within commoncrawl.org results via cc.py.
 
 Requirements: [cc.py](https://github.com/si9int/cc.py)
