@@ -1,15 +1,10 @@
 import sys
+from io import open
 try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
 
 def run(args):
-    results = []
-
-    for url in sys.stdin:
-        result = urlparse(url.rstrip('\n').encode("utf-8"))
-        results.append(result)
-
-    return results
-
+    with open(sys.stdin.fileno(), encoding="utf-8") as stdin:
+        return [urlparse(item.strip()).geturl() for item in stdin]

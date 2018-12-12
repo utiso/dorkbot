@@ -39,8 +39,5 @@ def run(args):
             print("Could not execute phantomjs. If not in PATH, then download and unpack as /path/to/dorkbot/tools/phantomjs/ or set phantomjs_dir option to correct directory.", file=sys.stderr)
             sys.exit(1)
 
-    results = []
-    for result in output.split(): results.append(urlparse(result))
-
-    return results
+    return [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]
 

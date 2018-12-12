@@ -52,13 +52,8 @@ def issue_request(data, key):
             if e.code == 429:
                 time.sleep(0.5)
 
-    items = []
-
     if "webPages" not in response or response["webPages"]["totalEstimatedMatches"] < data["offset"]:
-        return items
+        return []
 
-    for item in response["webPages"]["value"]:
-        items.append(urlparse(item["url"].encode("utf-8")))
-
-    return items
+    return [urlparse(item["url"].strip()).geturl() for item in response["webPages"]["value"]]
 

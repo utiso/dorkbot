@@ -89,12 +89,9 @@ def get_args_parser():
     return args, parser
 
 def index(db, indexer, args):
-    results = indexer.run(args)
-
-    for result in results:
-        url = result.geturl().decode("utf-8")
-        print(url)
+    for url in indexer.run(args):
         db.add_target(url)
+        print(url)
 
 def scan(db, scanner, args):
     dorkbot_dir = os.path.dirname(os.path.abspath(__file__))

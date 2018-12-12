@@ -10,8 +10,5 @@ def run(args):
         "http://www.example.com/baz.jsp?size=124"
     ]
 
-    results = []
-    for url in urls: results.append(urlparse(url.encode("utf-8")))
-
-    return results
+    return [urlparse(item.strip()).geturl() for item in urls]
 

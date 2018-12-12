@@ -73,7 +73,7 @@ def issue_request(data):
         if int(request["totalResults"]) == 0:
             return []
         for item in response["items"]:
-            items.append(urlparse(item["link"].encode("utf-8")))
+            items.append(urlparse(item["link"]).geturl())
 
     return items
 
