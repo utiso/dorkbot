@@ -26,10 +26,12 @@ def run(args):
         cc_py_path = default_cc_py_path
     domain = args["domain"]
     year = args.get("year", "")
+    index = args.get("index", "")
 
     with tempfile.NamedTemporaryFile() as temp_file:
         index_cmd = [os.path.join(cc_py_path, "cc.py")]
         if year: index_cmd += ["-y", year]
+        if index: index_cmd += ["-i", index]
         index_cmd += ["-o", temp_file.name]
         index_cmd += [domain]
 
