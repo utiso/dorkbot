@@ -166,11 +166,19 @@ def parse_options(options_string):
 
 class TargetDatabase:
     def __init__(self, database):
+        kwargs = {}
         if database.startswith("postgresql://"):
             module_name = "psycopg2"
+            self.insert = "INSERT"
+        elif database.startswith("phoenixdb://"):
+            module_name = "phoenixdb"
+            database = database[12:]
+            self.insert = "UPSERT"
+            kwargs["autocommit"] = True
         else:
             module_name = "sqlite3"
             database = os.path.expanduser(database)
+            self.insert = "INSERT"
 
         self.module = importlib.import_module(module_name, package=None)
 
@@ -180,15 +188,15 @@ class TargetDatabase:
             self.param = "%s"
 
         try:
-            self.db = self.module.connect(database)
+            self.db = self.module.connect(database, **kwargs)
         except self.module.Error as e:
             print("ERROR loading database - %s" % e, file=sys.stderr)
             sys.exit(1)
 
         try:
             c = self.db.cursor()
-            c.execute("CREATE TABLE IF NOT EXISTS targets (url TEXT UNIQUE)")
-            c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint TEXT UNIQUE, scanned TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)")
+            c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY)")
+            c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
             self.db.commit()
             c.close()
         except self.module.Error as e:
@@ -236,10 +244,12 @@ class TargetDatabase:
     def add_target(self, url):
         try:
             c = self.db.cursor()
-            c.execute("INSERT INTO targets (url) VALUES (%s)" % self.param, (url,))
+            c.execute("%s INTO targets VALUES (%s)" % (self.insert, self.param), (url,))
             self.db.commit()
             c.close()
-        except self.module.IntegrityError:
+        except self.module.IntegrityError as e:
+            if "UNIQUE constraint failed" in e:
+                return
             pass
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
@@ -258,7 +268,7 @@ class TargetDatabase:
     def get_scanned(self, fingerprint):
         try:
             c = self.db.cursor()
-            c.execute("SELECT scanned FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
+            c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
             row = c.fetchone()
             c.close()
         except self.module.Error as e:
@@ -271,11 +281,9 @@ class TargetDatabase:
     def add_fingerprint(self, fingerprint):
         try:
             c = self.db.cursor()
-            c.execute("INSERT INTO fingerprints (fingerprint) VALUES (%s)" % self.param, (fingerprint,))
+            c.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
             self.db.commit()
             c.close()
-        except self.module.IntegrityError:
-            pass
         except self.module.Error as e:
             print("ERROR adding fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
