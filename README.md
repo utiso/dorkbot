@@ -37,8 +37,8 @@ optional arguments:
 
 Requirements
 ============
-Python 2.7.x / 3.x (cross-platform)
-[psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
+* Python 2.7.x / 3.x (cross-platform)
+* (if using PostgreSQL) [psycopg2](http://initd.org/psycopg/)
 
 Tools
 =====
