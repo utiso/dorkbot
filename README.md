@@ -93,6 +93,7 @@ Options:
 * **domain** - pull all results for given domain or subdomain
 * cc_py_dir - cc.py base directory containing the file cc.py (default: tools/cc.py/)
 * year - limit results to data sets from given year (17 or 18, defaults to all)
+* index - query against specific commoncrawl index instead of cc.py's hard-coded list
 
 ### bing_api ###
 Search for targets via Bing Web Search API.
