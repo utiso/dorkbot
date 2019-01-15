@@ -9,6 +9,7 @@ try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
+from contextlib import closing
 import datetime
 import hashlib
 import importlib
@@ -194,21 +195,18 @@ class TargetDatabase:
             sys.exit(1)
 
         try:
-            c = self.db.cursor()
-            c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY)")
-            c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
-            self.db.commit()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY)")
+                c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
         except self.module.Error as e:
             print("ERROR loading database - %s" % e, file=sys.stderr)
             sys.exit(1)
        
     def get_targets(self):
         try:
-            c = self.db.cursor()
-            c.execute("SELECT url FROM targets")
-            targets = [row[0] for row in c.fetchall()]
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("SELECT url FROM targets")
+                targets = [row[0] for row in c.fetchall()]
         except self.module.Error as e:
             print("ERROR getting targets - %s" % e, file=sys.stderr)
             sys.exit(1)
@@ -217,10 +215,9 @@ class TargetDatabase:
 
     def get_next_target(self):
         try:
-            c = self.db.cursor()
-            c.execute("SELECT url FROM targets LIMIT 1")
-            row = c.fetchone()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("SELECT url FROM targets LIMIT 1")
+                row = c.fetchone()
         except self.module.Error as e:
             print("ERROR getting next target - %s" % e, file=sys.stderr)
             sys.exit(1)
@@ -230,10 +227,9 @@ class TargetDatabase:
 
     def get_random_target(self):
         try:
-            c = self.db.cursor()
-            c.execute("SELECT url FROM targets ORDER BY RANDOM() LIMIT 1")
-            row = c.fetchone()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("SELECT url FROM targets ORDER BY RANDOM() LIMIT 1")
+                row = c.fetchone()
         except self.module.Error as e:
             print("ERROR getting random target - %s" % e, file=sys.stderr)
             sys.exit(1)
@@ -243,10 +239,8 @@ class TargetDatabase:
 
     def add_target(self, url):
         try:
-            c = self.db.cursor()
-            c.execute("%s INTO targets VALUES (%s)" % (self.insert, self.param), (url,))
-            self.db.commit()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("%s INTO targets VALUES (%s)" % (self.insert, self.param), (url,))
         except self.module.IntegrityError as e:
             if "UNIQUE constraint failed" in e:
                 return
@@ -257,20 +251,17 @@ class TargetDatabase:
 
     def delete_target(self, url):
         try:
-            c = self.db.cursor()
-            c.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
-            self.db.commit()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
         except self.module.Error as e:
             print("ERROR deleting target - %s" % e, file=sys.stderr)
             sys.exit(1)
 
     def get_scanned(self, fingerprint):
         try:
-            c = self.db.cursor()
-            c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
-            row = c.fetchone()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
+                row = c.fetchone()
         except self.module.Error as e:
             print("ERROR looking up fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
@@ -280,20 +271,16 @@ class TargetDatabase:
 
     def add_fingerprint(self, fingerprint):
         try:
-            c = self.db.cursor()
-            c.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
-            self.db.commit()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
         except self.module.Error as e:
             print("ERROR adding fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
 
     def flush_fingerprints(self):
         try:
-            c = self.db.cursor()
-            c.execute("DELETE FROM fingerprints")
-            self.db.commit()
-            c.close()
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("DELETE FROM fingerprints")
         except self.module.Error as e:
             print("ERROR flushing fingerprints - %s" % e, file=sys.stderr)
             sys.exit(1)
