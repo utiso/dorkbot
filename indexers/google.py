@@ -14,7 +14,7 @@ def run(args):
             print ("ERROR: %s must be set" % r, file=sys.stderr)
             sys.exit(1)
 
-    tools_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "tools")
+    tools_dir = os.path.join(args["dorkbot_dir"], "tools")
     if "phantomjs_dir" in args:
         phantomjs_path = os.path.join(os.path.abspath(args["phantomjs_dir"]), "bin")
     elif os.path.isdir(os.path.join(tools_dir, "phantomjs", "bin")):

@@ -7,8 +7,7 @@ import subprocess
 import io
 
 def run(args, target):
-    dorkbot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
-    default_wapiti_path = os.path.join(dorkbot_dir, "tools", "wapiti", "bin")
+    default_wapiti_path = os.path.join(args["dorkbot_dir"], "tools", "wapiti", "bin")
     if not os.path.isdir(default_wapiti_path): default_wapiti_path = ""
     default_modules = "blindsql,exec,file,permanentxss,sql,xss"
 

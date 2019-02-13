@@ -13,15 +13,19 @@ Targets are stored in a local database file until they are scanned, at which poi
 Usage
 =====
 <pre>
-usage: dorkbot.py [-h] [-c CONFIG] [-d DATABASE] [-f] [-i INDEXER] [-l]
-                  [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS] [-s SCANNER]
+usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [-d DATABASE] [-f]
+                  [-i INDEXER] [-l] [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS]
+                  [-s SCANNER]
 
 optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         Configuration file
+  -r DIRECTORY, --directory DIRECTORY
+                        Dorkbot directory (default location of config, db,
+                        tools, reports)
   -d DATABASE, --database DATABASE
-                        SQLite3 database file or postgresql:// URI
+                        Database file/uri
   -f, --flush           Flush table of fingerprints of previously-scanned
                         items
   -i INDEXER, --indexer INDEXER
@@ -37,8 +41,8 @@ optional arguments:
 
 Requirements
 ============
-* Python 2.7.x / 3.x (cross-platform)
-* (if using PostgreSQL) [psycopg2](http://initd.org/psycopg/)
+Python 2.7.x / 3.x (cross-platform)
+[psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
 
 Tools
 =====
@@ -55,10 +59,42 @@ As needed, dorkbot will search for tools in the following order:
 Quickstart
 ==========
 Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
-Download either Arachni or Wapiti, unpack it into the tools directory, and rename the subdirectory to *arachni* or *wapiti* as appropriate.
+Download either Arachni or Wapiti, unpack it into the tools directory (e.g. *~/.config/dorkbot/tools/*), and rename the subdirectory to *arachni* or *wapiti* as appropriate.
 <pre>$ sudo apt install phantomjs</pre>
 <pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id"</pre>
 <pre>$ ./dorkbot.py -s arachni</pre> OR <pre>$ ./dorkbot.py -s wapiti</pre>
+
+Files
+=====
+A dorkbot directory is used to manage all configuration files, SQLite3 databases, tools, and reports. By default it is located at *~/.config/dorkbot/* (Linux / MacOS) or in the Application Data folder (Windows). It will honor $XDG_CONFIG_HOME / %APPDATA%, or you can force a specific directory with the --directory flag. Default file paths within this directory are as follows:
+* Dorkbot configuration file: *dorkbot.ini*
+* Scanner url blacklist file: *blacklist.txt*
+* SQLite3 database file: *dorkbot.db*
+* External tools directory: *tools/*
+* Scan report output directory: *reports/*
+
+Config File
+===========
+The configuration file (dorkbot.ini) can be used to prepopulate certain command-line flags.
+
+Example dorkbot.ini:
+<pre>
+[dorkbot]
+database=/opt/dorkbot/dorkbot.db
+</pre>
+
+Blacklist File
+==============
+The blacklist file (blacklist.txt) is a list of regular expressions of url patterns that should *not* be scanned. If a target url matches any line in this file it will be skipped and removed from the database. Note: do not leave any empty lines in the file.
+
+Example blacklist.txt:
+<pre>
+^[^\?]+$
+.*login.*
+^https?://[^.]*.example.com/.*
+</pre>
+
+The first line will remove any target that doesn't contain a question mark, in other words any url that doesn't contain any GET parameters to test. The second attempts to avoid login functions, and the third blacklists all target urls on example.com.
 
 Indexer Modules
 ===============
@@ -93,7 +129,6 @@ Options:
 * **domain** - pull all results for given domain or subdomain
 * cc_py_dir - cc.py base directory containing the file cc.py (default: tools/cc.py/)
 * year - limit results to data sets from given year (17 or 18, defaults to all)
-* index - query against specific commoncrawl index instead of cc.py's hard-coded list
 
 ### bing_api ###
 Search for targets via Bing Web Search API.

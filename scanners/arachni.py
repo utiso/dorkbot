@@ -7,8 +7,7 @@ import subprocess
 import io
 
 def run(args, target):
-    dorkbot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
-    default_arachni_path = os.path.join(dorkbot_dir, "tools", "arachni", "bin")
+    default_arachni_path = os.path.join(args["dorkbot_dir"], "tools", "arachni", "bin")
     if not os.path.isdir(default_arachni_path): default_arachni_path = ""
     default_checks = "active/*"
 
