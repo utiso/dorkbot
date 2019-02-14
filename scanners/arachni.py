@@ -42,8 +42,8 @@ def run(args, target):
         subprocess.check_call(scan_cmd, cwd=arachni_path)
         subprocess.check_call(report_cmd, cwd=arachni_path)
     except OSError as e:
-        if "No such file or directory" in e:
-            print("Could not find arachni. If not in PATH, then download and unpack as /path/to/dorkbot/tools/arachni/ or set arachni_dir option to correct directory.", file=sys.stderr)
+        if "No such file or directory" in str(e):
+            print("Could not find arachni. If not in PATH, then download the arachni project and unpack it in /path/to/dorkbot_directory/tools/ as \"arachni\" (e.g. ~/.config/dorkbot/tools/arachni/) such that it contains an executable bin/arachni, or set arachni_dir option to correct directory.", file=sys.stderr)
             sys.exit(1)
     except subprocess.CalledProcessError:
         return False

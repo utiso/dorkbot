@@ -30,8 +30,8 @@ def run(args, target):
     try:
         subprocess.check_call(scan_cmd, cwd=wapiti_path)
     except OSError as e:
-        if "No such file or directory" in e:
-            print("Could not find wapiti. If not in PATH, then download and unpack as /path/to/dorkbot/tools/wapiti/ or set wapiti_dir option to correct directory.", file=sys.stderr)
+        if "No such file or directory" in str(e):
+            print("Could not find wapiti. If not in PATH, then download the wapiti project and unpack it in /path/to/dorkbot_directory/tools/ as \"wapiti\" (e.g. ~/.config/dorkbot/tools/wapiti/) such that it contains an executable bin/wapiti, or set wapiti_dir option to correct directory.", file=sys.stderr)
             sys.exit(1)
     except subprocess.CalledProcessError:
         return False

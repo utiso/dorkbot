@@ -38,8 +38,8 @@ def run(args):
         try:
             subprocess.check_call(index_cmd)
         except OSError as e:
-            if "No such file or directory" in e:
-                print("Could not execute cc.py. If not in PATH, then download and unpack as /path/to/dorkbot/tools/cc.py/ or set cc_py_dir option to correct directory.", file=sys.stderr)
+            if "No such file or directory" in str(e):
+                print("Could not execute cc.py. If not in PATH, then download the cc.py project and unpack it in /path/to/dorkbot_directory/tools/ as \"cc.py\" (e.g. ~/.config/dorkbot/tools/cc.py/) such that it contains an executable cc.py, or set cc_py_dir option to correct directory.", file=sys.stderr)
                 sys.exit(1)
             elif "Permission denied" in e:
                 print("Could not execute cc.py. Make sure it is executable, e.g.: chmod +x tools/cc.py/cc.py", file=sys.stderr)
