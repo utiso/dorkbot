@@ -16,8 +16,7 @@ def run(args):
             print ("ERROR: %s must be set" % r, file=sys.stderr)
             sys.exit(1)
 
-    dorkbot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
-    default_cc_py_path = os.path.join(dorkbot_dir, "tools", "cc.py")
+    default_cc_py_path = os.path.join(args["dorkbot_dir"], "tools", "cc.py")
     if not os.path.isdir(default_cc_py_path): default_cc_py_path = ""
 
     if "cc_py_dir" in args:
