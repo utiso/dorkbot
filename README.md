@@ -151,7 +151,7 @@ Scanner Modules
 ### (general options) ###
 These options are applicable regardless of module chosen
 
-* blacklist - file containing (regex) patterns to blacklist from scans (default: config/blacklist.txt)
+* blacklist - file containing (regex) patterns to blacklist from scans (default: blacklist.txt)
 * report_dir - directory to save vulnerability report (default: reports/)
 * log - log file to append scan activity (default: prints to stdout)
 * label - friendly name field to include in vulnerability report
