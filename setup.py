@@ -18,6 +18,9 @@ setuptools.setup(
         "License :: Free for non-commercial use",
         "Operating System :: OS Independent",
     ],
+    install_requires = [
+        "psycopg2",
+    ],
     entry_points = {
         "console_scripts": ["dorkbot=dorkbot.dorkbot:main"],
     },
