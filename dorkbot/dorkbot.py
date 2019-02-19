@@ -42,14 +42,15 @@ def main():
         parser.print_usage()
 
 def load_module(category, name):
-    module = "%s.%s" % (category, name)
+    module_name = "%s.%s" % (category, name)
+    if __package__: module_name = "." + module_name
     try:
-        importlib.import_module(module)
+        module = importlib.import_module(module_name, package=__package__)
     except ImportError:
         print("ERROR: module not found", file=sys.stderr)
         sys.exit(1)
 
-    return sys.modules[module]
+    return module
 
 def get_args_parser():
     config_dir = os.path.abspath(os.path.expanduser(
