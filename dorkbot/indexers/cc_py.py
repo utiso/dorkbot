@@ -3,6 +3,7 @@ import sys
 import os
 import tempfile
 import subprocess
+import re
 from io import open
 try:
     from urllib.parse import urlparse
@@ -46,5 +47,14 @@ def run(args):
         except subprocess.CalledProcessError:
             return False
 
-        return [urlparse(item.decode("utf-8").strip()).geturl() for item in temp_file]
+        pattern = "http[s]?://" + domain + "/"
+        domain_url = re.compile(pattern)
+
+        results = []
+        for item in temp_file:
+            url = urlparse(item.decode("utf-8").strip()).geturl()
+            if domain_url.match(url):
+                results.append(url)
+
+        return results
 
