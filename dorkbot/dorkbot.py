@@ -207,7 +207,7 @@ class TargetDatabase:
             database = os.path.expanduser(database)
             database_dir = os.path.dirname(database)
             self.insert = "INSERT"
-            if not os.path.exists(database_dir):
+            if database_dir and not os.path.exists(database_dir):
                 try:
                     os.makedirs(database_dir)
                 except OSError as e:
