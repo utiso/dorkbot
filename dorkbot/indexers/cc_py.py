@@ -47,7 +47,7 @@ def run(args):
         except subprocess.CalledProcessError:
             return False
 
-        pattern = "http[s]?://" + domain + "/"
+        pattern = "http[s]?://([^/]*\.)*" + domain + "/"
         domain_url = re.compile(pattern)
 
         results = []
