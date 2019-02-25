@@ -5,6 +5,7 @@ import json
 import tempfile
 import subprocess
 import io
+import platform
 
 def run(args, target):
     default_arachni_path = os.path.join(args["dorkbot_dir"], "tools", "arachni", "bin")
@@ -20,6 +21,8 @@ def run(args, target):
     report = os.path.join(tempfile.gettempdir(), target.hash + ".afr")
 
     scan_cmd = [os.path.join(arachni_path, "arachni")]
+    if platform.system() is "Windows":
+        scan_cmd[0] = scan_cmd[0] + ".bat"
     scan_cmd += ["--checks", checks]
     scan_cmd += ["--report-save-path", report]
     scan_cmd += ["--output-only-positives"]
@@ -35,6 +38,8 @@ def run(args, target):
     scan_cmd += [target.url]
 
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]
+    if platform.system() is "Windows":
+        report_cmd[0] = report_cmd[0] + ".bat"
     report_cmd += ["--reporter", "json:outfile="+report+".json"]
     report_cmd += [report]
 
