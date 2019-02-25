@@ -19,22 +19,27 @@ def run(args, target):
 
     report = os.path.join(tempfile.gettempdir(), target.hash + ".json")
 
-    scan_cmd = [os.path.join(wapiti_path, "wapiti")]
-    scan_cmd += ["--url", target.url]
-    scan_cmd += ["--module", modules]
-    scan_cmd += ["--scope", "page"]
-    scan_cmd += ["--flush-session"]
-    scan_cmd += ["--format", "json"]
-    scan_cmd += ["--output", report]
+    args = [os.path.join(wapiti_path, "wapiti")]
+    args += ["--url", target.url]
+    args += ["--module", modules]
+    args += ["--scope", "page"]
+    args += ["--flush-session"]
+    args += ["--format", "json"]
+    args += ["--output", report]
 
-    try:
-        subprocess.check_call(scan_cmd, cwd=wapiti_path)
-    except OSError as e:
-        if "No such file or directory" in str(e):
-            print("Could not find wapiti. If not in PATH, then download the wapiti project and unpack it in /path/to/dorkbot_directory/tools/ as \"wapiti\" (e.g. ~/.config/dorkbot/tools/wapiti/) such that it contains an executable bin/wapiti, or set wapiti_dir option to correct directory.", file=sys.stderr)
-            sys.exit(1)
-    except subprocess.CalledProcessError:
-        return False
+    for cmd in ["python3", "python"]:
+        try:
+            subprocess.check_call([cmd] + args)
+        except OSError as e:
+            if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
+                if cmd is "python3":
+                    continue
+                else:
+                    print("Could not run script with \"python3\" or \"python\".", file=sys.stderr)
+                    sys.exit(1)
+        except subprocess.CalledProcessError:
+            print("Error executing wapiti.", file=sys.stderr)
+            return False
 
     with io.open(report, encoding="utf-8") as data_file:
         contents = data_file.read()
