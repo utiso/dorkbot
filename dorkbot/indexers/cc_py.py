@@ -39,11 +39,15 @@ def run(args):
     for cmd in ["python3", "python"]:
         try:
             subprocess.check_call([cmd] + args)
-        except Exception as e:
+        except OSError as e:
             if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
-                continue
-            else:
-                print("Could not find or execute cc.py. Make sure to download the cc.py project and unpack it in /path/to/dorkbot_directory/tools/ as \"cc.py\" (e.g. ~/.config/dorkbot/tools/cc.py/) such that it contains the file cc.py, or set cc_py_dir option to correct directory.", file=sys.stderr)
+                if cmd is "python3":
+                    continue
+                else:
+                    print("Could not run script with \"python3\" or \"python\".", file=sys.stderr)
+                    sys.exit(1)
+        except subprocess.CalledProcessError:
+            print("Could not execute cc.py. Make sure to download the cc.py project and unpack it in /path/to/dorkbot_directory/tools/ as \"cc.py\" (e.g. ~/.config/dorkbot/tools/cc.py/) such that it contains the file cc.py, or set cc_py_dir option to correct directory.", file=sys.stderr)
             sys.exit(1)
 
         pattern = "http[s]?://([^/]*\.)*" + domain + "/"
