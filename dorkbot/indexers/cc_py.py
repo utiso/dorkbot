@@ -28,33 +28,35 @@ def run(args):
     year = args.get("year", "")
     index = args.get("index", "")
 
-    with tempfile.NamedTemporaryFile() as temp_file:
-        index_cmd = [os.path.join(cc_py_path, "cc.py")]
-        if year: index_cmd += ["-y", year]
-        if index: index_cmd += ["-i", index]
-        index_cmd += ["-o", temp_file.name]
-        index_cmd += [domain]
+    fd, temp_file_name = tempfile.mkstemp()
 
+    args = [os.path.join(cc_py_path, "cc.py")]
+    if year: args += ["-y", year]
+    if index: args += ["-i", index]
+    args += ["-o", temp_file_name]
+    args += [domain]
+
+    for cmd in ["python3", "python"]:
         try:
-            subprocess.check_call(index_cmd)
-        except OSError as e:
-            if "No such file or directory" in str(e):
-                print("Could not execute cc.py. If not in PATH, then download the cc.py project and unpack it in /path/to/dorkbot_directory/tools/ as \"cc.py\" (e.g. ~/.config/dorkbot/tools/cc.py/) such that it contains an executable cc.py, or set cc_py_dir option to correct directory.", file=sys.stderr)
-                sys.exit(1)
-            elif "Permission denied" in str(e):
-                print("Could not execute cc.py. Make sure it is executable, e.g.: chmod +x tools/cc.py/cc.py", file=sys.stderr)
-                sys.exit(1)
-        except subprocess.CalledProcessError:
-            return False
+            ret = subprocess.check_call([cmd] + args)
+        except Exception as e:
+            if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
+                continue
+            else:
+                print("Could not find or execute cc.py. Make sure to download the cc.py project and unpack it in /path/to/dorkbot_directory/tools/ as \"cc.py\" (e.g. ~/.config/dorkbot/tools/cc.py/) such that it contains the file cc.py, or set cc_py_dir option to correct directory.", file=sys.stderr)
+            sys.exit(1)
 
         pattern = "http[s]?://([^/]*\.)*" + domain + "/"
         domain_url = re.compile(pattern)
 
-        results = []
-        for item in temp_file:
-            url = urlparse(item.decode("utf-8").strip()).geturl()
-            if domain_url.match(url):
-                results.append(url)
+        with open(temp_file_name, encoding="utf-8") as temp_file:
+            results = []
+            for item in temp_file:
+                url = urlparse(item.strip()).geturl()
+                if domain_url.match(url):
+                    results.append(url)
+        os.close(fd)
+        os.remove(temp_file_name)
 
         return results
 
