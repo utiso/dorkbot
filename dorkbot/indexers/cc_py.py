@@ -38,7 +38,7 @@ def run(args):
 
     for cmd in ["python3", "python"]:
         try:
-            ret = subprocess.check_call([cmd] + args)
+            subprocess.check_call([cmd] + args)
         except Exception as e:
             if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
                 continue
