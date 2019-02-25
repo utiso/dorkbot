@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dorkbot",
-    version="0.0.2",
+    version="0.0.3",
     author="jgor",
     author_email="jgor@utexas.edu",
     description="Command-line tool to scan search results for vulnerabilities",
