@@ -191,4 +191,5 @@ cd dorkbot
 docker build --tag dorkbot .
 docker run -it dorkbot /bin/bash
 ```
-Run indexers & scanners as normal.
+Run indexers as normal.
+Run arachni scanner with ```-p 'arachni_dir=/opt/arachni'``` set.
