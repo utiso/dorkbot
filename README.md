@@ -179,3 +179,16 @@ Options:
 * wapiti_dir - wapiti base directory containing bin/wapiti (default: tools/wapiti/)
 * modules - space-delimited list of modules to perform (default: "blindsql exec file permanentxss sql xss")
 
+### Docker ###
+Build a docker image to perform scans from.
+
+Requirements: [docker](https://www.docker.com/)
+
+Build the image:
+```
+git clone https://github.com/utiso/dorkbot
+cd dorkbot
+docker build --tag dorkbot .
+docker run -it dorkbot /bin/bash
+```
+Run indexers & scanners as normal.
