@@ -1,3 +1,5 @@
+![Image of Dorkbot](https://security.utexas.edu/sites/default/files/Artboard%203_0.png)
+
 dorkbot
 =======
 
