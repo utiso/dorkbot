@@ -107,8 +107,9 @@ def get_args_parser():
     return args, parser
 
 def index(db, indexer, args):
-    for url in indexer.run(args):
-        db.add_target(url)
+    urls = indexer.run(args)
+    db.add_targets(urls)
+    for url in urls:
         print(url)
 
 def scan(db, scanner, args):
@@ -275,6 +276,18 @@ class TargetDatabase:
         try:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("%s INTO targets VALUES (%s)" % (self.insert, self.param), (url,))
+        except self.module.IntegrityError as e:
+            if "UNIQUE constraint failed" in str(e):
+                return
+            pass
+        except self.module.Error as e:
+            print("ERROR adding target - %s" % e, file=sys.stderr)
+            sys.exit(1)
+
+    def add_targets(self, urls):
+        try:
+            with self.db, closing(self.db.cursor()) as c:
+                c.executemany("%s INTO targets VALUES (%s)" % (self.insert, self.param), [(url,) for url in urls])
         except self.module.IntegrityError as e:
             if "UNIQUE constraint failed" in str(e):
                 return
