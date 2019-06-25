@@ -275,11 +275,7 @@ class TargetDatabase:
     def add_target(self, url):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.execute("%s INTO targets VALUES (%s)" % (self.insert, self.param), (url,))
-        except self.module.IntegrityError as e:
-            if "UNIQUE constraint failed" in str(e):
-                return
-            pass
+                c.execute("%s INTO targets VALUES (%s) ON CONFLICT DO NOTHING" % (self.insert, self.param), (url,))
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
@@ -287,11 +283,7 @@ class TargetDatabase:
     def add_targets(self, urls):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.executemany("%s INTO targets VALUES (%s)" % (self.insert, self.param), [(url,) for url in urls])
-        except self.module.IntegrityError as e:
-            if "UNIQUE constraint failed" in str(e):
-                return
-            pass
+                c.executemany("%s INTO targets VALUES (%s) ON CONFLICT DO NOTHING" % (self.insert, self.param), [(url,) for url in urls])
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
