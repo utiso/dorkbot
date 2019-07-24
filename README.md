@@ -131,6 +131,17 @@ Options:
 * index - search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
 * filter - query filter to apply to the search
 
+### wayback ###
+Search for targets within archive.org results.
+
+Requirements: none
+
+Options:
+* **domain** - pull all results for given domain or subdomain
+* filter - query filter to apply to the search
+* from - beginning timestamp
+* to - end timestamp
+
 ### bing_api ###
 Search for targets via Bing Web Search API.
 
