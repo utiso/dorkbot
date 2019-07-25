@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sys
+import io
 
 def main():
     args, parser = get_args_parser()
@@ -130,7 +131,7 @@ def scan(db, scanner, args):
 
     count = int(args.get("count", "-1"))
     label = args.get("label", "")
-    if "log" in args: log = open(os.path.abspath(args["log"]), "a", 1)
+    if "log" in args: log = io.open(os.path.abspath(args["log"]), "a", 1, encoding="utf-8")
     else: log = sys.stdout
 
     scanned = 0
@@ -142,23 +143,23 @@ def scan(db, scanner, args):
         target = Target(url)
 
         if db.get_scanned(target.fingerprint):
-            print(target.starttime, "Skipping (matches fingerprint of previous scan): %s" % target.url, file=log)
+            print("%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target.url):
-            print(target.starttime, "Skipping (matches blacklist pattern): %s" % target.url, file=log)
+            print("%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
 
-        print(target.starttime, "Scanning: %s" % target.url, file=log)
+        print("%s Scanning: %s" % (target.starttime, target.url), file=log)
         db.delete_target(target.url)
         db.add_fingerprint(target.fingerprint)
         results = scanner.run(args, target)
         scanned += 1
 
         if results == False:
-            print(target.starttime, "ERROR scanning %s" % target.url, file=log)
+            print("%s ERROR scanning %s" % (target.starttime, target.url), file=log)
             continue
 
         target.endtime = target.get_timestamp()
