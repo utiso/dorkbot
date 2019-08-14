@@ -9,6 +9,7 @@ except ImportError:
     from urlparse import urlparse
 import json
 import sys
+import re
 
 def run(args):
     required = ["domain"]
@@ -21,14 +22,7 @@ def run(args):
     index = args.get("index", get_latest_index())
     url_filter = args.get("filter", "")
 
-    data = {}
-    data["url"] = "*.%s" % domain
-    data["fl"] = "url"
-    data["output"] = "json"
-    if url_filter:
-        data["filter"] = url_filter
- 
-    results = get_results(index, data)
+    results = get_results(domain, index, url_filter)
     return results
 
 def get_latest_index():
@@ -60,7 +54,14 @@ def get_num_pages(index, data):
     num_pages = response["pages"]
     return num_pages
 
-def get_results(index, data):
+def get_results(domain, index, url_filter):
+    data = {}
+    data["url"] = "*.%s" % domain
+    data["fl"] = "url"
+    data["output"] = "json"
+    if url_filter:
+        data["filter"] = url_filter
+
     num_pages = get_num_pages(index, data)
     del data["showNumPages"]
 
@@ -76,10 +77,14 @@ def get_results(index, data):
             print("error: %s" % str(e), file=sys.stderr)
             sys.exit(1)
 
+        pattern = "http[s]?://([^/]*\.)*" + domain + "/"
+        domain_url = re.compile(pattern)
+
         for item in response:
             item_json = json.loads(item)
             url = urlparse(item_json["url"].strip()).geturl()
-            results.append(url)
+            if domain_url.match(url):
+                results.append(url)
 
     return results
 
