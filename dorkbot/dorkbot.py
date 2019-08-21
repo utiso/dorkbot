@@ -199,16 +199,19 @@ class TargetDatabase:
         if database.startswith("postgresql://"):
             module_name = "psycopg2"
             self.insert = "INSERT"
+            self.conflict = "ON CONFLICT DO NOTHING"
         elif database.startswith("phoenixdb://"):
             module_name = "phoenixdb"
             database = database[12:]
             self.insert = "UPSERT"
+            self.conflict = ""
             kwargs["autocommit"] = True
         else:
             module_name = "sqlite3"
             database = os.path.expanduser(database)
             database_dir = os.path.dirname(database)
-            self.insert = "INSERT"
+            self.insert = "INSERT OR REPLACE"
+            self.conflict = ""
             if database_dir and not os.path.exists(database_dir):
                 try:
                     os.makedirs(database_dir)
@@ -276,7 +279,7 @@ class TargetDatabase:
     def add_target(self, url):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.execute("%s INTO targets VALUES (%s) ON CONFLICT DO NOTHING" % (self.insert, self.param), (url,))
+                c.execute("%s INTO targets VALUES (%s) %s" % (self.insert, self.param, self.conflict), (url,))
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
@@ -284,7 +287,7 @@ class TargetDatabase:
     def add_targets(self, urls):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.executemany("%s INTO targets VALUES (%s) ON CONFLICT DO NOTHING" % (self.insert, self.param), [(url,) for url in urls])
+                c.executemany("%s INTO targets VALUES (%s) %s" % (self.insert, self.param, self.conflict), [(url,) for url in urls])
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
