@@ -2,10 +2,12 @@ import setuptools
 import os
 
 pkg_vars = {}
-with open(os.path.join("dorkbot", "_version.py")) as fh:
+pkg_dir = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(pkg_dir, "dorkbot", "_version.py"), "r") as fh:
     exec(fh.read(), pkg_vars)
 
-with open("README.md", "r") as fh:
+with open(os.path.join(pkg_dir, "README.md"), "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
