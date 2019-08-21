@@ -1,11 +1,16 @@
 import setuptools
+import os
+
+pkg_vars = {}
+with open(os.path.join("dorkbot", "_version.py")) as fh:
+    exec(fh.read(), pkg_vars)
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="dorkbot",
-    version="0.0.5",
+    version=pkg_vars['__version__'],
     author="jgor",
     author_email="jgor@utexas.edu",
     description="Command-line tool to scan search results for vulnerabilities",

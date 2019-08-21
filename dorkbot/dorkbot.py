@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 from __future__ import print_function
+if __package__:
+    from ._version import __version__
+else:
+    from _version import __version__
 import argparse
 try:
     import ConfigParser as configparser
@@ -102,6 +106,8 @@ def get_args_parser():
         help="Scanner-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-s", "--scanner", \
         help="Scanner module to use")
+    parser.add_argument("-V", "--version", action="version", \
+        version="%(prog)s " + __version__, help="Print version")
 
     args = parser.parse_args(other_args)
     args.directory = initial_args.directory
