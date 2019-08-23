@@ -31,6 +31,8 @@ def main():
         if args.flush: db.flush_fingerprints()
         if args.list:
             for target in db.get_targets(): print(target)
+        db.close()
+
         if args.indexer:
             indexer_module = load_module("indexers", args.indexer)
             indexer_args = parse_options(args.indexer_options)
@@ -114,7 +116,9 @@ def get_args_parser():
 
 def index(db, indexer, args):
     urls = indexer.run(args)
+    db.connect()
     db.add_targets(urls)
+    db.close()
     for url in urls:
         print(url)
 
@@ -141,6 +145,7 @@ def scan(db, scanner, args):
 
     scanned = 0
     while scanned < count or count == -1:
+        db.connect()
         if "random" in args: url = db.get_random_target()
         else: url = db.get_next_target()
         if not url: break
@@ -160,6 +165,7 @@ def scan(db, scanner, args):
         print("%s Scanning: %s" % (target.starttime, target.url), file=log)
         db.delete_target(target.url)
         db.add_fingerprint(target.fingerprint)
+        db.close()
         results = scanner.run(args, target)
         scanned += 1
 
@@ -233,139 +239,111 @@ class TargetDatabase:
         else:
             self.param = "%s"
 
-        db = self.connect()
+        self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY)")
                 c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
         except self.module.Error as e:
             print("ERROR loading database - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
     def connect(self):
         try:
-            db = self.module.connect(self.database, **self.connect_kwargs)
+            self.db = self.module.connect(self.database, **self.connect_kwargs)
         except self.module.Error as e:
             print("ERROR loading database - %s" % e, file=sys.stderr)
             sys.exit(1)
 
-        return db
+    def close(self):
+        self.db.close()
        
     def get_targets(self):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("SELECT url FROM targets")
                 targets = [row[0] for row in c.fetchall()]
         except self.module.Error as e:
             print("ERROR getting targets - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
         return targets
 
     def get_next_target(self):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("SELECT url FROM targets LIMIT 1")
                 row = c.fetchone()
         except self.module.Error as e:
             print("ERROR getting next target - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
         if row: return row[0]
         else: return None
 
     def get_random_target(self):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("SELECT url FROM targets ORDER BY RANDOM() LIMIT 1")
                 row = c.fetchone()
         except self.module.Error as e:
             print("ERROR getting random target - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
         if row: return row[0]
         else: return None
 
     def add_target(self, url):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("%s INTO targets VALUES (%s) %s" % (self.insert, self.param, self.conflict), (url,))
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
     def add_targets(self, urls):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.executemany("%s INTO targets VALUES (%s) %s" % (self.insert, self.param, self.conflict), [(url,) for url in urls])
         except self.module.Error as e:
             print("ERROR adding target - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
     def delete_target(self, url):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
         except self.module.Error as e:
             print("ERROR deleting target - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
     def get_scanned(self, fingerprint):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
                 row = c.fetchone()
         except self.module.Error as e:
             print("ERROR looking up fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
         if row: return row[0]
         else: return False
 
     def add_fingerprint(self, fingerprint):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
         except self.module.Error as e:
             print("ERROR adding fingerprint - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
     def flush_fingerprints(self):
-        db = self.connect()
         try:
-            with db, closing(db.cursor()) as c:
+            with self.db, closing(self.db.cursor()) as c:
                 c.execute("DELETE FROM fingerprints")
         except self.module.Error as e:
             print("ERROR flushing fingerprints - %s" % e, file=sys.stderr)
             sys.exit(1)
-        finally:
-            db.close()
 
 class Target:
     def __init__(self, url):
