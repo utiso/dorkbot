@@ -35,6 +35,8 @@ def run(args, target):
         scan_cmd += ["--browser-cluster-pool-size", "1"]
     if "throttle" in args:
         scan_cmd += ["--plugin", "rate_limiter:requests_per_second=%d" % int(args["throttle"])]
+    if "args" in args:
+        scan_cmd += args["args"].split()
     scan_cmd += [target.url]
 
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]
