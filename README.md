@@ -181,6 +181,7 @@ Options:
 * timeout - maximum scan time in hours:minutes:seconds (default: disabled)
 * single-thread - set browser pool and max concurrency to one each
 * throttle - maximum requests per second (default: disabled)
+* args - space-delimited list of additional arguments, e.g. "--http-user-agent=Dorkbot/1.0"
 
 ### wapiti ###
 Scan targets with Wapiti command-line scanner.
