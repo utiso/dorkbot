@@ -151,12 +151,12 @@ def prune(db, args):
 
         fingerprint = get_fingerprint(url)
         if fingerprint in fingerprints or db.get_scanned(fingerprint):
-            print("%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
+            print(u"%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target.url):
-            print("%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
+            print(u"%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
 
@@ -198,16 +198,16 @@ def scan(db, scanner, args):
 
         fingerprint = get_fingerprint(url)
         if db.get_scanned(fingerprint):
-            print("%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
+            print(u"%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target.url):
-            print("%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
+            print(u"%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
 
-        print("%s Scanning: %s" % (target.starttime, target.url), file=log)
+        print(u"%s Scanning: %s" % (target.starttime, target.url), file=log)
         db.delete_target(target.url)
         db.add_fingerprint(fingerprint)
         db.close()
@@ -215,7 +215,7 @@ def scan(db, scanner, args):
         scanned += 1
 
         if results == False:
-            print("%s ERROR scanning %s" % (target.starttime, target.url), file=log)
+            print(u"%s ERROR scanning %s" % (target.starttime, target.url), file=log)
             continue
 
         target.endtime = target.get_timestamp()
