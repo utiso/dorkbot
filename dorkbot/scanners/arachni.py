@@ -18,7 +18,7 @@ def run(args, target):
         arachni_path = default_arachni_path
     checks = args.get("checks", default_checks).replace(" ", ",").replace("\"","")
 
-    report = os.path.join(tempfile.gettempdir(), target.hash + ".afr")
+    report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".afr")
 
     scan_cmd = [os.path.join(arachni_path, "arachni")]
     if platform.system() is "Windows":

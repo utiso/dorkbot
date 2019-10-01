@@ -22,11 +22,12 @@ import os
 import re
 import sys
 import io
+import random
 
 def main():
     args, parser = get_args_parser()
 
-    if args.flush or args.list or args.indexer or args.scanner:
+    if args.flush or args.list or args.indexer or args.prune or args.scanner:
         db = TargetDatabase(args.database)
         if args.flush: db.flush_fingerprints()
         if args.list:
@@ -38,6 +39,10 @@ def main():
             indexer_args = parse_options(args.indexer_options)
             indexer_args["dorkbot_dir"] = args.directory
             index(db, indexer_module, indexer_args)
+        if args.prune:
+            prune_args = parse_options(args.scanner_options)
+            prune_args["dorkbot_dir"] = args.directory
+            prune(db, prune_args)
         if args.scanner:
             scanner_module = load_module("scanners", args.scanner)
             scanner_args = parse_options(args.scanner_options)
@@ -107,6 +112,8 @@ def get_args_parser():
         help="Scanner-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-s", "--scanner", \
         help="Scanner module to use")
+    parser.add_argument("-u", "--prune", action="store_true", \
+        help="Delete unscannable targets (blacklist / fingerprinting)")
     parser.add_argument("-V", "--version", action="version", \
         version="%(prog)s " + __version__, help="Print version")
 
@@ -121,6 +128,43 @@ def index(db, indexer, args):
     db.close()
     for url in urls:
         print(url)
+
+def prune(db, args):
+    defaults = {
+        "blacklist": os.path.join(args["dorkbot_dir"], "blacklist.txt")
+    }
+
+    blacklist = get_blacklist(args.get("blacklist", defaults["blacklist"]))
+    fingerprints = set()
+
+    if "log" in args: log = io.open(os.path.abspath(args["log"]), "a", 1, encoding="utf-8")
+    else: log = sys.stdout
+
+    db.connect()
+    urls = db.get_targets()
+
+    if "random" in args:
+        random.shuffle(urls)
+
+    for url in urls:
+        target = Target(url)
+
+        fingerprint = get_fingerprint(url)
+        if fingerprint in fingerprints or db.get_scanned(fingerprint):
+            print("%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
+            db.delete_target(target.url)
+            continue
+
+        if blacklist.match(target.url):
+            print("%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
+            db.delete_target(target.url)
+            continue
+
+        fingerprints.add(fingerprint)
+
+    db.close()
+
+    if "log" in args: log.close()
 
 def scan(db, scanner, args):
     defaults = {
@@ -152,7 +196,8 @@ def scan(db, scanner, args):
 
         target = Target(url)
 
-        if db.get_scanned(target.fingerprint):
+        fingerprint = get_fingerprint(url)
+        if db.get_scanned(fingerprint):
             print("%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
             continue
@@ -164,7 +209,7 @@ def scan(db, scanner, args):
 
         print("%s Scanning: %s" % (target.starttime, target.url), file=log)
         db.delete_target(target.url)
-        db.add_fingerprint(target.fingerprint)
+        db.add_fingerprint(fingerprint)
         db.close()
         results = scanner.run(args, target)
         scanned += 1
@@ -190,6 +235,18 @@ def get_blacklist(blacklist_file):
         sys.exit(1)
 
     return blacklist
+
+def get_fingerprint(url):
+    url_parts = urlparse(url)
+    netloc = url_parts.netloc
+    depth = str(url_parts.path.count("/"))
+    params = []
+    for param in url_parts.query.split("&"):
+        split = param.split("=", 1)
+        if len(split) == 2 and split[1]:
+            params.append(split[0])
+    fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
+    return fingerprint
 
 def parse_options(options_string):
     options = dict()
@@ -348,27 +405,13 @@ class TargetDatabase:
 class Target:
     def __init__(self, url):
         self.url = url
-        self.hash = self.generate_hash()
-        self.fingerprint = self.generate_fingerprint()
-        self.starttime = self.get_timestamp()
+        self.hash = ""
+        self.starttime = datetime.datetime.now(UTC()).isoformat()
 
-    def generate_hash(self):
-        return hashlib.md5(self.url.encode("utf-8")).hexdigest()
-
-    def generate_fingerprint(self):
-        url_parts = urlparse(self.url)
-        netloc = url_parts.netloc
-        depth = str(url_parts.path.count("/"))
-        params = []
-        for param in url_parts.query.split("&"):
-            split = param.split("=", 1)
-            if len(split) == 2 and split[1]:
-                params.append(split[0])
-        fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
-        return fingerprint
-
-    def get_timestamp(self):
-        return datetime.datetime.now(UTC()).isoformat()
+    def get_hash(self):
+        if not self.hash:
+            self.hash = hashlib.md5(self.url.encode("utf-8")).hexdigest()
+        return self.hash
 
     def write_report(self, report_dir, label, vulnerabilities):
         vulns = {}
@@ -378,7 +421,7 @@ class Target:
         vulns["url"] = self.url
         vulns["label"] = label
 
-        filename = os.path.join(report_dir, self.hash + ".json")
+        filename = os.path.join(report_dir, self.get_hash() + ".json")
 
         with open(filename, "w") as outfile:
             json.dump(vulns, outfile, indent=4, sort_keys=True)

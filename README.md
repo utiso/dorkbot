@@ -192,3 +192,11 @@ Options:
 * wapiti_dir - wapiti base directory containing bin/wapiti (default: tools/wapiti/)
 * modules - space-delimited list of modules to perform (default: "blindsql exec file permanentxss sql xss")
 
+Prune
+=====
+The prune flag iterates through all targets, computes the fingerprints in memory, and deletes any target matching a blacklist item or fingerprint. The result is a database of only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
+
+* blacklist - file containing (regex) patterns to blacklist from scans (default: blacklist.txt)
+* log - log file to append prune activity (default: prints to stdout)
+* random - evaluate urls in random order when computing fingerprints
+

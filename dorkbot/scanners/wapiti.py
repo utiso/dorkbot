@@ -17,7 +17,7 @@ def run(args, target):
         wapiti_path = default_wapiti_path
     modules = args.get("modules", default_modules).replace(" ", ",").replace("\"","")
 
-    report = os.path.join(tempfile.gettempdir(), target.hash + ".json")
+    report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".json")
 
     args = [os.path.join(wapiti_path, "wapiti")]
     args += ["--url", target.url]
