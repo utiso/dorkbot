@@ -149,7 +149,7 @@ def prune(db, args):
     for url in urls:
         target = Target(url)
 
-        fingerprint = get_fingerprint(url)
+        fingerprint = generate_fingerprint(url)
         if fingerprint in fingerprints or db.get_scanned(fingerprint):
             print(u"%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
@@ -196,7 +196,7 @@ def scan(db, scanner, args):
 
         target = Target(url)
 
-        fingerprint = get_fingerprint(url)
+        fingerprint = generate_fingerprint(url)
         if db.get_scanned(fingerprint):
             print(u"%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
             db.delete_target(target.url)
@@ -218,7 +218,7 @@ def scan(db, scanner, args):
             print(u"%s ERROR scanning %s" % (target.starttime, target.url), file=log)
             continue
 
-        target.endtime = target.get_timestamp()
+        target.endtime = generate_timestamp()
         target.write_report(report_dir, label, results)
 
     if "log" in args: log.close()
@@ -236,7 +236,7 @@ def get_blacklist(blacklist_file):
 
     return blacklist
 
-def get_fingerprint(url):
+def generate_fingerprint(url):
     url_parts = urlparse(url)
     netloc = url_parts.netloc
     depth = str(url_parts.path.count("/"))
@@ -247,6 +247,12 @@ def get_fingerprint(url):
             params.append(split[0])
     fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
     return fingerprint
+
+def generate_timestamp():
+    return datetime.datetime.now(UTC()).isoformat()
+
+def generate_hash(url):
+    return hashlib.md5(url.encode("utf-8")).hexdigest()
 
 def parse_options(options_string):
     options = dict()
@@ -406,11 +412,11 @@ class Target:
     def __init__(self, url):
         self.url = url
         self.hash = ""
-        self.starttime = datetime.datetime.now(UTC()).isoformat()
+        self.starttime = generate_timestamp()
 
     def get_hash(self):
         if not self.hash:
-            self.hash = hashlib.md5(self.url.encode("utf-8")).hexdigest()
+            self.hash = generate_hash(self.url)
         return self.hash
 
     def write_report(self, report_dir, label, vulnerabilities):
