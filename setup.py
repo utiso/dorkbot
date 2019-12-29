@@ -21,7 +21,7 @@ setuptools.setup(
     url="http://dorkbot.io",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
         "License :: Free for non-commercial use",
         "Operating System :: OS Independent",
     ],

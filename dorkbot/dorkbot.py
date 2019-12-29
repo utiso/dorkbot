@@ -1,18 +1,11 @@
-#!/usr/bin/env python
-from __future__ import print_function
+#!/usr/bin/env python3
 if __package__:
     from ._version import __version__
 else:
     from _version import __version__
 import argparse
-try:
-    import ConfigParser as configparser
-except ImportError:
-    import configparser
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
+import configparser
+from urllib.parse import urlparse
 from contextlib import closing
 import datetime
 import hashlib
@@ -23,9 +16,12 @@ import re
 import sys
 import io
 import random
+import logging
 
 def main():
     args, parser = get_args_parser()
+
+    initialize_logger(args.logfile)
 
     if args.flush or args.list or args.indexer or args.prune or args.scanner:
         db = TargetDatabase(args.database)
@@ -52,13 +48,29 @@ def main():
     else:
         parser.print_usage()
 
+def initialize_logger(logfile):
+    log = logging.getLogger()
+    log.setLevel(logging.DEBUG)
+
+    log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
+    if logfile:
+        log_filehandler = logging.FileHandler(logfile, mode="a", encoding="utf-8")
+        log_filehandler.setLevel(logging.DEBUG)
+        log_filehandler.setFormatter(log_formatter)
+        log.addHandler(log_filehandler)
+    else:
+        log_streamhandler = logging.StreamHandler()
+        log_streamhandler.setLevel(logging.DEBUG)
+        log_streamhandler.setFormatter(log_formatter)
+        log.addHandler(log_streamhandler)
+
 def load_module(category, name):
     module_name = "%s.%s" % (category, name)
     if __package__: module_name = "." + module_name
     try:
         module = importlib.import_module(module_name, package=__package__)
     except ImportError:
-        print("ERROR: module not found", file=sys.stderr)
+        logging.error("Module not found")
         sys.exit(1)
 
     return module
@@ -106,6 +118,8 @@ def get_args_parser():
         help="Indexer module to use")
     parser.add_argument("-l", "--list", action="store_true", \
         help="List targets in database")
+    parser.add_argument("--logfile", \
+        help="Log file")
     parser.add_argument("-o", "--indexer-options", \
         help="Indexer-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-p", "--scanner-options", \
@@ -137,9 +151,6 @@ def prune(db, args):
     blacklist = get_blacklist(args.get("blacklist", defaults["blacklist"]))
     fingerprints = set()
 
-    if "log" in args: log = io.open(os.path.abspath(args["log"]), "a", 1, encoding="utf-8")
-    else: log = sys.stdout
-
     db.connect()
     urls = db.get_targets()
 
@@ -151,20 +162,18 @@ def prune(db, args):
 
         fingerprint = generate_fingerprint(url)
         if fingerprint in fingerprints or db.get_scanned(fingerprint):
-            print(u"%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
+            logging.info("Skipping (matches fingerprint of previous scan): %s", target.url)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target.url):
-            print(u"%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
+            logging.info("Skipping (matches blacklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
 
         fingerprints.add(fingerprint)
 
     db.close()
-
-    if "log" in args: log.close()
 
 def scan(db, scanner, args):
     defaults = {
@@ -179,13 +188,11 @@ def scan(db, scanner, args):
         try:
             os.makedirs(report_dir)
         except OSError as e:
-            print("ERROR creating report directory - %s" % e, file=sys.stderr)
+            logging.error("Failed to create report directory - %s", str(e))
             sys.exit(1)
 
     count = int(args.get("count", "-1"))
     label = args.get("label", "")
-    if "log" in args: log = io.open(os.path.abspath(args["log"]), "a", 1, encoding="utf-8")
-    else: log = sys.stdout
 
     scanned = 0
     while scanned < count or count == -1:
@@ -198,16 +205,16 @@ def scan(db, scanner, args):
 
         fingerprint = generate_fingerprint(url)
         if db.get_scanned(fingerprint):
-            print(u"%s Skipping (matches fingerprint of previous scan): %s" % (target.starttime, target.url), file=log)
+            logging.info("Skipping (matches fingerprint of previous scan): %s", target.url)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target.url):
-            print(u"%s Skipping (matches blacklist pattern): %s" % (target.starttime, target.url), file=log)
+            logging.info("Skipping (matches blacklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
 
-        print(u"%s Scanning: %s" % (target.starttime, target.url), file=log)
+        logging.info("Scanning: %s", target.url)
         db.delete_target(target.url)
         db.add_fingerprint(fingerprint)
         db.close()
@@ -215,13 +222,11 @@ def scan(db, scanner, args):
         scanned += 1
 
         if results == False:
-            print(u"%s ERROR scanning %s" % (target.starttime, target.url), file=log)
+            logging.error("Scan failed: %s", target.url)
             continue
 
         target.endtime = generate_timestamp()
         target.write_report(report_dir, label, results)
-
-    if "log" in args: log.close()
 
 def get_blacklist(blacklist_file):
     pattern = "$^"
@@ -231,7 +236,7 @@ def get_blacklist(blacklist_file):
                 pattern = "|".join(f.read().splitlines())
         blacklist = re.compile(pattern)
     except Exception as e:
-        print("ERROR reading blacklist - %s" % e, file=sys.stderr)
+        logging.error("Failed to read blacklist - %s", str(e))
         sys.exit(1)
 
     return blacklist
@@ -249,7 +254,7 @@ def generate_fingerprint(url):
     return fingerprint
 
 def generate_timestamp():
-    return datetime.datetime.now(UTC()).isoformat()
+    return datetime.datetime.now().astimezone().isoformat()
 
 def generate_hash(url):
     return hashlib.md5(url.encode("utf-8")).hexdigest()
@@ -291,7 +296,7 @@ class TargetDatabase:
                 try:
                     os.makedirs(database_dir)
                 except OSError as e:
-                    print("ERROR creating directory - %s" % e, file=sys.stderr)
+                    logging.error("Failed to create directory - %s", str(e))
                     sys.exit(1)
 
 
@@ -308,14 +313,14 @@ class TargetDatabase:
                 c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY)")
                 c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
         except self.module.Error as e:
-            print("ERROR loading database - %s" % e, file=sys.stderr)
+            logging.error("Failed to load database - %s", str(e))
             sys.exit(1)
 
     def connect(self):
         try:
             self.db = self.module.connect(self.database, **self.connect_kwargs)
         except self.module.Error as e:
-            print("ERROR loading database - %s" % e, file=sys.stderr)
+            loging.error("Error loading database - %s", str(e))
             sys.exit(1)
 
     def close(self):
@@ -327,7 +332,7 @@ class TargetDatabase:
                 c.execute("SELECT url FROM targets")
                 targets = [row[0] for row in c.fetchall()]
         except self.module.Error as e:
-            print("ERROR getting targets - %s" % e, file=sys.stderr)
+            logging.error("Failed to get targets - %s", str(e))
             sys.exit(1)
 
         return targets
@@ -338,7 +343,7 @@ class TargetDatabase:
                 c.execute("SELECT url FROM targets LIMIT 1")
                 row = c.fetchone()
         except self.module.Error as e:
-            print("ERROR getting next target - %s" % e, file=sys.stderr)
+            logging.error("Failed to get next target - %s", str(e))
             sys.exit(1)
 
         if row: return row[0]
@@ -350,7 +355,7 @@ class TargetDatabase:
                 c.execute("SELECT url FROM targets ORDER BY RANDOM() LIMIT 1")
                 row = c.fetchone()
         except self.module.Error as e:
-            print("ERROR getting random target - %s" % e, file=sys.stderr)
+            logging.error("Failed to get random target - %s", str(e))
             sys.exit(1)
 
         if row: return row[0]
@@ -361,7 +366,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("%s INTO targets VALUES (%s) %s" % (self.insert, self.param, self.conflict), (url,))
         except self.module.Error as e:
-            print("ERROR adding target - %s" % e, file=sys.stderr)
+            logging.error("Failed to add target - %s", str(e))
             sys.exit(1)
 
     def add_targets(self, urls):
@@ -369,7 +374,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.executemany("%s INTO targets VALUES (%s) %s" % (self.insert, self.param, self.conflict), [(url,) for url in urls])
         except self.module.Error as e:
-            print("ERROR adding target - %s" % e, file=sys.stderr)
+            logging.error("Failed to add target - %s", str(e))
             sys.exit(1)
 
     def delete_target(self, url):
@@ -377,7 +382,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
         except self.module.Error as e:
-            print("ERROR deleting target - %s" % e, file=sys.stderr)
+            logging.error("Failed to delete target - %s", str(e))
             sys.exit(1)
 
     def get_scanned(self, fingerprint):
@@ -386,7 +391,7 @@ class TargetDatabase:
                 c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
                 row = c.fetchone()
         except self.module.Error as e:
-            print("ERROR looking up fingerprint - %s" % e, file=sys.stderr)
+            logging.error("Failed to look up fingerprint - %s", str(e))
             sys.exit(1)
 
         if row: return row[0]
@@ -397,7 +402,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
         except self.module.Error as e:
-            print("ERROR adding fingerprint - %s" % e, file=sys.stderr)
+            logging.error("Failed to add fingerprint - %s", str(e))
             sys.exit(1)
 
     def flush_fingerprints(self):
@@ -405,7 +410,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("DELETE FROM fingerprints")
         except self.module.Error as e:
-            print("ERROR flushing fingerprints - %s" % e, file=sys.stderr)
+            logging.error("Failed to flush fingerprints - %s", str(e))
             sys.exit(1)
 
 class Target:
@@ -432,14 +437,6 @@ class Target:
         with open(filename, "w") as outfile:
             json.dump(vulns, outfile, indent=4, sort_keys=True)
             print("Report saved to: %s" % outfile.name)
-
-class UTC(datetime.tzinfo):
-    def utcoffset(self, dt):
-        return datetime.timedelta(0)
-    def tzname(self, dt):
-        return "UTC"
-    def dst(self, dt):
-        return datetime.timedelta(0)
 
 if __name__ == "__main__":
     main()

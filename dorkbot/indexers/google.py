@@ -1,17 +1,14 @@
-from __future__ import print_function
 import sys
 import os
 import subprocess
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
+from urllib.parse import urlparse
+import logging
 
 def run(args):
     required = ["engine", "query"]
     for r in required:
         if r not in args:
-            print ("ERROR: %s must be set" % r, file=sys.stderr)
+            logging.error("%s must be set", r)
             sys.exit(1)
 
     tools_dir = os.path.join(args["dorkbot_dir"], "tools")
@@ -36,7 +33,7 @@ def run(args):
         output = subprocess.check_output(index_cmd)
     except OSError as e:
         if "No such file or directory" in str(e):
-            print("Could not find phantomjs. If not in PATH, then download the phantomjs project and unpack it in /path/to/dorkbot_directory/tools/ as \"phantomjs\" (e.g. ~/.config/dorkbot/tools/phantomjs/) such that it contains an executable bin/phantomjs, or set phantomjs_dir option to correct directory.", file=sys.stderr)
+            logging.critical("Could not find phantomjs. If not in PATH, then download the phantomjs project and unpack it in /path/to/dorkbot_directory/tools/ as \"phantomjs\" (e.g. ~/.config/dorkbot/tools/phantomjs/) such that it contains an executable bin/phantomjs, or set phantomjs_dir option to correct directory.")
             sys.exit(1)
 
     return [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]

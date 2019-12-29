@@ -1,15 +1,14 @@
-from __future__ import print_function
 import sys
 import os
 import tempfile
 import json
 import subprocess
 import io
+import logging
 
 def run(args, target):
     default_wapiti_path = os.path.join(args["dorkbot_dir"], "tools", "wapiti", "bin")
     if not os.path.isdir(default_wapiti_path): default_wapiti_path = ""
-    default_modules = "blindsql,exec,file,permanentxss,sql,xss"
 
     if "wapiti_dir" in args:
         wapiti_path = os.path.join(os.path.abspath(args["wapiti_dir"]), "bin")
@@ -21,11 +20,12 @@ def run(args, target):
 
     args = [os.path.join(wapiti_path, "wapiti")]
     args += ["--url", target.url]
-    args += ["--module", modules]
     args += ["--scope", "page"]
     args += ["--flush-session"]
     args += ["--format", "json"]
     args += ["--output", report]
+    if "args" in args:
+        scan_cmd += args["args"].split()
 
     for cmd in ["python3", "python"]:
         try:
@@ -35,10 +35,10 @@ def run(args, target):
                 if cmd is "python3":
                     continue
                 else:
-                    print("Could not run script with \"python3\" or \"python\".", file=sys.stderr)
+                    logging.error("Could not run script with \"python3\" or \"python\".")
                     sys.exit(1)
         except subprocess.CalledProcessError:
-            print("Error executing wapiti.", file=sys.stderr)
+            logging.error("Failed to execute wapiti")
             return False
 
     with io.open(report, encoding="utf-8") as data_file:

@@ -165,7 +165,6 @@ These options are applicable regardless of module chosen
 
 * blacklist - file containing (regex) patterns to blacklist from scans (default: blacklist.txt)
 * report_dir - directory to save vulnerability report (default: reports/)
-* log - log file to append scan activity (default: prints to stdout)
 * label - friendly name field to include in vulnerability report
 * count - number of urls to scan, or -1 to scan all urls (default: -1)
 * random - scan urls in random order

@@ -1,21 +1,16 @@
-from __future__ import print_function
-try:
-    from urllib.request import Request, urlopen
-    from urllib.parse import urlencode,urlparse
-    from urllib.error import HTTPError
-except ImportError:
-    from urllib import urlencode
-    from urllib2 import Request, urlopen, HTTPError
-    from urlparse import urlparse
+from urllib.request import Request, urlopen
+from urllib.parse import urlencode,urlparse
+from urllib.error import HTTPError
 import json
 import sys
 import time
+import logging
 
 def run(args):
     required = ["key", "query"]
     for r in required:
         if r not in args:
-            print("ERROR: %s must be set" % r, file=sys.stderr)
+            logging.error("%s must be set", r)
             sys.exit(1)
 
     results = get_results(args)

@@ -1,21 +1,16 @@
-from __future__ import print_function
-try:
-    from urllib.request import urlopen
-    from urllib.parse import urlencode,urlparse
-    from urllib.error import HTTPError
-except ImportError:
-    from urllib import urlencode
-    from urllib2 import urlopen, HTTPError
-    from urlparse import urlparse
+from urllib.request import urlopen
+from urllib.parse import urlencode,urlparse
+from urllib.error import HTTPError
 import json
 import sys
 import time
+import logging
 
 def run(args):
     required = ["key", "engine", "query"]
     for r in required:
         if r not in args:
-            print ("ERROR: %s must be set" % r, file=sys.stderr)
+            logging.error("%s must be set", r)
             sys.exit(1)
 
     results = get_results(args)
@@ -55,14 +50,14 @@ def issue_request(data):
             response = json.loads(response_str)
             if "Invalid Value" in response["error"]["message"]:
                 return []
-            print("error: %d - %s" % (response["error"]["code"], response["error"]["message"]), file=sys.stderr)
+            logging.error("Failed to fetch results - %d %s", response["error"]["code"], response["error"]["message"])
             for error in response["error"]["errors"]:
-                print("%s::%s::%s" % (error["domain"], error["reason"], error["message"]), file=sys.stderr)
+                logging.error("%s::%s::%s", error["domain"], error["reason"], error["message"])
             if "User Rate Limit Exceeded" in response["error"]["message"]:
                 time.sleep(5)
                 continue
             elif "Daily Limit Exceeded" in response["error"]["message"]:
-                print("sleeping 1 hour", file=sys.stderr)
+                logging.info("sleeping 1 hour")
                 time.sleep(3600)
                 continue
             else:

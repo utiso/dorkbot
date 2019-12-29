@@ -1,20 +1,15 @@
-from __future__ import print_function
-try:
-    from urllib.request import urlopen
-    from urllib.parse import urlencode, urlparse
-    from urllib.error import HTTPError
-except ImportError:
-    from urllib import urlencode
-    from urllib2 import urlopen, HTTPError
-    from urlparse import urlparse
+from urllib.request import urlopen
+from urllib.parse import urlencode, urlparse
+from urllib.error import HTTPError
 import json
 import sys
+import logging
 
 def run(args):
     required = ["domain"]
     for r in required:
         if r not in args:
-            print ("ERROR: %s must be set" % r, file=sys.stderr)
+            logging.error("%s must be set", r)
             sys.exit(1)
 
     domain = args["domain"]
@@ -44,7 +39,7 @@ def get_num_pages(data):
         response = urlopen(url)
         response = response.read().decode("utf-8")
     except HTTPError as e:
-        print("error: %s" % str(e), file=sys.stderr)
+        logging.error("Failed to fetch number of pages - %s", str(e))
         sys.exit(1)
 
     num_pages = int(response)
@@ -63,7 +58,7 @@ def get_results(data, domain):
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
         except HTTPError as e:
-            print("error: %s" % str(e), file=sys.stderr)
+            logging.error("Failed to fetch results - %s", str(e))
             sys.exit(1)
 
         for item in response[1:]:
