@@ -33,7 +33,7 @@ def run(args):
         output = subprocess.check_output(index_cmd)
     except OSError as e:
         if "No such file or directory" in str(e):
-            logging.critical("Could not find phantomjs. If not in PATH, then download the phantomjs project and unpack it in /path/to/dorkbot_directory/tools/ as \"phantomjs\" (e.g. ~/.config/dorkbot/tools/phantomjs/) such that it contains an executable bin/phantomjs, or set phantomjs_dir option to correct directory.")
+            logging.critical("Could not find phantomjs. If not in PATH, extract or symlink as [directory]/tools/phantomjs or set phantomjs_dir option to correct directory.")
             sys.exit(1)
 
     return [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]

@@ -81,28 +81,22 @@ def get_args_parser():
                     os.environ.get("APPDATA") or
                     os.path.join(os.environ["HOME"], ".config")
                  ))
-    default_dorkbot_dir = os.path.join(config_dir, "dorkbot")
 
     initial_parser = argparse.ArgumentParser(
         description="dorkbot", add_help=False)
     initial_parser.add_argument("-c", "--config", \
+        default=os.path.join(config_dir, "dorkbot", "dorkbot.ini"), \
         help="Configuration file")
     initial_parser.add_argument("-r", "--directory", \
-        default=default_dorkbot_dir, \
-        help="Dorkbot directory (default location of config, db, tools, reports)")
+        default=os.getcwd(), \
+        help="Dorkbot directory (default location of db, tools, reports)")
     initial_args, other_args = initial_parser.parse_known_args()
 
     defaults = {
         "database": os.path.join(initial_args.directory, "dorkbot.db"),
-        "config": os.path.join(initial_args.directory, "dorkbot.ini"),
     }
 
-    if initial_args.config:
-        config_file = initial_args.config
-    else:
-        config_file = defaults["config"]
-
-    if os.path.isfile(config_file):
+    if os.path.isfile(initial_args.config):
         config = configparser.SafeConfigParser()
         config.read(config_file)
         options = config.items("dorkbot")

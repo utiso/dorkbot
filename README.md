@@ -43,7 +43,7 @@ optional arguments:
 
 Requirements
 ============
-Python 2.7.x / 3.x (cross-platform)
+Python 3.x (cross-platform)
 [psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
 
 Tools
@@ -54,25 +54,29 @@ Tools
 
 As needed, dorkbot will search for tools in the following order:
 * Directory specified via relevant module option
-* Located in dorkbot's *tools* directory, with the subdirectory named after the tool
+* Located in *tools* directory (within current directory, by default), with the subdirectory named after the tool
 * Available in the user's PATH (e.g. installed system-wide)
 
 Quickstart
 ==========
 Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
-Download either Arachni or Wapiti, unpack it into the tools directory (e.g. *~/.config/dorkbot/tools/*), and rename the subdirectory to *arachni* or *wapiti* as appropriate.
+<pre>$ mkdir tools</pre>, download Arachni and extract it as tools/arachni, or <pre>$ pip3 install wapiti3</pre>
 <pre>$ sudo apt install phantomjs</pre>
 <pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id"</pre>
 <pre>$ ./dorkbot.py -s arachni</pre> OR <pre>$ ./dorkbot.py -s wapiti</pre>
 
 Files
 =====
-A dorkbot directory is used to manage all configuration files, SQLite3 databases, tools, and reports. By default it is located at *~/.config/dorkbot/* (Linux / MacOS) or in the Application Data folder (Windows). It will honor $XDG_CONFIG_HOME / %APPDATA%, or you can force a specific directory with the --directory flag. Default file paths within this directory are as follows:
-* Dorkbot configuration file: *dorkbot.ini*
-* Scanner url blacklist file: *blacklist.txt*
+All SQLite3 databases, tools, and reports are saved in the dorkbot directory, which by default is the current directory. You can force a specific directory with the --directory flag. Default file paths within this directory are as follows:
+
 * SQLite3 database file: *dorkbot.db*
 * External tools directory: *tools/*
 * Scan report output directory: *reports/*
+
+Configuration files are by default read from *~/.config/dorkbot/* (Linux / MacOS) or in the Application Data folder (Windows), honoring $XDG_CONFIG_HOME / %APPDATA%. Default file paths within this directory are as follows:
+
+* Dorkbot configuration file: *dorkbot.ini*
+* Scanner url blacklist file: *blacklist.txt*
 
 Config File
 ===========
@@ -176,11 +180,7 @@ Requirements: [Arachni](http://www.arachni-scanner.com/)
 
 Options:
 * arachni_dir - arachni base directory containing bin/arachni and bin/arachni_reporter (default: tools/arachni/)
-* checks - space-delimited list of vulnerability checks to perform (default: "active/\*")
-* timeout - maximum scan time in hours:minutes:seconds (default: disabled)
-* single-thread - set browser pool and max concurrency to one each
-* throttle - maximum requests per second (default: disabled)
-* args - space-delimited list of additional arguments, e.g. "--http-user-agent=Dorkbot/1.0"
+* args - space-delimited list of additional arguments, e.g. args="--http-user-agent Dorkbot/1.0 --timeout 00:15:00"
 
 ### wapiti ###
 Scan targets with Wapiti command-line scanner.
@@ -189,13 +189,12 @@ Requirements: [Wapiti](http://wapiti.sourceforge.net/)
 
 Options:
 * wapiti_dir - wapiti base directory containing bin/wapiti (default: tools/wapiti/)
-* modules - space-delimited list of modules to perform (default: "blindsql exec file permanentxss sql xss")
+* args - space-delimited list of additional arguments
 
 Prune
 =====
 The prune flag iterates through all targets, computes the fingerprints in memory, and deletes any target matching a blacklist item or fingerprint. The result is a database of only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
 
 * blacklist - file containing (regex) patterns to blacklist from scans (default: blacklist.txt)
-* log - log file to append prune activity (default: prints to stdout)
 * random - evaluate urls in random order when computing fingerprints
 

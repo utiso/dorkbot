@@ -40,9 +40,10 @@ def run(args, target):
         subprocess.check_call(report_cmd, cwd=arachni_path)
     except OSError as e:
         if "No such file or directory" in str(e):
-            logging.critical("Could not find arachni. If not in PATH, then download the arachni project and unpack it in /path/to/dorkbot_directory/tools/ as \"arachni\" (e.g. ~/.config/dorkbot/tools/arachni/) such that it contains an executable bin/arachni, or set arachni_dir option to correct directory.")
+            logging.critical("Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni_dir option to correct directory.")
             sys.exit(1)
     except subprocess.CalledProcessError:
+        logging.error("Failed to execute arachni command")
         return False
 
     with io.open(report+".json", encoding="utf-8") as data_file:    

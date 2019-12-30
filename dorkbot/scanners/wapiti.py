@@ -5,6 +5,7 @@ import json
 import subprocess
 import io
 import logging
+import platform
 
 def run(args, target):
     default_wapiti_path = os.path.join(args["dorkbot_dir"], "tools", "wapiti", "bin")
@@ -14,32 +15,29 @@ def run(args, target):
         wapiti_path = os.path.join(os.path.abspath(args["wapiti_dir"]), "bin")
     else:
         wapiti_path = default_wapiti_path
-    modules = args.get("modules", default_modules).replace(" ", ",").replace("\"","")
 
     report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".json")
 
-    args = [os.path.join(wapiti_path, "wapiti")]
-    args += ["--url", target.url]
-    args += ["--scope", "page"]
-    args += ["--flush-session"]
-    args += ["--format", "json"]
-    args += ["--output", report]
+    cmd = [os.path.join(wapiti_path, "wapiti")]
+    if platform.system() is "Windows":
+        cmd.insert(0, sys.executable)
+    cmd += ["--url", target.url]
+    cmd += ["--scope", "page"]
+    cmd += ["--flush-session"]
+    cmd += ["--format", "json"]
+    cmd += ["--output", report]
     if "args" in args:
-        scan_cmd += args["args"].split()
+        cmd += args["args"].split()
 
-    for cmd in ["python3", "python"]:
-        try:
-            subprocess.check_call([cmd] + args)
-        except OSError as e:
-            if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
-                if cmd is "python3":
-                    continue
-                else:
-                    logging.error("Could not run script with \"python3\" or \"python\".")
-                    sys.exit(1)
-        except subprocess.CalledProcessError:
-            logging.error("Failed to execute wapiti")
-            return False
+    try:
+        subprocess.check_call(cmd)
+    except OSError as e:
+        if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
+            logging.critical("Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti_dir option to correct directory.")
+            sys.exit(1)
+    except subprocess.CalledProcessError:
+        logging.error("Failed to execute wapiti command")
+        return False
 
     with io.open(report, encoding="utf-8") as data_file:
         contents = data_file.read()
