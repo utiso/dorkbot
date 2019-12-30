@@ -16,16 +16,16 @@ Usage
 =====
 <pre>
 usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [-d DATABASE] [-f]
-                  [-i INDEXER] [-l] [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS]
-                  [-s SCANNER]
+                  [-i INDEXER] [-l] [--logfile LOGFILE] [-o INDEXER_OPTIONS]
+                  [-p SCANNER_OPTIONS] [-s SCANNER] [-u] [-V]
 
 optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         Configuration file
   -r DIRECTORY, --directory DIRECTORY
-                        Dorkbot directory (default location of config, db,
-                        tools, reports)
+                        Dorkbot directory (default location of db, tools,
+                        reports)
   -d DATABASE, --database DATABASE
                         Database file/uri
   -f, --flush           Flush table of fingerprints of previously-scanned
@@ -33,12 +33,17 @@ optional arguments:
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
   -l, --list            List targets in database
+  --logfile LOGFILE     Log file
   -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
                         Indexer-specific options (opt1=val1,opt2=val2,..)
   -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
                         Scanner-specific options (opt1=val1,opt2=val2,..)
   -s SCANNER, --scanner SCANNER
                         Scanner module to use
+  -u, --prune           Delete unscannable targets (blacklist /
+                        fingerprinting)
+  -V, --version         Print version
+
 </pre>
 
 Requirements
