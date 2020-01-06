@@ -15,9 +15,13 @@ Targets are stored in a local database file until they are scanned, at which poi
 Usage
 =====
 <pre>
-usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [-d DATABASE] [-f]
-                  [-i INDEXER] [-l] [--logfile LOGFILE] [-o INDEXER_OPTIONS]
-                  [-p SCANNER_OPTIONS] [-s SCANNER] [-u] [-V]
+usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY]
+                  [--add-blacklist-item ADD_BLACKLIST_ITEM] [-b BLACKLIST]
+                  [-d DATABASE]
+                  [--delete-blacklist-item DELETE_BLACKLIST_ITEM] [-f]
+                  [--flush-blacklist] [-i INDEXER] [-l] [--list-blacklist]
+                  [--log LOG] [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS]
+                  [-s SCANNER] [-u] [-V]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -26,14 +30,23 @@ optional arguments:
   -r DIRECTORY, --directory DIRECTORY
                         Dorkbot directory (default location of db, tools,
                         reports)
+  --add-blacklist-item ADD_BLACKLIST_ITEM
+                        Add an ip/host/regex pattern to the blacklist
+  -b BLACKLIST, --blacklist BLACKLIST
+                        Database file/uri
   -d DATABASE, --database DATABASE
                         Database file/uri
-  -f, --flush           Flush table of fingerprints of previously-scanned
+  --delete-blacklist-item DELETE_BLACKLIST_ITEM
+                        Delete an item from the blacklist
+  -f, --flush-fingerprints
+                        Flush table of fingerprints of previously-scanned
                         items
+  --flush-blacklist     Flush table of blacklist items
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
-  -l, --list            List targets in database
-  --logfile LOGFILE     Log file
+  -l, --list-targets    List targets in database
+  --list-blacklist      List blacklist entries
+  --log LOG             Path to log file
   -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
                         Indexer-specific options (opt1=val1,opt2=val2,..)
   -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
@@ -81,7 +94,6 @@ All SQLite3 databases, tools, and reports are saved in the dorkbot directory, wh
 Configuration files are by default read from *~/.config/dorkbot/* (Linux / MacOS) or in the Application Data folder (Windows), honoring $XDG_CONFIG_HOME / %APPDATA%. Default file paths within this directory are as follows:
 
 * Dorkbot configuration file: *dorkbot.ini*
-* Scanner url blacklist file: *blacklist.txt*
 
 Config File
 ===========
@@ -93,18 +105,26 @@ Example dorkbot.ini:
 database=/opt/dorkbot/dorkbot.db
 </pre>
 
-Blacklist File
-==============
-The blacklist file (blacklist.txt) is a list of regular expressions of url patterns that should *not* be scanned. If a target url matches any line in this file it will be skipped and removed from the database. Note: do not leave any empty lines in the file.
+Blacklist
+=========
+The blacklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. By default the blacklist is stored in the dorkbot database, but a separate database or file can be specified by passing the appropriate connection uri or file path to --blacklist. Note: --add-blacklist-item / --delete-blacklist-item are not implemented for file-based blacklists, and --flush-blacklist deletes the file.
 
-Example blacklist.txt:
+Supported external blacklists:
+* postgresql://[server info]
+* phoenixdb://[server info]
+* sqlite3:///path/to/blacklist.db
+* /path/to/blacklist.txt
+
+Example blacklist items:
 <pre>
-^[^\?]+$
-.*login.*
-^https?://[^.]*.example.com/.*
+regex:^[^\?]+$
+regex:.*login.*
+regex:^https?://[^.]*.example.com/.*
+host:www.google.com
+ip:127.0.0.1
 </pre>
 
-The first line will remove any target that doesn't contain a question mark, in other words any url that doesn't contain any GET parameters to test. The second attempts to avoid login functions, and the third blacklists all target urls on example.com.
+The first item will remove any target that doesn't contain a question mark, in other words any url that doesn't contain any GET parameters to test. The second attempts to avoid login functions, and the third blacklists all target urls on example.com. The fourth excludes targets with a hostname of www.google.com and the fifth excludes targets whose host resolves to 127.0.0.1.
 
 Indexer Modules
 ===============
@@ -172,7 +192,6 @@ Scanner Modules
 ### (general options) ###
 These options are applicable regardless of module chosen
 
-* blacklist - file containing (regex) patterns to blacklist from scans (default: blacklist.txt)
 * report_dir - directory to save vulnerability report (default: reports/)
 * label - friendly name field to include in vulnerability report
 * count - number of urls to scan, or -1 to scan all urls (default: -1)
@@ -200,6 +219,5 @@ Prune
 =====
 The prune flag iterates through all targets, computes the fingerprints in memory, and deletes any target matching a blacklist item or fingerprint. The result is a database of only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
 
-* blacklist - file containing (regex) patterns to blacklist from scans (default: blacklist.txt)
 * random - evaluate urls in random order when computing fingerprints
 

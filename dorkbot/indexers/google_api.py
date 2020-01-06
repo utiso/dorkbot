@@ -6,26 +6,26 @@ import sys
 import time
 import logging
 
-def run(args):
+def run(options):
     required = ["key", "engine", "query"]
     for r in required:
-        if r not in args:
+        if r not in options:
             logging.error("%s must be set", r)
             sys.exit(1)
 
-    results = get_results(args)
+    results = get_results(options)
     return results
 
-def get_results(args):
+def get_results(options):
     data = {}
-    data["key"] = args["key"]
-    data["cx"] = args["engine"]
-    data["q"] = args["query"]
+    data["key"] = options["key"]
+    data["cx"] = options["engine"]
+    data["q"] = options["query"]
     data["num"] = 10
     data["start"] = 1
 
-    if "domain" in args:
-        data["siteSearch"] = args["domain"]
+    if "domain" in options:
+        data["siteSearch"] = options["domain"]
 
     results = []
     while True:

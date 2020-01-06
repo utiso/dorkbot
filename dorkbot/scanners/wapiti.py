@@ -7,12 +7,12 @@ import io
 import logging
 import platform
 
-def run(args, target):
-    default_wapiti_path = os.path.join(args["dorkbot_dir"], "tools", "wapiti", "bin")
+def run(options, target):
+    default_wapiti_path = os.path.join(options["directory"], "tools", "wapiti", "bin")
     if not os.path.isdir(default_wapiti_path): default_wapiti_path = ""
 
-    if "wapiti_dir" in args:
-        wapiti_path = os.path.join(os.path.abspath(args["wapiti_dir"]), "bin")
+    if "wapiti_dir" in options:
+        wapiti_path = os.path.join(os.path.abspath(options["wapiti_dir"]), "bin")
     else:
         wapiti_path = default_wapiti_path
 
@@ -26,8 +26,8 @@ def run(args, target):
     cmd += ["--flush-session"]
     cmd += ["--format", "json"]
     cmd += ["--output", report]
-    if "args" in args:
-        cmd += args["args"].split()
+    if "args" in options:
+        cmd += options["args"].split()
 
     try:
         subprocess.check_call(cmd)

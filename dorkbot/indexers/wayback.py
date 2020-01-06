@@ -5,17 +5,17 @@ import json
 import sys
 import logging
 
-def run(args):
+def run(options):
     required = ["domain"]
     for r in required:
-        if r not in args:
+        if r not in options:
             logging.error("%s must be set", r)
             sys.exit(1)
 
-    domain = args["domain"]
-    time_from = args.get("from", "")
-    time_to = args.get("to", "")
-    url_filter = args.get("filter", "")
+    domain = options["domain"]
+    time_from = options.get("from", "")
+    time_to = options.get("to", "")
+    url_filter = options.get("filter", "")
 
     data = {}
     data["url"] = "*.%s" % domain

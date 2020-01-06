@@ -6,16 +6,16 @@ import sys
 import re
 import logging
 
-def run(args):
+def run(options):
     required = ["domain"]
     for r in required:
-        if r not in args:
+        if r not in options:
             logging.error("%s must be set", r)
             sys.exit(1)
 
-    domain = args["domain"]
-    index = args.get("index", get_latest_index())
-    url_filter = args.get("filter", "")
+    domain = options["domain"]
+    index = options.get("index", get_latest_index())
+    url_filter = options.get("filter", "")
 
     results = get_results(domain, index, url_filter)
     return results

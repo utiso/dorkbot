@@ -20,41 +20,55 @@ import logging
 
 def main():
     args, parser = get_args_parser()
+    initialize_logger(args.log)
+    indexer_options = parse_options(args.indexer_options)
+    scanner_options = parse_options(args.scanner_options)
 
-    initialize_logger(args.logfile)
-
-    if args.flush or args.list or args.indexer or args.prune or args.scanner:
+    if args.flush_fingerprints or args.flush_blacklist or \
+       args.list_targets or args.list_blacklist or \
+       args.add_blacklist_item or args.delete_blacklist_item or \
+       args.indexer or args.prune or args.scanner:
         db = TargetDatabase(args.database)
-        if args.flush: db.flush_fingerprints()
-        if args.list:
+        if args.blacklist is not None:
+            blacklist = Blacklist(args.blacklist)
+        else:
+            blacklist = Blacklist("sqlite3://" + args.database)
+
+        if args.flush_fingerprints: db.flush_fingerprints()
+        if args.list_targets:
             for target in db.get_targets(): print(target)
+        if args.add_blacklist_item:
+            blacklist.connect()
+            blacklist.add(args.add_blacklist_item)
+            blacklist.close()
+        if args.delete_blacklist_item:
+            blacklist.connect()
+            blacklist.delete(args.delete_blacklist_item)
+            blacklist.close()
+        if args.list_blacklist:
+            items = blacklist.get_parsed_items()
+            for item in items: print(item)
+        if args.flush_blacklist: blacklist.flush()
+ 
         db.close()
 
         if args.indexer:
-            indexer_module = load_module("indexers", args.indexer)
-            indexer_args = parse_options(args.indexer_options)
-            indexer_args["dorkbot_dir"] = args.directory
-            index(db, indexer_module, indexer_args)
+            index(db, load_module("indexers", args.indexer), args, indexer_options)
         if args.prune:
-            prune_args = parse_options(args.scanner_options)
-            prune_args["dorkbot_dir"] = args.directory
-            prune(db, prune_args)
+            prune(db, args, scanner_args)
         if args.scanner:
-            scanner_module = load_module("scanners", args.scanner)
-            scanner_args = parse_options(args.scanner_options)
-            scanner_args["dorkbot_dir"] = args.directory
-            scan(db, scanner_module, scanner_args)
+            scan(db, load_module("scanners", args.scanner), args, scanner_options)
 
     else:
         parser.print_usage()
 
-def initialize_logger(logfile):
+def initialize_logger(log_file):
     log = logging.getLogger()
     log.setLevel(logging.DEBUG)
 
     log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
-    if logfile:
-        log_filehandler = logging.FileHandler(logfile, mode="a", encoding="utf-8")
+    if log_file:
+        log_filehandler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
         log_filehandler.setLevel(logging.DEBUG)
         log_filehandler.setFormatter(log_formatter)
         log.addHandler(log_filehandler)
@@ -98,22 +112,32 @@ def get_args_parser():
 
     if os.path.isfile(initial_args.config):
         config = configparser.SafeConfigParser()
-        config.read(config_file)
+        config.read(initial_args.config)
         options = config.items("dorkbot")
         defaults.update(dict(options))
 
     parser = argparse.ArgumentParser(parents=[initial_parser])
     parser.set_defaults(**defaults)
+    parser.add_argument("--add-blacklist-item", \
+        help="Add an ip/host/regex pattern to the blacklist")
+    parser.add_argument("-b", "--blacklist", \
+        help="Database file/uri")
     parser.add_argument("-d", "--database", \
         help="Database file/uri")
-    parser.add_argument("-f", "--flush", action="store_true", \
+    parser.add_argument("--delete-blacklist-item", \
+        help="Delete an item from the blacklist")
+    parser.add_argument("-f", "--flush-fingerprints", action="store_true", \
         help="Flush table of fingerprints of previously-scanned items")
+    parser.add_argument("--flush-blacklist", action="store_true", \
+        help="Flush table of blacklist items")
     parser.add_argument("-i", "--indexer", \
         help="Indexer module to use")
-    parser.add_argument("-l", "--list", action="store_true", \
+    parser.add_argument("-l", "--list-targets", action="store_true", \
         help="List targets in database")
-    parser.add_argument("--logfile", \
-        help="Log file")
+    parser.add_argument("--list-blacklist", action="store_true", \
+        help="List blacklist entries")
+    parser.add_argument("--log", \
+        help="Path to log file")
     parser.add_argument("-o", "--indexer-options", \
         help="Indexer-specific options (opt1=val1,opt2=val2,..)")
     parser.add_argument("-p", "--scanner-options", \
@@ -129,38 +153,35 @@ def get_args_parser():
     args.directory = initial_args.directory
     return args, parser
 
-def index(db, indexer, args):
-    urls = indexer.run(args)
+def index(db, indexer, args, options):
+    options["directory"] = args.directory
+    blacklist = get_blacklist(args.blacklist)
+    urls = indexer.run(options)
     db.connect()
     db.add_targets(urls)
     db.close()
     for url in urls:
         print(url)
 
-def prune(db, args):
-    defaults = {
-        "blacklist": os.path.join(args["dorkbot_dir"], "blacklist.txt")
-    }
-
-    blacklist = get_blacklist(args.get("blacklist", defaults["blacklist"]))
+def prune(db, args, options):
     fingerprints = set()
 
     db.connect()
     urls = db.get_targets()
 
-    if "random" in args:
+    if "random" in options:
         random.shuffle(urls)
 
     for url in urls:
         target = Target(url)
 
-        fingerprint = generate_fingerprint(url)
+        fingerprint = generate_fingerprint(target)
         if fingerprint in fingerprints or db.get_scanned(fingerprint):
             logging.info("Skipping (matches fingerprint of previous scan): %s", target.url)
             db.delete_target(target.url)
             continue
 
-        if blacklist.match(target.url):
+        if blacklist.match(target):
             logging.info("Skipping (matches blacklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
@@ -169,15 +190,10 @@ def prune(db, args):
 
     db.close()
 
-def scan(db, scanner, args):
-    defaults = {
-        "blacklist": os.path.join(args["dorkbot_dir"], "blacklist.txt"),
-        "reports": os.path.join(args["dorkbot_dir"], "reports")
-    }
-
-    blacklist = get_blacklist(args.get("blacklist", defaults["blacklist"]))
-
-    report_dir = args.get("report_dir", defaults["reports"])
+def scan(db, scanner, args, options):
+    options["directory"] = args.directory
+    blacklist = get_blacklist(args.blacklist)
+    report_dir = options.get("reports", os.path.join(args.directory, "reports"))
     if not os.path.exists(report_dir):
         try:
             os.makedirs(report_dir)
@@ -185,19 +201,19 @@ def scan(db, scanner, args):
             logging.error("Failed to create report directory - %s", str(e))
             sys.exit(1)
 
-    count = int(args.get("count", "-1"))
-    label = args.get("label", "")
+    count = int(options.get("count", "-1"))
+    label = options.get("label", "")
 
     scanned = 0
     while scanned < count or count == -1:
         db.connect()
-        if "random" in args: url = db.get_random_target()
+        if "random" in options: url = db.get_random_target()
         else: url = db.get_next_target()
         if not url: break
 
         target = Target(url)
 
-        fingerprint = generate_fingerprint(url)
+        fingerprint = generate_fingerprint(target)
         if db.get_scanned(fingerprint):
             logging.info("Skipping (matches fingerprint of previous scan): %s", target.url)
             db.delete_target(target.url)
@@ -212,7 +228,7 @@ def scan(db, scanner, args):
         db.delete_target(target.url)
         db.add_fingerprint(fingerprint)
         db.close()
-        results = scanner.run(args, target)
+        results = scanner.run(options, target)
         scanned += 1
 
         if results == False:
@@ -222,21 +238,8 @@ def scan(db, scanner, args):
         target.endtime = generate_timestamp()
         target.write_report(report_dir, label, results)
 
-def get_blacklist(blacklist_file):
-    pattern = "$^"
-    try:
-        if os.path.isfile(blacklist_file):
-            with open(blacklist_file, "r") as f:
-                pattern = "|".join(f.read().splitlines())
-        blacklist = re.compile(pattern)
-    except Exception as e:
-        logging.error("Failed to read blacklist - %s", str(e))
-        sys.exit(1)
-
-    return blacklist
-
-def generate_fingerprint(url):
-    url_parts = urlparse(url)
+def generate_fingerprint(target):
+    url_parts = urlparse(target.url)
     netloc = url_parts.netloc
     depth = str(url_parts.path.count("/"))
     params = []
@@ -306,6 +309,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY)")
                 c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
+                c.execute("CREATE TABLE IF NOT EXISTS blacklist (item VARCHAR PRIMARY KEY)")
         except self.module.Error as e:
             logging.error("Failed to load database - %s", str(e))
             sys.exit(1)
@@ -413,6 +417,10 @@ class Target:
         self.hash = ""
         self.starttime = generate_timestamp()
 
+        url_parts = urlparse(url)
+        self.host = url_parts.hostname
+        self.ip = socket.gethostbyname(self.host)
+
     def get_hash(self):
         if not self.hash:
             self.hash = generate_hash(self.url)
@@ -431,6 +439,175 @@ class Target:
         with open(filename, "w") as outfile:
             json.dump(vulns, outfile, indent=4, sort_keys=True)
             print("Report saved to: %s" % outfile.name)
+
+class Blacklist:
+    def __init__(self, blacklist):
+        self.connect_kwargs = {}
+        self.ip_list = []
+        self.host_list = []
+        self.regex_list = []
+
+        if blacklist.startswith("postgresql://"):
+            self.database = blacklist
+            module_name = "psycopg2"
+            self.insert = "INSERT"
+            self.conflict = "ON CONFLICT DO NOTHING"
+        elif blacklist.startswith("phoenixdb://"):
+            self.database = blacklist[12:]
+            module_name = "phoenixdb"
+            self.insert = "UPSERT"
+            self.conflict = ""
+            self.connect_kwargs["autocommit"] = True
+        elif blacklist.startswith("sqlite3://"):
+            self.database = os.path.expanduser(blacklist[10:])
+            module_name = "sqlite3"
+            database_dir = os.path.dirname(self.database)
+            self.insert = "INSERT OR REPLACE"
+            self.conflict = ""
+            if database_dir and not os.path.exists(database_dir):
+                try:
+                    os.makedirs(database_dir)
+                except OSError as e:
+                    logging.error("Failed to create directory - %s", str(e))
+                    sys.exit(1)
+        else:
+            self.database = False
+            self.filename = blacklist
+            try:
+                self.blacklist_file = open(self.filename, "r")
+            except Exception as e:
+                logging.error("Failed to read blacklist file - %s", str(e))
+                sys.exit(1)
+
+        if self.database:
+            self.module = importlib.import_module(module_name, package=None)
+
+            if self.module.paramstyle == "qmark":
+                self.param = "?"
+            else:
+                self.param = "%s"
+
+            self.connect()
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("CREATE TABLE IF NOT EXISTS blacklist (item VARCHAR PRIMARY KEY)")
+            except self.module.Error as e:
+                logging.error("Failed to load blacklist database - %s", str(e))
+                sys.exit(1)
+
+        self.parse_list(self.read_items())
+
+    def connect(self):
+        if self.database:
+            try:
+                self.db = self.module.connect(self.database, **self.connect_kwargs)
+            except self.module.Error as e:
+                logging.error("Error loading database - %s", str(e))
+                sys.exit(1)
+        else:
+            try:
+                self.blacklist_file = open(self.filename, "a")
+            except Exception as e:
+                logging.error("Failed to read blacklist file - %s", str(e))
+                sys.exit(1)
+
+    def close(self):
+        if self.database:
+            self.db.close()
+        else:
+            self.blacklist_file.close()
+
+    def parse_list(self, items):
+        for item in items:
+            category, value = item.split(":")
+            if category == "ip":
+                self.ip_list.append(value)
+            elif category == "host":
+                self.host_list.append(value)
+            elif category == "regex":
+                self.regex_list.append(value)
+            else:
+                logging.warning("Could not parse blacklist item - %s", item)
+
+        pattern = "$^"
+        pattern = "|".join(self.regex_list)
+        self.regex = re.compile(pattern)
+
+    def get_parsed_items(self):
+        return ["ip:" + item for item in self.ip_list] + \
+               ["host:" + item for item in self.host_list] + \
+               ["regex:" + item for item in self.regex_list]
+       
+    def read_items(self):
+        if self.database:
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("SELECT item FROM blacklist")
+                    items = [row[0] for row in c.fetchall()]
+            except self.module.Error as e:
+                logging.error("Failed to get targets - %s", str(e))
+                sys.exit(1)
+        else:
+            items = self.blacklist_file.read().splitlines()
+
+        return items
+
+    def add(self, item):
+        if self.database:
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("%s INTO blacklist VALUES (%s)" % (self.insert, self.param), (item,))
+            except self.module.Error as e:
+                logging.error("Failed to add blacklist item - %s", str(e))
+                sys.exit(1)
+        else:
+            logging.warning("Add ignored (not implemented for file-based blacklist)")
+
+        category, value = item.split(":")
+        if category == "ip":
+            self.ip_list.append(value)
+        elif category == "host":
+            self.host_list.append(value)
+        elif category == "regex":
+            self.regex_list.append(value)
+        else:
+            logging.warning("Could not parse blacklist item - %s", item)
+
+    def delete(self, item):
+        if self.database:
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("DELETE FROM blacklist WHERE item=(%s)" % self.param, (item,))
+            except self.module.Error as e:
+                logging.error("Failed to delete blacklist item - %s", str(e))
+                sys.exit(1)
+        else:
+            logging.warning("Delete ignored (not implemented for file-based blacklist)")
+
+    def match(self, target):
+        if self.regex.match(target.url):
+            return True
+        elif target.host in self.host_list:
+            return True
+        elif target.ip in self.ip_list:
+            return True
+
+        return False
+
+    def flush(self):
+        if self.database:
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("DELETE FROM blacklist")
+            except self.module.Error as e:
+                logging.error("Failed to flush blacklist - %s", str(e))
+                sys.exit(1)
+        else:
+            try:
+                os.unlink(self.blacklist_file)
+            except OSError as e:
+                logging.error("Failed to delete blacklist file - %s", str(e))
+                sys.exit(1)
 
 if __name__ == "__main__":
     main()

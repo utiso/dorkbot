@@ -7,12 +7,12 @@ import io
 import platform
 import logging
 
-def run(args, target):
-    default_arachni_path = os.path.join(args["dorkbot_dir"], "tools", "arachni", "bin")
+def run(options, target):
+    default_arachni_path = os.path.join(options["directory"], "tools", "arachni", "bin")
     if not os.path.isdir(default_arachni_path): default_arachni_path = ""
 
-    if "arachni_dir" in args:
-        arachni_path = os.path.join(os.path.abspath(args["arachni_dir"]), "bin")
+    if "arachni_dir" in options:
+        arachni_path = os.path.join(os.path.abspath(options["arachni_dir"]), "bin")
     else:
         arachni_path = default_arachni_path
 
@@ -25,8 +25,8 @@ def run(args, target):
     scan_cmd += ["--output-only-positives"]
     scan_cmd += ["--scope-page-limit", "1"]
     scan_cmd += ["--scope-include-pattern", target.url.split("?", 1)[0]]
-    if "args" in args:
-        scan_cmd += args["args"].split()
+    if "args" in options:
+        scan_cmd += options["args"].split()
     scan_cmd += [target.url]
 
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]

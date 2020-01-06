@@ -6,24 +6,24 @@ import sys
 import time
 import logging
 
-def run(args):
+def run(options):
     required = ["key", "query"]
     for r in required:
-        if r not in args:
+        if r not in options:
             logging.error("%s must be set", r)
             sys.exit(1)
 
-    results = get_results(args)
+    results = get_results(options)
     return results
 
-def get_results(args):
-    data = {"q": args["query"],
+def get_results(options):
+    data = {"q": options["query"],
             "count": 50,
             "offset": 0}
 
     results = []
     while data["offset"] < 1000:
-        items = issue_request(data, args["key"])
+        items = issue_request(data, options["key"])
         data["offset"] += data["count"]
         if not items:
             break

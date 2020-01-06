@@ -4,29 +4,29 @@ import subprocess
 from urllib.parse import urlparse
 import logging
 
-def run(args):
+def run(options):
     required = ["engine", "query"]
     for r in required:
-        if r not in args:
+        if r not in options:
             logging.error("%s must be set", r)
             sys.exit(1)
 
-    tools_dir = os.path.join(args["dorkbot_dir"], "tools")
-    if "phantomjs_dir" in args:
-        phantomjs_path = os.path.join(os.path.abspath(args["phantomjs_dir"]), "bin")
+    tools_dir = os.path.join(options["directory"], "tools")
+    if "phantomjs_dir" in options:
+        phantomjs_path = os.path.join(os.path.abspath(options["phantomjs_dir"]), "bin")
     elif os.path.isdir(os.path.join(tools_dir, "phantomjs", "bin")):
         phantomjs_path = os.path.join(tools_dir, "phantomjs", "bin")
     else:
         phantomjs_path = ""
 
-    if "domain" in args: domain = args["domain"]
+    if "domain" in options: domain = options["domain"]
     else: domain = ""
 
     index_cmd = [os.path.join(phantomjs_path, "phantomjs")]
     index_cmd += ["--ignore-ssl-errors=true"]
     index_cmd += [os.path.join(os.path.dirname(os.path.abspath(__file__)), "google.js")]
-    index_cmd += [args["engine"]]
-    index_cmd += [args["query"]]
+    index_cmd += [options["engine"]]
+    index_cmd += [options["query"]]
     if domain: index_cmd += [domain]
 
     try:
