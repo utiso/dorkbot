@@ -24,38 +24,37 @@ def main():
     indexer_options = parse_options(args.indexer_options)
     scanner_options = parse_options(args.scanner_options)
 
-    if args.flush_fingerprints or args.flush_blacklist or \
-       args.list_targets or args.list_blacklist or \
-       args.add_blacklist_item or args.delete_blacklist_item or \
-       args.indexer or args.prune or args.scanner:
+    if args.prune \
+       or args.list_targets or args.add_target or args.delete_target \
+       or args.flush_fingerprints or args.flush_blacklist \
+       or args.add_blacklist_item or args.delete_blacklist_item \
+       or args.list_blacklist or args.indexer or args.scanner:
+
         db = TargetDatabase(args.database)
-        if args.blacklist is not None:
+        if args.blacklist:
             blacklist = Blacklist(args.blacklist)
         else:
             blacklist = Blacklist("sqlite3://" + args.database)
 
+        if args.flush_blacklist: blacklist.flush()
         if args.flush_fingerprints: db.flush_fingerprints()
+        if args.add_target: db.add_target(args.add_target)
+        if args.delete_target: db.delete_target(args.delete_target)
         if args.list_targets:
             for target in db.get_targets(): print(target)
-        if args.add_blacklist_item:
-            blacklist.connect()
-            blacklist.add(args.add_blacklist_item)
-            blacklist.close()
-        if args.delete_blacklist_item:
-            blacklist.connect()
-            blacklist.delete(args.delete_blacklist_item)
-            blacklist.close()
-        if args.list_blacklist:
-            items = blacklist.get_parsed_items()
-            for item in items: print(item)
-        if args.flush_blacklist: blacklist.flush()
- 
         db.close()
+
+        if args.add_blacklist_item: blacklist.add(args.add_blacklist_item)
+        if args.delete_blacklist_item: blacklist.delete(args.delete_blacklist_item)
+        if args.list_blacklist:
+            for item in blacklist.get_parsed_items(): print(item)
 
         if args.indexer:
             index(db, load_module("indexers", args.indexer), args, indexer_options)
+
         if args.prune:
             prune(db, args, scanner_args)
+
         if args.scanner:
             scan(db, load_module("scanners", args.scanner), args, scanner_options)
 
@@ -122,27 +121,37 @@ def get_args_parser():
         help="Path to log file")
     parser.add_argument("-V", "--version", action="version", \
         version="%(prog)s " + __version__, help="Print version")
+
     database = parser.add_argument_group('database')
     database.add_argument("-d", "--database", \
         help="Database file/uri")
     database.add_argument("-u", "--prune", action="store_true", \
         help="Delete unscannable targets (blacklist / fingerprinting)")
+
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true", \
         help="List targets in database")
+    targets.add_argument("--add-target", metavar="TARGET", \
+        help="Add a url to the target database")
+    targets.add_argument("--delete-target", metavar="TARGET", \
+        help="Delete a url from the target database")
+
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer", \
         help="Indexer module to use")
     indexing.add_argument("-o", "--indexer-options", \
         help="Indexer-specific options (opt1=val1,opt2=val2,..)")
+
     scanning = parser.add_argument_group('scanning')
     scanning.add_argument("-s", "--scanner", \
         help="Scanner module to use")
     scanning.add_argument("-p", "--scanner-options", \
         help="Scanner-specific options (opt1=val1,opt2=val2,..)")
+
     fingerprints = parser.add_argument_group('fingerprints')
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
         help="Flush table of fingerprints of previously-scanned items")
+
     blacklist = parser.add_argument_group('blacklist')
     blacklist.add_argument("-b", "--blacklist", \
         help="Blacklist file/uri")
@@ -295,13 +304,6 @@ class TargetDatabase:
             database_dir = os.path.dirname(self.database)
             self.insert = "INSERT OR REPLACE"
             self.conflict = ""
-            if database_dir and not os.path.exists(database_dir):
-                try:
-                    os.makedirs(database_dir)
-                except OSError as e:
-                    logging.error("Failed to create directory - %s", str(e))
-                    sys.exit(1)
-
 
         self.module = importlib.import_module(module_name, package=None)
 
@@ -309,6 +311,16 @@ class TargetDatabase:
             self.param = "?"
         else:
             self.param = "%s"
+
+        if module_name == "sqlite3" and not os.path.exists(self.database):
+            logging.info("Creating database file - %s", self.database)
+
+            if database_dir and not os.path.exists(database_dir):
+                try:
+                    os.makedirs(database_dir)
+                except OSError as e:
+                    logging.error("Failed to create directory - %s", str(e))
+                    sys.exit(1)
 
         self.connect()
         try:
@@ -559,6 +571,8 @@ class Blacklist:
         return items
 
     def add(self, item):
+        self.connect()
+
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
@@ -579,7 +593,11 @@ class Blacklist:
         else:
             logging.warning("Could not parse blacklist item - %s", item)
 
+        self.close()
+
     def delete(self, item):
+        self.connect()
+
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
@@ -589,6 +607,8 @@ class Blacklist:
                 sys.exit(1)
         else:
             logging.warning("Delete ignored (not implemented for file-based blacklist)")
+
+        self.close()
 
     def match(self, target):
         if self.regex.match(target.url):
