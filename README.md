@@ -15,13 +15,11 @@ Targets are stored in a local database file until they are scanned, at which poi
 Usage
 =====
 <pre>
-usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY]
-                  [--add-blacklist-item ADD_BLACKLIST_ITEM] [-b BLACKLIST]
-                  [-d DATABASE]
-                  [--delete-blacklist-item DELETE_BLACKLIST_ITEM] [-f]
-                  [--flush-blacklist] [-i INDEXER] [-l] [--list-blacklist]
-                  [--log LOG] [-o INDEXER_OPTIONS] [-p SCANNER_OPTIONS]
-                  [-s SCANNER] [-u] [-V]
+usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-V]
+                  [-d DATABASE] [-u] [-l] [-i INDEXER] [-o INDEXER_OPTIONS]
+                  [-s SCANNER] [-p SCANNER_OPTIONS] [-f] [-b BLACKLIST]
+                  [--list-blacklist] [--add-blacklist-item ITEM]
+                  [--delete-blacklist-item ITEM] [--flush-blacklist]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -30,33 +28,44 @@ optional arguments:
   -r DIRECTORY, --directory DIRECTORY
                         Dorkbot directory (default location of db, tools,
                         reports)
-  --add-blacklist-item ADD_BLACKLIST_ITEM
-                        Add an ip/host/regex pattern to the blacklist
-  -b BLACKLIST, --blacklist BLACKLIST
-                        Database file/uri
+  --log LOG             Path to log file
+  -V, --version         Print version
+
+database:
   -d DATABASE, --database DATABASE
                         Database file/uri
-  --delete-blacklist-item DELETE_BLACKLIST_ITEM
-                        Delete an item from the blacklist
+  -u, --prune           Delete unscannable targets (blacklist /
+                        fingerprinting)
+
+targets:
+  -l, --list-targets    List targets in database
+
+indexing:
+  -i INDEXER, --indexer INDEXER
+                        Indexer module to use
+  -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
+                        Indexer-specific options (opt1=val1,opt2=val2,..)
+
+scanning:
+  -s SCANNER, --scanner SCANNER
+                        Scanner module to use
+  -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
+                        Scanner-specific options (opt1=val1,opt2=val2,..)
+
+fingerprints:
   -f, --flush-fingerprints
                         Flush table of fingerprints of previously-scanned
                         items
-  --flush-blacklist     Flush table of blacklist items
-  -i INDEXER, --indexer INDEXER
-                        Indexer module to use
-  -l, --list-targets    List targets in database
-  --list-blacklist      List blacklist entries
-  --log LOG             Path to log file
-  -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
-                        Indexer-specific options (opt1=val1,opt2=val2,..)
-  -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
-                        Scanner-specific options (opt1=val1,opt2=val2,..)
-  -s SCANNER, --scanner SCANNER
-                        Scanner module to use
-  -u, --prune           Delete unscannable targets (blacklist /
-                        fingerprinting)
-  -V, --version         Print version
 
+blacklist:
+  -b BLACKLIST, --blacklist BLACKLIST
+                        Blacklist file/uri
+  --list-blacklist      List blacklist entries
+  --add-blacklist-item ITEM
+                        Add an ip/host/regex pattern to the blacklist
+  --delete-blacklist-item ITEM
+                        Delete an item from the blacklist
+  --flush-blacklist     Flush table of blacklist items
 </pre>
 
 Requirements
