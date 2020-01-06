@@ -16,10 +16,12 @@ Usage
 =====
 <pre>
 usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-V]
-                  [-d DATABASE] [-u] [-l] [-i INDEXER] [-o INDEXER_OPTIONS]
-                  [-s SCANNER] [-p SCANNER_OPTIONS] [-f] [-b BLACKLIST]
-                  [--list-blacklist] [--add-blacklist-item ITEM]
-                  [--delete-blacklist-item ITEM] [--flush-blacklist]
+                  [-d DATABASE] [-u] [-l] [--add-target TARGET]
+                  [--delete-target TARGET] [--flush-targets] [-i INDEXER]
+                  [-o INDEXER_OPTIONS] [-s SCANNER] [-p SCANNER_OPTIONS] [-f]
+                  [-b BLACKLIST] [--list-blacklist]
+                  [--add-blacklist-item ITEM] [--delete-blacklist-item ITEM]
+                  [--flush-blacklist]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -39,6 +41,10 @@ database:
 
 targets:
   -l, --list-targets    List targets in database
+  --add-target TARGET   Add a url to the target database
+  --delete-target TARGET
+                        Delete a url from the target database
+  --flush-targets       Delete all targets
 
 indexing:
   -i INDEXER, --indexer INDEXER
@@ -54,8 +60,7 @@ scanning:
 
 fingerprints:
   -f, --flush-fingerprints
-                        Flush table of fingerprints of previously-scanned
-                        items
+                        Delete all fingerprints of previously-scanned items
 
 blacklist:
   -b BLACKLIST, --blacklist BLACKLIST
@@ -65,7 +70,7 @@ blacklist:
                         Add an ip/host/regex pattern to the blacklist
   --delete-blacklist-item ITEM
                         Delete an item from the blacklist
-  --flush-blacklist     Flush table of blacklist items
+  --flush-blacklist     Delete all blacklist items
 </pre>
 
 Requirements
