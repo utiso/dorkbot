@@ -17,12 +17,21 @@ import sys
 import io
 import random
 import logging
+import socket
 
 def main():
     args, parser = get_args_parser()
     initialize_logger(args.log)
     indexer_options = parse_options(args.indexer_options)
     scanner_options = parse_options(args.scanner_options)
+
+    if args.directory and not os.path.isdir(args.directory):
+        logging.info("Creating directory - %s", args.directory)
+        try:
+            os.makedirs(args.directory)
+        except OSError as e:
+            logging.error("Failed to create directory - %s", str(e))
+            sys.exit(1)
 
     if args.prune \
        or args.list_targets or args.add_target or args.delete_target \
@@ -50,13 +59,13 @@ def main():
             for item in blacklist.get_parsed_items(): print(item)
 
         if args.indexer:
-            index(db, load_module("indexers", args.indexer), args, indexer_options)
+            index(db, blacklist, load_module("indexers", args.indexer), args, indexer_options)
 
         if args.prune:
-            prune(db, args, scanner_args)
+            prune(db, blacklist, args, scanner_options)
 
         if args.scanner:
-            scan(db, load_module("scanners", args.scanner), args, scanner_options)
+            scan(db, blacklist, load_module("scanners", args.scanner), args, scanner_options)
 
     else:
         parser.print_usage()
@@ -168,17 +177,22 @@ def get_args_parser():
     args.directory = initial_args.directory
     return args, parser
 
-def index(db, indexer, args, options):
+def index(db, blacklist, indexer, args, options):
     options["directory"] = args.directory
-    blacklist = get_blacklist(args.blacklist)
     urls = indexer.run(options)
-    db.connect()
-    db.add_targets(urls)
-    db.close()
-    for url in urls:
-        print(url)
 
-def prune(db, args, options):
+    targets = []
+    for url in urls:
+        if not blacklist.match(Target(url)): targets.append(url)
+
+    db.connect()
+    db.add_targets(targets)
+    db.close()
+
+    for target in targets:
+        print(target)
+
+def prune(db, blacklist, args, options):
     fingerprints = set()
 
     db.connect()
@@ -205,11 +219,10 @@ def prune(db, args, options):
 
     db.close()
 
-def scan(db, scanner, args, options):
+def scan(db, blacklist, scanner, args, options):
     options["directory"] = args.directory
-    blacklist = get_blacklist(args.blacklist)
     report_dir = options.get("reports", os.path.join(args.directory, "reports"))
-    if not os.path.exists(report_dir):
+    if not os.path.isdir(report_dir):
         try:
             os.makedirs(report_dir)
         except OSError as e:
@@ -234,7 +247,7 @@ def scan(db, scanner, args, options):
             db.delete_target(target.url)
             continue
 
-        if blacklist.match(target.url):
+        if blacklist.match(target):
             logging.info("Skipping (matches blacklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
@@ -312,10 +325,10 @@ class TargetDatabase:
         else:
             self.param = "%s"
 
-        if module_name == "sqlite3" and not os.path.exists(self.database):
+        if module_name == "sqlite3" and not os.path.isfile(self.database):
             logging.info("Creating database file - %s", self.database)
 
-            if database_dir and not os.path.exists(database_dir):
+            if database_dir and not os.path.isdir(database_dir):
                 try:
                     os.makedirs(database_dir)
                 except OSError as e:
@@ -482,7 +495,7 @@ class Blacklist:
             database_dir = os.path.dirname(self.database)
             self.insert = "INSERT OR REPLACE"
             self.conflict = ""
-            if database_dir and not os.path.exists(database_dir):
+            if database_dir and not os.path.isdir(database_dir):
                 try:
                     os.makedirs(database_dir)
                 except OSError as e:
@@ -547,9 +560,11 @@ class Blacklist:
             else:
                 logging.warning("Could not parse blacklist item - %s", item)
 
-        pattern = "$^"
         pattern = "|".join(self.regex_list)
-        self.regex = re.compile(pattern)
+        if pattern:
+            self.regex = re.compile(pattern)
+        else:
+            self.regex = None
 
     def get_parsed_items(self):
         return ["ip:" + item for item in self.ip_list] + \
@@ -611,7 +626,7 @@ class Blacklist:
         self.close()
 
     def match(self, target):
-        if self.regex.match(target.url):
+        if self.regex and self.regex.match(target.url):
             return True
         elif target.host in self.host_list:
             return True
@@ -634,6 +649,10 @@ class Blacklist:
             except OSError as e:
                 logging.error("Failed to delete blacklist file - %s", str(e))
                 sys.exit(1)
+
+        self.regex = None
+        self.ip_list = []
+        self.host_list = []
 
 if __name__ == "__main__":
     main()
