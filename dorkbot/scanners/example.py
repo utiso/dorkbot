@@ -7,7 +7,7 @@ def run(args, target):
     scan_cmd += ["to"]
     scan_cmd += ["scan", target.url]
     try:
-        subprocess.check_call(scan_cmd)
+        subprocess.run(scan_cmd, check=True)
     except subprocess.CalledProcessError:
         return False
 

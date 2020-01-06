@@ -36,8 +36,8 @@ def run(options, target):
     report_cmd += [report]
 
     try:
-        subprocess.check_call(scan_cmd, cwd=arachni_path)
-        subprocess.check_call(report_cmd, cwd=arachni_path)
+        subprocess.run(scan_cmd, cwd=arachni_path, check=True)
+        subprocess.run(report_cmd, cwd=arachni_path, check=True)
     except OSError as e:
         if "No such file or directory" in str(e):
             logging.critical("Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni_dir option to correct directory.")

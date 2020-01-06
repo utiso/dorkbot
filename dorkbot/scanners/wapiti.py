@@ -30,7 +30,7 @@ def run(options, target):
         cmd += options["args"].split()
 
     try:
-        subprocess.check_call(cmd)
+        subprocess.run(cmd, check=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical("Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti_dir option to correct directory.")
