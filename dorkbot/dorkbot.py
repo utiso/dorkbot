@@ -662,7 +662,7 @@ class Blacklist:
                 sys.exit(1)
         else:
             try:
-                os.unlink(self.blacklist_file)
+                os.unlink(self.filename)
             except OSError as e:
                 logging.error("Failed to delete blacklist file - %s", str(e))
                 sys.exit(1)
