@@ -44,7 +44,12 @@ def main():
         if args.blacklist:
             blacklist = Blacklist(args.blacklist)
         else:
-            blacklist = Blacklist("sqlite3://" + args.database)
+            pattern = "^[^:]+://.*$"
+            regex = re.compile(pattern)
+            if (regex.match(args.database)):
+                blacklist = Blacklist(args.database)
+            else:
+                blacklist = Blacklist("sqlite3://" + args.database)
 
         if args.flush_targets: db.flush_targets()
         if args.flush_blacklist: blacklist.flush()
