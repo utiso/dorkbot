@@ -118,36 +118,42 @@ def get_args_parser():
 
     parser = argparse.ArgumentParser(parents=[initial_parser])
     parser.set_defaults(**defaults)
-    parser.add_argument("--add-blacklist-item", \
-        help="Add an ip/host/regex pattern to the blacklist")
-    parser.add_argument("-b", "--blacklist", \
-        help="Database file/uri")
-    parser.add_argument("-d", "--database", \
-        help="Database file/uri")
-    parser.add_argument("--delete-blacklist-item", \
-        help="Delete an item from the blacklist")
-    parser.add_argument("-f", "--flush-fingerprints", action="store_true", \
-        help="Flush table of fingerprints of previously-scanned items")
-    parser.add_argument("--flush-blacklist", action="store_true", \
-        help="Flush table of blacklist items")
-    parser.add_argument("-i", "--indexer", \
-        help="Indexer module to use")
-    parser.add_argument("-l", "--list-targets", action="store_true", \
-        help="List targets in database")
-    parser.add_argument("--list-blacklist", action="store_true", \
-        help="List blacklist entries")
     parser.add_argument("--log", \
         help="Path to log file")
-    parser.add_argument("-o", "--indexer-options", \
-        help="Indexer-specific options (opt1=val1,opt2=val2,..)")
-    parser.add_argument("-p", "--scanner-options", \
-        help="Scanner-specific options (opt1=val1,opt2=val2,..)")
-    parser.add_argument("-s", "--scanner", \
-        help="Scanner module to use")
-    parser.add_argument("-u", "--prune", action="store_true", \
-        help="Delete unscannable targets (blacklist / fingerprinting)")
     parser.add_argument("-V", "--version", action="version", \
         version="%(prog)s " + __version__, help="Print version")
+    database = parser.add_argument_group('database')
+    database.add_argument("-d", "--database", \
+        help="Database file/uri")
+    database.add_argument("-u", "--prune", action="store_true", \
+        help="Delete unscannable targets (blacklist / fingerprinting)")
+    targets = parser.add_argument_group('targets')
+    targets.add_argument("-l", "--list-targets", action="store_true", \
+        help="List targets in database")
+    indexing = parser.add_argument_group('indexing')
+    indexing.add_argument("-i", "--indexer", \
+        help="Indexer module to use")
+    indexing.add_argument("-o", "--indexer-options", \
+        help="Indexer-specific options (opt1=val1,opt2=val2,..)")
+    scanning = parser.add_argument_group('scanning')
+    scanning.add_argument("-s", "--scanner", \
+        help="Scanner module to use")
+    scanning.add_argument("-p", "--scanner-options", \
+        help="Scanner-specific options (opt1=val1,opt2=val2,..)")
+    fingerprints = parser.add_argument_group('fingerprints')
+    fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
+        help="Flush table of fingerprints of previously-scanned items")
+    blacklist = parser.add_argument_group('blacklist')
+    blacklist.add_argument("-b", "--blacklist", \
+        help="Blacklist file/uri")
+    blacklist.add_argument("--list-blacklist", action="store_true", \
+        help="List blacklist entries")
+    blacklist.add_argument("--add-blacklist-item", metavar="ITEM", \
+        help="Add an ip/host/regex pattern to the blacklist")
+    blacklist.add_argument("--delete-blacklist-item", metavar="ITEM", \
+        help="Delete an item from the blacklist")
+    blacklist.add_argument("--flush-blacklist", action="store_true", \
+        help="Flush table of blacklist items")
 
     args = parser.parse_args(other_args)
     args.directory = initial_args.directory
