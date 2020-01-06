@@ -30,7 +30,7 @@ def run(options):
     if domain: index_cmd += [domain]
 
     try:
-        output = subprocess.run(index_cmd, check=True, stdout=PIPE).stdout
+        output = subprocess.run(index_cmd, check=True, stdout=subprocess.PIPE).stdout
     except OSError as e:
         if "No such file or directory" in str(e):
             logging.critical("Could not find phantomjs. If not in PATH, extract or symlink as [directory]/tools/phantomjs or set phantomjs_dir option to correct directory.")
