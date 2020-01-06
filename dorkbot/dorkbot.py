@@ -33,11 +33,12 @@ def main():
             logging.error("Failed to create directory - %s", str(e))
             sys.exit(1)
 
-    if args.prune \
-       or args.list_targets or args.add_target or args.delete_target \
-       or args.flush_fingerprints or args.flush_blacklist \
+    if args.indexer or args.prune or args.scanner \
+       or args.list_targets or args.flush_targets \
+       or args.add_target or args.delete_target \
+       or args.list_blacklist or args.flush_blacklist \
        or args.add_blacklist_item or args.delete_blacklist_item \
-       or args.list_blacklist or args.indexer or args.scanner:
+       or args.flush_fingerprints:
 
         db = TargetDatabase(args.database)
         if args.blacklist:
@@ -45,6 +46,7 @@ def main():
         else:
             blacklist = Blacklist("sqlite3://" + args.database)
 
+        if args.flush_targets: db.flush_targets()
         if args.flush_blacklist: blacklist.flush()
         if args.flush_fingerprints: db.flush_fingerprints()
         if args.add_target: db.add_target(args.add_target)
@@ -144,6 +146,8 @@ def get_args_parser():
         help="Add a url to the target database")
     targets.add_argument("--delete-target", metavar="TARGET", \
         help="Delete a url from the target database")
+    targets.add_argument("--flush-targets", action="store_true", \
+        help="Delete all targets")
 
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer", \
@@ -159,7 +163,7 @@ def get_args_parser():
 
     fingerprints = parser.add_argument_group('fingerprints')
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
-        help="Flush table of fingerprints of previously-scanned items")
+        help="Delete all fingerprints of previously-scanned items")
 
     blacklist = parser.add_argument_group('blacklist')
     blacklist.add_argument("-b", "--blacklist", \
@@ -171,7 +175,7 @@ def get_args_parser():
     blacklist.add_argument("--delete-blacklist-item", metavar="ITEM", \
         help="Delete an item from the blacklist")
     blacklist.add_argument("--flush-blacklist", action="store_true", \
-        help="Flush table of blacklist items")
+        help="Delete all blacklist items")
 
     args = parser.parse_args(other_args)
     args.directory = initial_args.directory
@@ -440,6 +444,14 @@ class TargetDatabase:
                 c.execute("DELETE FROM fingerprints")
         except self.module.Error as e:
             logging.error("Failed to flush fingerprints - %s", str(e))
+            sys.exit(1)
+
+    def flush_targets(self):
+        try:
+            with self.db, closing(self.db.cursor()) as c:
+                c.execute("DELETE FROM targets")
+        except self.module.Error as e:
+            logging.error("Failed to flush targets - %s", str(e))
             sys.exit(1)
 
 class Target:
