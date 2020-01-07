@@ -567,13 +567,12 @@ class Blacklist:
 
     def parse_list(self, items):
         for item in items:
-            category, value = item.split(":")
-            if category == "ip":
-                self.ip_list.append(value)
-            elif category == "host":
-                self.host_list.append(value)
-            elif category == "regex":
-                self.regex_list.append(value)
+            if item.startswith("ip:"):
+                self.ip_list.append(item.split(":")[1])
+            elif item.startswith("host:"):
+                self.host_list.append(item.split(":")[1])
+            elif item.startswith("regex:"):
+                self.regex_list.append(item.split(":")[1])
             else:
                 logging.warning("Could not parse blacklist item - %s", item)
 
