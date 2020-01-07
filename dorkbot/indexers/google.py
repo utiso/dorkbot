@@ -32,9 +32,14 @@ def run(options):
     try:
         output = subprocess.run(index_cmd, check=True, stdout=subprocess.PIPE).stdout
     except OSError as e:
-        if "No such file or directory" in str(e):
+        if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical("Could not find phantomjs. If not in PATH, extract or symlink as [directory]/tools/phantomjs or set phantomjs_dir option to correct directory.")
             sys.exit(1)
+        else:
+            raise
+    except subprocess.CalledProcessError:
+        logging.error("Failed to execute phantomjs command")
+        return False
 
     return [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]
 

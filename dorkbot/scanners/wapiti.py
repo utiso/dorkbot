@@ -35,6 +35,8 @@ def run(options, target):
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical("Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti_dir option to correct directory.")
             sys.exit(1)
+        else:
+            raise
     except subprocess.CalledProcessError:
         logging.error("Failed to execute wapiti command")
         return False
