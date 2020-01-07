@@ -358,7 +358,7 @@ class TargetDatabase:
         try:
             self.db = self.module.connect(self.database, **self.connect_kwargs)
         except self.module.Error as e:
-            loging.error("Error loading database - %s", str(e))
+            logging.error("Error loading database - %s", str(e))
             sys.exit(1)
 
     def close(self):
