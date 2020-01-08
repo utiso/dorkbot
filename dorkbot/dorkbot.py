@@ -604,6 +604,16 @@ class Blacklist:
     def add(self, item):
         self.connect()
 
+        if item.startswith("ip:"):
+            self.ip_list.append(item.split(":")[1])
+        elif item.startswith("host:"):
+            self.host_list.append(item.split(":")[1])
+        elif item.startswith("regex:"):
+            self.regex_list.append(item.split(":")[1])
+        else:
+            logging.warning("Could not parse blacklist item - %s", item)
+            return
+
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
@@ -613,16 +623,6 @@ class Blacklist:
                 sys.exit(1)
         else:
             logging.warning("Add ignored (not implemented for file-based blacklist)")
-
-        category, value = item.split(":")
-        if category == "ip":
-            self.ip_list.append(value)
-        elif category == "host":
-            self.host_list.append(value)
-        elif category == "regex":
-            self.regex_list.append(value)
-        else:
-            logging.warning("Could not parse blacklist item - %s", item)
 
         self.close()
 
