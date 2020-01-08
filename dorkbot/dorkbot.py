@@ -22,8 +22,8 @@ import socket
 def main():
     args, parser = get_args_parser()
     initialize_logger(args.log)
-    indexer_options = parse_options(args.indexer_options)
-    scanner_options = parse_options(args.scanner_options)
+    indexer_options = parse_options(args.indexer_option)
+    scanner_options = parse_options(args.scanner_option)
 
     if args.directory and not os.path.isdir(args.directory):
         logging.info("Creating directory - %s", args.directory)
@@ -157,14 +157,14 @@ def get_args_parser():
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer", \
         help="Indexer module to use")
-    indexing.add_argument("-o", "--indexer-options", \
-        help="Indexer-specific options (opt1=val1,opt2=val2,..)")
+    indexing.add_argument("-o", "--indexer-option", action="append", \
+        help="Pass an option to the indexer (can be used multiple times)")
 
     scanning = parser.add_argument_group('scanning')
     scanning.add_argument("-s", "--scanner", \
         help="Scanner module to use")
-    scanning.add_argument("-p", "--scanner-options", \
-        help="Scanner-specific options (opt1=val1,opt2=val2,..)")
+    scanning.add_argument("-p", "--scanner-option", action="append", \
+        help="Pass an option to the scanner (can be used multiple times)")
 
     fingerprints = parser.add_argument_group('fingerprints')
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
@@ -293,11 +293,11 @@ def generate_timestamp():
 def generate_hash(url):
     return hashlib.md5(url.encode("utf-8")).hexdigest()
 
-def parse_options(options_string):
+def parse_options(options_list):
     options = dict()
 
-    if options_string:
-        for option in options_string.split(","):
+    if options_list:
+        for option in options_list:
             if "=" in option:
                 key, value = option.split("=", 1)
             else:

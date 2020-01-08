@@ -18,7 +18,7 @@ Usage
 usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-V]
                   [-d DATABASE] [-u] [-l] [--add-target TARGET]
                   [--delete-target TARGET] [--flush-targets] [-i INDEXER]
-                  [-o INDEXER_OPTIONS] [-s SCANNER] [-p SCANNER_OPTIONS] [-f]
+                  [-o INDEXER_OPTION] [-s SCANNER] [-p SCANNER_OPTION] [-f]
                   [-b BLACKLIST] [--list-blacklist]
                   [--add-blacklist-item ITEM] [--delete-blacklist-item ITEM]
                   [--flush-blacklist]
@@ -49,14 +49,16 @@ targets:
 indexing:
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
-  -o INDEXER_OPTIONS, --indexer-options INDEXER_OPTIONS
-                        Indexer-specific options (opt1=val1,opt2=val2,..)
+  -o INDEXER_OPTION, --indexer-option INDEXER_OPTION
+                        Pass an option to the indexer (can be used multiple
+                        times)
 
 scanning:
   -s SCANNER, --scanner SCANNER
                         Scanner module to use
-  -p SCANNER_OPTIONS, --scanner-options SCANNER_OPTIONS
-                        Scanner-specific options (opt1=val1,opt2=val2,..)
+  -p SCANNER_OPTION, --scanner-option SCANNER_OPTION
+                        Pass an option to the scanner (can be used multiple
+                        times)
 
 fingerprints:
   -f, --flush-fingerprints
