@@ -1,1 +1,1 @@
-__version__ = "0.1.0+git"
+__version__ = "0.1.1+git"
