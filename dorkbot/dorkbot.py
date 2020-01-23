@@ -187,6 +187,9 @@ def get_args_parser():
     return args, parser
 
 def index(db, blacklist, indexer, args, options):
+    indexer_name = indexer.__name__.split(".")[-1]
+    indexer_options = ",".join(["%s=%s" % (key, val) for key, val in options.items()])
+    logging.info("Indexing: %s %s", indexer_name, indexer_options)
     options["directory"] = args.directory
     urls = indexer.run(options)
 
@@ -204,6 +207,7 @@ def index(db, blacklist, indexer, args, options):
 def prune(db, blacklist, args, options):
     fingerprints = set()
 
+    logging.info("Pruning database")
     db.connect()
     urls = db.get_targets()
 
@@ -444,6 +448,7 @@ class TargetDatabase:
             sys.exit(1)
 
     def flush_fingerprints(self):
+        logging.info("Flushing fingerprints")
         try:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("DELETE FROM fingerprints")
@@ -452,6 +457,7 @@ class TargetDatabase:
             sys.exit(1)
 
     def flush_targets(self):
+        logging.info("Flushing targets")
         try:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("DELETE FROM targets")
@@ -652,6 +658,7 @@ class Blacklist:
         return False
 
     def flush(self):
+        logging.info("Flushing blacklist")
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
