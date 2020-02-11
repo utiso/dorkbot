@@ -41,5 +41,9 @@ def run(options):
         logging.error("Failed to execute phantomjs command")
         return False
 
-    return [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]
+    results = [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]
+    for result in results:
+        logging.debug(result)
+    logging.info("Fetched %d results", len(results))
+    return results
 

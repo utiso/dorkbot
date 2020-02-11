@@ -29,6 +29,9 @@ def run(options):
         data["to"] = time_to
  
     results = get_results(data, domain)
+    for result in results:
+        logging.debug(result)
+    logging.info("Fetched %d results", len(results))
     return results
 
 def get_num_pages(data):

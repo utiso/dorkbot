@@ -35,6 +35,9 @@ def get_results(options):
             break
         results.extend(items)
 
+    for result in results:
+        logging.debug(result)
+    logging.info("Fetched %d results", len(results))
     return results
 
 def issue_request(data):

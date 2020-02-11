@@ -21,12 +21,12 @@ import socket
 
 def main():
     args, parser = get_args_parser()
-    initialize_logger(args.log)
+    initialize_logger(args.log, args.verbose)
     indexer_options = parse_options(args.indexer_option)
     scanner_options = parse_options(args.scanner_option)
 
     if args.directory and not os.path.isdir(args.directory):
-        logging.info("Creating directory - %s", args.directory)
+        logging.debug("Creating directory - %s", args.directory)
         try:
             os.makedirs(args.directory)
         except OSError as e:
@@ -77,9 +77,13 @@ def main():
     else:
         parser.print_usage()
 
-def initialize_logger(log_file):
+def initialize_logger(log_file, verbose):
     log = logging.getLogger()
-    log.setLevel(logging.DEBUG)
+
+    if verbose:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
     log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
     if log_file:
@@ -135,6 +139,8 @@ def get_args_parser():
     parser.set_defaults(**defaults)
     parser.add_argument("--log", \
         help="Path to log file")
+    parser.add_argument("-v", "--verbose", action="store_true", \
+        help="Enable verbose logging (DEBUG output)")
     parser.add_argument("-V", "--version", action="version", \
         version="%(prog)s " + __version__, help="Print version")
 
@@ -201,9 +207,6 @@ def index(db, blacklist, indexer, args, options):
     db.add_targets(targets)
     db.close()
 
-    for target in targets:
-        print(target)
-
 def prune(db, blacklist, args, options):
     fingerprints = set()
 
@@ -219,12 +222,12 @@ def prune(db, blacklist, args, options):
 
         fingerprint = generate_fingerprint(target)
         if fingerprint in fingerprints or db.get_scanned(fingerprint):
-            logging.info("Skipping (matches fingerprint of previous scan): %s", target.url)
+            logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target):
-            logging.info("Skipping (matches blacklist pattern): %s", target.url)
+            logging.debug("Skipping (matches blacklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
 
@@ -256,12 +259,12 @@ def scan(db, blacklist, scanner, args, options):
 
         fingerprint = generate_fingerprint(target)
         if db.get_scanned(fingerprint):
-            logging.info("Skipping (matches fingerprint of previous scan): %s", target.url)
+            logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
             db.delete_target(target.url)
             continue
 
         if blacklist.match(target):
-            logging.info("Skipping (matches blacklist pattern): %s", target.url)
+            logging.debug("Skipping (matches blacklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
 
@@ -339,7 +342,7 @@ class TargetDatabase:
             self.param = "%s"
 
         if module_name == "sqlite3" and not os.path.isfile(self.database):
-            logging.info("Creating database file - %s", self.database)
+            logging.debug("Creating database file - %s", self.database)
 
             if database_dir and not os.path.isdir(database_dir):
                 try:

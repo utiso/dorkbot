@@ -14,6 +14,9 @@ def run(options):
             sys.exit(1)
 
     results = get_results(options)
+    for result in results:
+        logging.debug(result)
+    logging.info("Fetched %d results", len(results))
     return results
 
 def get_results(options):
