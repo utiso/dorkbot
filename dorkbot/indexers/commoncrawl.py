@@ -49,7 +49,7 @@ def get_latest_index(retries):
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
         except HTTPError as e:
-            if e.code == 504 or e.code == 503:
+            if e.code == 504 or e.code == 503 or e.code == 404 or e.code == 403:
                 if i == retries - 1:
                     logging.error("Failed to fetch index list (retries exceeded) - %s", str(e))
                     sys.exit(1)
@@ -78,7 +78,7 @@ def get_num_pages(index, data, retries):
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
         except HTTPError as e:
-            if e.code == 504 or e.code == 503:
+            if e.code == 504 or e.code == 503 or e.code == 404 or e.code == 403:
                 if i == retries - 1:
                     logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
                     sys.exit(1)
@@ -109,7 +109,7 @@ def get_page(domain, index, data, retries, page):
             response_str = response_str.read().decode("utf-8")
             response = response_str.splitlines()
         except HTTPError as e:
-            if e.code == 504 or e.code == 503:
+            if e.code == 504 or e.code == 503 or e.code == 404 or e.code == 403:
                 if i == retries - 1:
                     logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
                     sys.exit(1)
