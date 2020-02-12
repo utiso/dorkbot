@@ -89,7 +89,7 @@ def get_num_pages(index, data, retries):
             else:
                 raise
         except Exception:
-            logging.error("Failed to fetch number of pages")
+            logging.exception("Failed to fetch number of pages")
             sys.exit(1)
         break
 
