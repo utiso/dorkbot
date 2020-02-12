@@ -43,14 +43,14 @@ def get_latest_index(retries):
     url = "https://index.commoncrawl.org/collinfo.json"
 
     logging.debug("Fetching latest index list")
-    for i in range(retries + 1):
+    for i in range(retries):
         try:
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
         except HTTPError as e:
             if e.code == 504 or e.code == 503:
-                if i == retries:
+                if i == retries - 1:
                     logging.error("Failed to fetch index list (retries exceeded) - %s", str(e))
                     sys.exit(1)
                 else:
@@ -72,14 +72,14 @@ def get_num_pages(index, data, retries):
     url = "https://index.commoncrawl.org/" + index + "-index?" + urlencode(data)
 
     logging.debug("Fetching number of pages")
-    for i in range(retries + 1):
+    for i in range(retries):
         try:
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
         except HTTPError as e:
             if e.code == 504 or e.code == 503:
-                if i == retries:
+                if i == retries - 1:
                     logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
                     sys.exit(1)
                 else:
@@ -103,14 +103,14 @@ def get_page(domain, index, data, retries, page):
     url = "https://index.commoncrawl.org/" + index + "-index?" + urlencode(data)
 
     logging.debug("Fetching page %d", page)
-    for i in range(retries + 1):
+    for i in range(retries):
         try:
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = response_str.splitlines()
         except HTTPError as e:
             if e.code == 504 or e.code == 503:
-                if i == retries:
+                if i == retries - 1:
                     logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
                     sys.exit(1)
                 else:

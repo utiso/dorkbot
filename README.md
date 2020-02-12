@@ -176,8 +176,8 @@ Options:
 * **domain** - pull all results for given domain or subdomain
 * index - search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
 * filter - query filter to apply to the search
-* retries - number of times to retry fetching results on error
-* threads - number concurrent requests to commoncrawl.org
+* retries - number of times to retry fetching results on error (default: 10)
+* threads - number concurrent requests to commoncrawl.org (default: 10)
 
 ### wayback ###
 Search for targets within archive.org results.
