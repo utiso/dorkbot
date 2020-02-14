@@ -127,12 +127,12 @@ def get_page(domain, index, data, retries, page):
     pattern = "http[s]?://([^/]*\.)*" + domain + "/"
     domain_url = re.compile(pattern)
 
-    results = []
+    results = set()
     for item in response:
         item_json = json.loads(item)
         url = urlparse(item_json["url"].strip()).geturl()
         if domain_url.match(url):
-            results.append(url)
+            results.add(url)
 
     return results
 
@@ -144,13 +144,13 @@ def get_results(domain, index, data, num_pages, threads, retries):
         logging.error("Failed to execute threads")
         sys.exit(1)
 
-    results = []
+    results = set()
     try:
         for result in list(threads):
-            results.extend(result)
+            results.update(result)
     except Exception:
         logging.exception("Failed to fetch all results")
         sys.exit(1)
 
-    return results
+    return list(results)
 
