@@ -479,8 +479,7 @@ class Target:
 
         try:
             self.ip = socket.gethostbyname(self.host)
-        except socket.gaierror as e:
-            if "nodename nor servname provided, or not known" in str(e):
+        except socket.gaierror:
                 self.ip = None
             else:
                 raise
