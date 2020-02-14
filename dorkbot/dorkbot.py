@@ -480,7 +480,8 @@ class Target:
         try:
             self.ip = socket.gethostbyname(self.host)
         except socket.gaierror:
-                self.ip = None
+            self.ip = None
+            pass
         except Exception:
             logging.exception("Failed to resolve hostname: %s", self.host)
 
