@@ -476,7 +476,16 @@ class Target:
 
         url_parts = urlparse(url)
         self.host = url_parts.hostname
-        self.ip = socket.gethostbyname(self.host)
+
+        try:
+            self.ip = socket.gethostbyname(self.host)
+        except socket.gaierror as e:
+            if "nodename nor servname provided, or not known" in str(e):
+                self.ip = None
+            else:
+                raise
+        except Exception:
+            logging.exception("Failed to resolve hostname: %s", self.host)
 
     def get_hash(self):
         if not self.hash:
