@@ -77,6 +77,8 @@ def main():
     else:
         parser.print_usage()
 
+    logging.shutdown()
+
 def initialize_logger(log_file, verbose):
     log = logging.getLogger()
 
