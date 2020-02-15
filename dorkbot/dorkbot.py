@@ -17,6 +17,7 @@ import sys
 import io
 import random
 import logging
+from logging.handlers import WatchedFileHandler
 import socket
 
 def main():
@@ -89,7 +90,7 @@ def initialize_logger(log_file, verbose):
 
     log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
     if log_file:
-        log_filehandler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+        log_filehandler = WatchedFileHandler(log_file, mode="a", encoding="utf-8")
         log_filehandler.setLevel(logging.DEBUG)
         log_filehandler.setFormatter(log_formatter)
         log.addHandler(log_filehandler)
