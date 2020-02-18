@@ -97,7 +97,7 @@ Quickstart
 Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
 <pre>$ mkdir tools</pre>, download Arachni and extract it as tools/arachni, or <pre>$ pip3 install wapiti3</pre>
 <pre>$ sudo apt install phantomjs</pre>
-<pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h,query="filetype:php inurl:id"</pre>
+<pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h -o query="filetype:php inurl:id"</pre>
 <pre>$ ./dorkbot.py -s arachni</pre> OR <pre>$ ./dorkbot.py -s wapiti</pre>
 
 Files
