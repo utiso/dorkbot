@@ -10,18 +10,18 @@ dorkbot is a modular command-line tool for performing vulnerability scans agains
 * *Indexers* - modules that return a list of targets
 * *Scanners* - modules that perform a vulnerability scan against each target
 
-Targets are stored in a local database file until they are scanned, at which point a standard JSON report is produced containing any vulnerabilities found. Indexing and scanning processes can be run separately or combined in a single command (up to one of each).
+Targets are stored in a database as they are indexed. Once scanned, a standard JSON report is produced containing any vulnerabilities found. Indexing and scanning processes can be run separately or combined in a single command (up to one of each).
 
 Usage
 =====
 <pre>
 usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-v] [-V]
-                  [-d DATABASE] [-u] [-l] [--add-target TARGET]
-                  [--delete-target TARGET] [--flush-targets] [-i INDEXER]
-                  [-o INDEXER_OPTION] [-s SCANNER] [-p SCANNER_OPTION] [-f]
-                  [-b BLACKLIST] [--list-blacklist]
-                  [--add-blacklist-item ITEM] [--delete-blacklist-item ITEM]
-                  [--flush-blacklist]
+                  [-d DATABASE] [-u] [-l] [--list-unscanned]
+                  [--add-target TARGET] [--delete-target TARGET]
+                  [--flush-targets] [-i INDEXER] [-o INDEXER_OPTION]
+                  [-s SCANNER] [-p SCANNER_OPTION] [-f] [-b BLACKLIST]
+                  [--list-blacklist] [--add-blacklist-item ITEM]
+                  [--delete-blacklist-item ITEM] [--flush-blacklist]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -37,11 +37,11 @@ optional arguments:
 database:
   -d DATABASE, --database DATABASE
                         Database file/uri
-  -u, --prune           Delete unscannable targets (blacklist /
-                        fingerprinting)
+  -u, --prune           Apply fingerprinting and blacklist without scanning
 
 targets:
   -l, --list-targets    List targets in database
+  --list-unscanned      List unscanned targets in database
   --add-target TARGET   Add a url to the target database
   --delete-target TARGET
                         Delete a url from the target database
@@ -74,6 +74,7 @@ blacklist:
   --delete-blacklist-item ITEM
                         Delete an item from the blacklist
   --flush-blacklist     Delete all blacklist items
+
 </pre>
 
 Requirements
@@ -236,7 +237,7 @@ Options:
 
 Prune
 =====
-The prune flag iterates through all targets, computes the fingerprints in memory, and deletes any target matching a blacklist item or fingerprint. The result is a database of only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
+The prune flag iterates through all targets, computes the fingerprints in memory, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blacklist item. The result is a database where --list-unscanned returns only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
 
 * random - evaluate urls in random order when computing fingerprints
 
