@@ -376,8 +376,8 @@ class TargetDatabase:
 
         try:
             with self.db, closing(self.db.cursor()) as c:
-               c.execute(sql)
-               urls = [row[0] for row in c.fetchall()]
+                c.execute(sql)
+                urls = [row[0] for row in c.fetchall()]
         except self.module.Error as e:
             logging.error("Failed to get targets - %s", str(e))
             sys.exit(1)
