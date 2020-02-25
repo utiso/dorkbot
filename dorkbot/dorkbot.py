@@ -19,6 +19,7 @@ import random
 import logging
 from logging.handlers import WatchedFileHandler
 import socket
+import ipaddress
 
 def main():
     args, parser = get_args_parser()
@@ -486,7 +487,8 @@ class Target:
         self.host = url_parts.hostname
 
         try:
-            self.ip = socket.gethostbyname(self.host)
+            resolved_ip = socket.gethostbyname(self.host)
+            self.ip = ipaddress.ip_address(resolved_ip)
         except socket.gaierror:
             self.ip = None
             pass
@@ -515,9 +517,9 @@ class Target:
 class Blacklist:
     def __init__(self, blacklist):
         self.connect_kwargs = {}
-        self.ip_list = []
-        self.host_list = []
-        self.regex_list = []
+        self.ip_set = set()
+        self.host_set = set()
+        self.regex_set = set()
 
         if blacklist.startswith("postgresql://"):
             self.database = blacklist
@@ -592,24 +594,36 @@ class Blacklist:
     def parse_list(self, items):
         for item in items:
             if item.startswith("ip:"):
-                self.ip_list.append(item.split(":")[1])
+                ip = item.split(":")[1]
+                try:
+                    ip_net = ipaddress.ip_network(ip)
+                except ValueError as e:
+                    logging.error("Could not parse blacklist item as ip - %s", str(e))
+                self.ip_set.add(ip_net)
             elif item.startswith("host:"):
-                self.host_list.append(item.split(":")[1])
+                self.host_set.add(item.split(":")[1])
             elif item.startswith("regex:"):
-                self.regex_list.append(item.split(":")[1])
+                self.regex_set.add(item.split(":")[1])
             else:
                 logging.warning("Could not parse blacklist item - %s", item)
 
-        pattern = "|".join(self.regex_list)
+        pattern = "|".join(self.regex_set)
         if pattern:
             self.regex = re.compile(pattern)
         else:
             self.regex = None
 
     def get_parsed_items(self):
-        return ["ip:" + item for item in self.ip_list] + \
-               ["host:" + item for item in self.host_list] + \
-               ["regex:" + item for item in self.regex_list]
+        parsed_ip_set = set()
+        for ip_net in self.ip_set:
+            if ip_net.num_addresses == 1:
+                parsed_ip_set.add(str(ip_net[0]))
+            else:
+                parsed_ip_set.add(str(ip_net))
+
+        return ["ip:" + item for item in parsed_ip_set] + \
+               ["host:" + item for item in self.host_set] + \
+               ["regex:" + item for item in self.regex_set]
        
     def read_items(self):
         if self.database:
@@ -629,14 +643,20 @@ class Blacklist:
         self.connect()
 
         if item.startswith("ip:"):
-            self.ip_list.append(item.split(":")[1])
+            ip = item.split(":")[1]
+            try:
+                ip_net = ipaddress.ip_network(ip)
+            except ValueError as e:
+                logging.error("Could not parse blacklist item as ip - %s", str(e))
+                sys.exit(1)
+            self.ip_set.add(ip_net)
         elif item.startswith("host:"):
-            self.host_list.append(item.split(":")[1])
+            self.host_set.add(item.split(":")[1])
         elif item.startswith("regex:"):
-            self.regex_list.append(item.split(":")[1])
+            self.regex_set.add(item.split(":")[1])
         else:
-            logging.warning("Could not parse blacklist item - %s", item)
-            return
+            logging.error("Could not parse blacklist item - %s", item)
+            sys.exit(1)
 
         if self.database:
             try:
@@ -668,10 +688,13 @@ class Blacklist:
     def match(self, target):
         if self.regex and self.regex.match(target.url):
             return True
-        elif target.host in self.host_list:
+
+        if target.host in self.host_set:
             return True
-        elif target.ip in self.ip_list:
-            return True
+
+        for ip_net in self.ip_set:
+            if target.ip in ip_net:
+                return True
 
         return False
 
@@ -692,8 +715,9 @@ class Blacklist:
                 sys.exit(1)
 
         self.regex = None
-        self.ip_list = []
-        self.host_list = []
+        self.regex_set = set()
+        self.ip_set = set()
+        self.host_set = set()
 
 if __name__ == "__main__":
     main()
