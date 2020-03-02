@@ -56,7 +56,7 @@ def get_latest_index(retries):
             else:
                 logging.warn("Failed to fetch index list (will retry) - %s", str(e))
                 time.sleep(random.randrange(retries, 2**retries))
-            continue
+                continue
         except Exception:
             logging.exception("Failed to fetch index list")
             sys.exit(1)
@@ -82,7 +82,7 @@ def get_num_pages(index, data, retries):
             else:
                 logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
                 time.sleep(random.randrange(retries, 2**retries))
-            continue
+                continue
         except Exception:
             logging.exception("Failed to fetch number of pages")
             sys.exit(1)
@@ -110,7 +110,7 @@ def get_page(domain, index, data, retries, page):
             else:
                 logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
                 time.sleep(random.randrange(retries, 2**retries))
-            continue
+                continue
         except Exception:
             logging.exception("Failed to fetch results (page %d)", page)
             sys.exit(1)
