@@ -8,6 +8,7 @@ import sys
 import re
 import logging
 import time
+import random
 
 def run(options):
     required = ["domain"]
@@ -51,16 +52,13 @@ def get_num_pages(data, retries):
             response = urlopen(url)
             response = response.read().decode("utf-8")
         except HTTPError as e:
-            if e.code == 504 or e.code == 503 or e.code == 404 or e.code == 403:
-                if i == retries - 1:
-                    logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
-                    sys.exit(1)
-                else:
-                    logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
-                    time.sleep(retries)
-                continue
+            if i == retries - 1:
+                logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
+                sys.exit(1)
             else:
-                raise
+                logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
+                time.sleep(random.randrange(retries, 2**retries))
+            continue
         except Exception:
             logging.exception("Failed to fetch number of pages")
             sys.exit(1)
@@ -82,16 +80,13 @@ def get_page(domain, data, retries, page):
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
         except HTTPError as e:
-            if e.code == 504 or e.code == 503 or e.code == 404 or e.code == 403:
-                if i == retries - 1:
-                    logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
-                    sys.exit(1)
-                else:
-                    logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
-                    time.sleep(retries)
-                continue
+            if i == retries - 1:
+                logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
+                sys.exit(1)
             else:
-                raise
+                logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
+                time.sleep(random.randrange(retries, 2**retries))
+            continue
         except Exception:
             logging.exception("Failed to fetch results (page %d)", page)
             sys.exit(1)
