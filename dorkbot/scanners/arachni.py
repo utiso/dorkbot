@@ -44,8 +44,8 @@ def run(options, target):
             sys.exit(1)
         else:
             raise
-    except subprocess.CalledProcessError:
-        logging.error("Failed to execute arachni command")
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to execute arachni command - %s", str(e))
         return False
 
     with io.open(report+".json", encoding="utf-8") as data_file:    

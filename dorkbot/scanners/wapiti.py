@@ -37,8 +37,8 @@ def run(options, target):
             sys.exit(1)
         else:
             raise
-    except subprocess.CalledProcessError:
-        logging.error("Failed to execute wapiti command")
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to execute wapiti command - %s", str(e))
         return False
 
     with io.open(report, encoding="utf-8") as data_file:

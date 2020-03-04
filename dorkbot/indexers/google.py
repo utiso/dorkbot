@@ -37,8 +37,8 @@ def run(options):
             sys.exit(1)
         else:
             raise
-    except subprocess.CalledProcessError:
-        logging.error("Failed to execute phantomjs command")
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to execute phantomjs command - %s", str(e))
         return False
 
     results = [urlparse(item.decode("utf-8").strip()).geturl() for item in output.split()]
