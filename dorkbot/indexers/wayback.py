@@ -57,7 +57,7 @@ def get_num_pages(data, retries):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
-                time.sleep(random.randrange(retries, 2**retries))
+                time.sleep(random.randrange(i, 2**i))
                 continue
         except Exception:
             logging.exception("Failed to fetch number of pages")
@@ -85,7 +85,7 @@ def get_page(domain, data, retries, page):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
-                time.sleep(random.randrange(retries, 2**retries))
+                time.sleep(random.randrange(i, 2**i))
                 continue
         except Exception:
             logging.exception("Failed to fetch results (page %d)", page)
