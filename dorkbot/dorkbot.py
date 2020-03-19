@@ -693,7 +693,7 @@ class Blacklist:
             return True
 
         for ip_net in self.ip_set:
-            if target.ip in ip_net:
+            if target.ip and target.ip in ip_net:
                 return True
 
         return False
