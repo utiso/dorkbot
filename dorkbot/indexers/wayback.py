@@ -1,6 +1,7 @@
 from urllib.request import urlopen
 from urllib.parse import urlencode, urlparse
 from urllib.error import HTTPError
+from http.client import IncompleteRead
 from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 import json
@@ -51,7 +52,7 @@ def get_num_pages(data, retries):
         try:
             response = urlopen(url)
             response = response.read().decode("utf-8")
-        except HTTPError as e:
+        except (HTTPError, IncompleteRead) as e:
             if i == retries - 1:
                 logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
                 sys.exit(1)
@@ -79,7 +80,7 @@ def get_page(domain, data, retries, page):
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
-        except HTTPError as e:
+        except (HTTPError, IncompleteRead) as e:
             if i == retries - 1:
                 logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
                 sys.exit(1)

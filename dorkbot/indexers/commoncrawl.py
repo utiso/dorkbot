@@ -1,6 +1,7 @@
 from urllib.request import urlopen
 from urllib.parse import urlencode, urlparse
 from urllib.error import HTTPError
+from http.client import IncompleteRead
 from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 import json
@@ -49,7 +50,7 @@ def get_latest_index(retries):
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
-        except HTTPError as e:
+        except (HTTPError, IncompleteRead) as e:
             if i == retries - 1:
                 logging.error("Failed to fetch index list (retries exceeded) - %s", str(e))
                 sys.exit(1)
@@ -75,7 +76,7 @@ def get_num_pages(index, data, retries):
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
-        except HTTPError as e:
+        except (HTTPError, IncompleteRead) as e:
             if i == retries - 1:
                 logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
                 sys.exit(1)
@@ -103,7 +104,7 @@ def get_page(domain, index, data, retries, page):
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = response_str.splitlines()
-        except HTTPError as e:
+        except (HTTPError, IncompleteRead) as e:
             if i == retries - 1:
                 logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
                 sys.exit(1)
