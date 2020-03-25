@@ -22,7 +22,7 @@ def get_results(options):
     data["cx"] = options["engine"]
     data["q"] = options["query"]
     data["num"] = 10
-    data["start"] = 1
+    data["start"] = 0
 
     if "domain" in options:
         data["siteSearch"] = options["domain"]
@@ -44,6 +44,7 @@ def issue_request(data):
     url = "https://www.googleapis.com/customsearch/v1?" + urlencode(data)
     while True:
         try:
+            logging.debug("Issuing request: %s", url)
             response_str = urlopen(url)
             response_str = response_str.read().decode("utf-8")
             response = json.loads(response_str)
@@ -53,7 +54,8 @@ def issue_request(data):
             response = json.loads(response_str)
             if "Invalid Value" in response["error"]["message"]:
                 return []
-            logging.error("Failed to fetch results - %d %s", response["error"]["code"], response["error"]["message"])
+            elif "Request contains an invalid argument" in response["error"]["message"]:
+                return []
             for error in response["error"]["errors"]:
                 logging.error("%s::%s::%s", error["domain"], error["reason"], error["message"])
             if "User Rate Limit Exceeded" in response["error"]["message"]:
@@ -64,6 +66,7 @@ def issue_request(data):
                 time.sleep(3600)
                 continue
             else:
+                logging.error("Failed to fetch results - %d %s", response["error"]["code"], response["error"]["message"])
                 sys.exit(1)
 
     items = []
