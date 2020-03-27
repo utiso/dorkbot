@@ -1,5 +1,6 @@
 import sys
 import io
+import logging
 from urllib.parse import urlparse
 
 def run(args):
