@@ -1,7 +1,8 @@
-import sys
 import io
 import logging
+import sys
 from urllib.parse import urlparse
+
 
 def run(args):
     with io.open(sys.stdin.fileno(), encoding="utf-8") as stdin:

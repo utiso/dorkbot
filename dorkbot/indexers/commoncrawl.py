@@ -1,15 +1,16 @@
-from urllib.request import urlopen
-from urllib.parse import urlencode, urlparse
-from urllib.error import HTTPError
-from http.client import IncompleteRead
-from concurrent.futures import ThreadPoolExecutor
-from itertools import repeat
 import json
-import sys
-import re
 import logging
-import time
 import random
+import re
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
+from http.client import IncompleteRead
+from itertools import repeat
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urlparse
+from urllib.request import urlopen
+
 
 def run(options):
     required = ["domain"]
@@ -41,6 +42,7 @@ def run(options):
     logging.info("Fetched %d results", len(results))
     return results
 
+
 def get_latest_index(retries):
     url = "https://index.commoncrawl.org/collinfo.json"
 
@@ -56,7 +58,7 @@ def get_latest_index(retries):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch index list (will retry) - %s", str(e))
-                time.sleep(random.randrange(i, 2**i))
+                time.sleep(random.randrange(i, 2 ** i))
                 continue
         except Exception:
             logging.exception("Failed to fetch index list")
@@ -65,6 +67,7 @@ def get_latest_index(retries):
 
     index = response[0]["id"]
     return index
+
 
 def get_num_pages(index, data, retries):
     data["showNumPages"] = "true"
@@ -82,7 +85,7 @@ def get_num_pages(index, data, retries):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
-                time.sleep(random.randrange(i, 2**i))
+                time.sleep(random.randrange(i, 2 ** i))
                 continue
         except Exception:
             logging.exception("Failed to fetch number of pages")
@@ -93,6 +96,7 @@ def get_num_pages(index, data, retries):
     num_pages = response["pages"]
     logging.debug("Got %d pages", num_pages)
     return num_pages
+
 
 def get_page(domain, index, data, retries, page):
     data["page"] = page
@@ -110,7 +114,7 @@ def get_page(domain, index, data, retries, page):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
-                time.sleep(random.randrange(i, 2**i))
+                time.sleep(random.randrange(i, 2 ** i))
                 continue
         except Exception:
             logging.exception("Failed to fetch results (page %d)", page)
@@ -129,6 +133,7 @@ def get_page(domain, index, data, retries, page):
 
     return results
 
+
 def get_results(domain, index, data, num_pages, threads, retries):
     try:
         executor = ThreadPoolExecutor(max_workers=threads)
@@ -146,4 +151,3 @@ def get_results(domain, index, data, num_pages, threads, retries):
         sys.exit(1)
 
     return list(results)
-

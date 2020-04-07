@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def run(args, target):
     scan_cmd = [os.path.abspath(os.path.join(os.sep, "bin", "echo"))]
     scan_cmd += ["pretending"]
@@ -22,4 +23,3 @@ def run(args, target):
         vulns.append(vuln)
 
     return vulns
-

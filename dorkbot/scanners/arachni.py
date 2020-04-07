@@ -1,11 +1,12 @@
-import sys
-import os
-import json
-import tempfile
-import subprocess
 import io
-import platform
+import json
 import logging
+import os
+import platform
+import subprocess
+import sys
+import tempfile
+
 
 def run(options, target):
     default_arachni_path = os.path.join(options["directory"], "tools", "arachni", "bin")
@@ -32,7 +33,7 @@ def run(options, target):
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]
     if platform.system() is "Windows":
         report_cmd[0] = report_cmd[0] + ".bat"
-    report_cmd += ["--reporter", "json:outfile="+report+".json"]
+    report_cmd += ["--reporter", "json:outfile=" + report + ".json"]
     report_cmd += [report]
 
     try:
@@ -40,7 +41,8 @@ def run(options, target):
         subprocess.run(report_cmd, cwd=arachni_path, check=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
-            logging.critical("Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni_dir option to correct directory.")
+            logging.critical(
+                "Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni_dir option to correct directory.")
             sys.exit(1)
         else:
             raise
@@ -48,7 +50,7 @@ def run(options, target):
         logging.error("Failed to execute arachni command - %s", str(e))
         return False
 
-    with io.open(report+".json", encoding="utf-8") as data_file:    
+    with io.open(report + ".json", encoding="utf-8") as data_file:
         contents = data_file.read()
         data = json.loads(contents)
         vulns = []
@@ -65,7 +67,6 @@ def run(options, target):
             vulns.append(vuln)
 
     os.remove(report)
-    os.remove(report+".json")
+    os.remove(report + ".json")
 
     return vulns
-

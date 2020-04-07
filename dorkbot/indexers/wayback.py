@@ -1,15 +1,16 @@
-from urllib.request import urlopen
-from urllib.parse import urlencode, urlparse
-from urllib.error import HTTPError
-from http.client import IncompleteRead
-from concurrent.futures import ThreadPoolExecutor
-from itertools import repeat
 import json
-import sys
-import re
 import logging
-import time
 import random
+import re
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
+from http.client import IncompleteRead
+from itertools import repeat
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urlparse
+from urllib.request import urlopen
+
 
 def run(options):
     required = ["domain"]
@@ -37,12 +38,13 @@ def run(options):
         data["to"] = time_to
 
     num_pages = get_num_pages(data, retries)
- 
+
     results = get_results(domain, data, num_pages, threads, retries)
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
     return results
+
 
 def get_num_pages(data, retries):
     data["showNumPages"] = "true"
@@ -58,7 +60,7 @@ def get_num_pages(data, retries):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
-                time.sleep(random.randrange(i, 2**i))
+                time.sleep(random.randrange(i, 2 ** i))
                 continue
         except Exception:
             logging.exception("Failed to fetch number of pages")
@@ -69,6 +71,7 @@ def get_num_pages(data, retries):
     num_pages = int(response)
     logging.debug("Got %d pages", num_pages)
     return num_pages
+
 
 def get_page(domain, data, retries, page):
     data["page"] = page
@@ -86,7 +89,7 @@ def get_page(domain, data, retries, page):
                 sys.exit(1)
             else:
                 logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
-                time.sleep(random.randrange(i, 2**i))
+                time.sleep(random.randrange(i, 2 ** i))
                 continue
         except Exception:
             logging.exception("Failed to fetch results (page %d)", page)
@@ -106,6 +109,7 @@ def get_page(domain, data, retries, page):
 
     return results
 
+
 def get_results(domain, data, num_pages, threads, retries):
     try:
         executor = ThreadPoolExecutor(max_workers=threads)
@@ -123,4 +127,3 @@ def get_results(domain, data, num_pages, threads, retries):
         sys.exit(1)
 
     return list(results)
-

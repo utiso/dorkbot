@@ -1,11 +1,12 @@
-import sys
-import os
-import tempfile
-import json
-import subprocess
 import io
+import json
 import logging
+import os
 import platform
+import subprocess
+import sys
+import tempfile
+
 
 def run(options, target):
     default_wapiti_path = os.path.join(options["directory"], "tools", "wapiti", "bin")
@@ -33,7 +34,8 @@ def run(options, target):
         subprocess.run(cmd, check=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
-            logging.critical("Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti_dir option to correct directory.")
+            logging.critical(
+                "Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti_dir option to correct directory.")
             sys.exit(1)
         else:
             raise
@@ -58,4 +60,3 @@ def run(options, target):
     os.remove(report)
 
     return vulns
-

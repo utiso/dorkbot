@@ -1,8 +1,9 @@
-import sys
+import logging
 import os
 import subprocess
+import sys
 from urllib.parse import urlparse
-import logging
+
 
 def run(options):
     required = ["engine", "query"]
@@ -19,8 +20,10 @@ def run(options):
     else:
         phantomjs_path = ""
 
-    if "domain" in options: domain = options["domain"]
-    else: domain = ""
+    if "domain" in options:
+        domain = options["domain"]
+    else:
+        domain = ""
 
     index_cmd = [os.path.join(phantomjs_path, "phantomjs")]
     index_cmd += ["--ignore-ssl-errors=true"]
@@ -33,7 +36,8 @@ def run(options):
         output = subprocess.run(index_cmd, check=True, stdout=subprocess.PIPE).stdout
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
-            logging.critical("Could not find phantomjs. If not in PATH, extract or symlink as [directory]/tools/phantomjs or set phantomjs_dir option to correct directory.")
+            logging.critical(
+                "Could not find phantomjs. If not in PATH, extract or symlink as [directory]/tools/phantomjs or set phantomjs_dir option to correct directory.")
             sys.exit(1)
         else:
             raise
@@ -46,4 +50,3 @@ def run(options):
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
     return results
-

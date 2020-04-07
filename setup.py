@@ -1,5 +1,6 @@
-import setuptools
 import os
+
+import setuptools
 
 pkg_vars = {}
 pkg_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,9 +26,8 @@ setuptools.setup(
         "License :: Free for non-commercial use",
         "Operating System :: OS Independent",
     ],
-    entry_points = {
+    entry_points={
         "console_scripts": ["dorkbot=dorkbot.dorkbot:main"],
     },
     include_package_data=True,
 )
-

@@ -1,10 +1,11 @@
-from urllib.request import urlopen
-from urllib.parse import urlencode,urlparse
-from urllib.error import HTTPError
 import json
+import logging
 import sys
 import time
-import logging
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urlparse
+from urllib.request import urlopen
+
 
 def run(options):
     required = ["key", "engine", "query"]
@@ -15,6 +16,7 @@ def run(options):
 
     results = get_results(options)
     return results
+
 
 def get_results(options):
     data = {}
@@ -39,6 +41,7 @@ def get_results(options):
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
     return results
+
 
 def issue_request(data):
     url = "https://www.googleapis.com/customsearch/v1?" + urlencode(data)
@@ -66,7 +69,8 @@ def issue_request(data):
                 time.sleep(3600)
                 continue
             else:
-                logging.error("Failed to fetch results - %d %s", response["error"]["code"], response["error"]["message"])
+                logging.error("Failed to fetch results - %d %s", response["error"]["code"],
+                              response["error"]["message"])
                 sys.exit(1)
 
     items = []
@@ -77,4 +81,3 @@ def issue_request(data):
             items.append(urlparse(item["link"]).geturl())
 
     return items
-

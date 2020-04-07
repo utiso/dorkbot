@@ -1,10 +1,11 @@
-from urllib.request import Request, urlopen
-from urllib.parse import urlencode,urlparse
-from urllib.error import HTTPError
 import json
+import logging
 import sys
 import time
-import logging
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urlparse
+from urllib.request import Request, urlopen
+
 
 def run(options):
     required = ["key", "query"]
@@ -18,6 +19,7 @@ def run(options):
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
     return results
+
 
 def get_results(options):
     data = {"q": options["query"],
@@ -33,6 +35,7 @@ def get_results(options):
         results.extend(items)
 
     return results
+
 
 def issue_request(data, key):
     url = "https://api.cognitive.microsoft.com/bing/v7.0/search?" + urlencode(data)
@@ -54,4 +57,3 @@ def issue_request(data, key):
         return []
 
     return [urlparse(item["url"].strip()).geturl() for item in response["webPages"]["value"]]
-

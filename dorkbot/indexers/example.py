@@ -1,5 +1,6 @@
 from urllib.parse import urlparse
 
+
 def run(args):
     urls = [
         "http://www.example.com/foo.php?id=4",
@@ -8,4 +9,3 @@ def run(args):
     ]
 
     return [urlparse(item.strip()).geturl() for item in urls]
-

@@ -5,21 +5,21 @@ else:
     from _version import __version__
 import argparse
 import configparser
-from urllib.parse import urlparse
-from contextlib import closing
 import datetime
 import hashlib
 import importlib
-import json
-import os
-import re
-import sys
-import io
-import random
-import logging
-from logging.handlers import WatchedFileHandler
-import socket
 import ipaddress
+import json
+import logging
+import os
+import random
+import re
+import socket
+import sys
+from contextlib import closing
+from logging.handlers import WatchedFileHandler
+from urllib.parse import urlparse
+
 
 def main():
     args, parser = get_args_parser()
@@ -36,11 +36,11 @@ def main():
             sys.exit(1)
 
     if args.indexer or args.prune or args.scanner \
-       or args.list_targets or args.flush_targets \
-       or args.add_target or args.delete_target \
-       or args.list_blacklist or args.flush_blacklist \
-       or args.add_blacklist_item or args.delete_blacklist_item \
-       or args.flush_fingerprints or args.list_unscanned:
+            or args.list_targets or args.flush_targets \
+            or args.add_target or args.delete_target \
+            or args.list_blacklist or args.flush_blacklist \
+            or args.add_blacklist_item or args.delete_blacklist_item \
+            or args.flush_fingerprints or args.list_unscanned:
 
         db = TargetDatabase(args.database)
         if args.blacklist:
@@ -61,7 +61,7 @@ def main():
         if args.list_targets:
             for url in db.get_urls(): print(url)
         if args.list_unscanned:
-            for url in db.get_urls(unscanned_only = True): print(url)
+            for url in db.get_urls(unscanned_only=True): print(url)
         db.close()
 
         if args.add_blacklist_item: blacklist.add(args.add_blacklist_item)
@@ -83,6 +83,7 @@ def main():
 
     logging.shutdown()
 
+
 def initialize_logger(log_file, verbose):
     log = logging.getLogger()
 
@@ -103,6 +104,7 @@ def initialize_logger(log_file, verbose):
         log_streamhandler.setFormatter(log_formatter)
         log.addHandler(log_streamhandler)
 
+
 def load_module(category, name):
     module_name = "%s.%s" % (category, name)
     if __package__: module_name = "." + module_name
@@ -114,21 +116,22 @@ def load_module(category, name):
 
     return module
 
+
 def get_args_parser():
     config_dir = os.path.abspath(os.path.expanduser(
-                    os.environ.get("XDG_CONFIG_HOME") or
-                    os.environ.get("APPDATA") or
-                    os.path.join(os.environ["HOME"], ".config")
-                 ))
+        os.environ.get("XDG_CONFIG_HOME") or
+        os.environ.get("APPDATA") or
+        os.path.join(os.environ["HOME"], ".config")
+    ))
 
     initial_parser = argparse.ArgumentParser(
         description="dorkbot", add_help=False)
     initial_parser.add_argument("-c", "--config", \
-        default=os.path.join(config_dir, "dorkbot", "dorkbot.ini"), \
-        help="Configuration file")
+                                default=os.path.join(config_dir, "dorkbot", "dorkbot.ini"), \
+                                help="Configuration file")
     initial_parser.add_argument("-r", "--directory", \
-        default=os.getcwd(), \
-        help="Dorkbot directory (default location of db, tools, reports)")
+                                default=os.getcwd(), \
+                                help="Dorkbot directory (default location of db, tools, reports)")
     initial_args, other_args = initial_parser.parse_known_args()
 
     defaults = {
@@ -144,61 +147,62 @@ def get_args_parser():
     parser = argparse.ArgumentParser(parents=[initial_parser])
     parser.set_defaults(**defaults)
     parser.add_argument("--log", \
-        help="Path to log file")
+                        help="Path to log file")
     parser.add_argument("-v", "--verbose", action="store_true", \
-        help="Enable verbose logging (DEBUG output)")
+                        help="Enable verbose logging (DEBUG output)")
     parser.add_argument("-V", "--version", action="version", \
-        version="%(prog)s " + __version__, help="Print version")
+                        version="%(prog)s " + __version__, help="Print version")
 
     database = parser.add_argument_group('database')
     database.add_argument("-d", "--database", \
-        help="Database file/uri")
+                          help="Database file/uri")
     database.add_argument("-u", "--prune", action="store_true", \
-        help="Apply fingerprinting and blacklist without scanning")
+                          help="Apply fingerprinting and blacklist without scanning")
 
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true", \
-        help="List targets in database")
+                         help="List targets in database")
     targets.add_argument("--list-unscanned", action="store_true", \
-        help="List unscanned targets in database")
+                         help="List unscanned targets in database")
     targets.add_argument("--add-target", metavar="TARGET", \
-        help="Add a url to the target database")
+                         help="Add a url to the target database")
     targets.add_argument("--delete-target", metavar="TARGET", \
-        help="Delete a url from the target database")
+                         help="Delete a url from the target database")
     targets.add_argument("--flush-targets", action="store_true", \
-        help="Delete all targets")
+                         help="Delete all targets")
 
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer", \
-        help="Indexer module to use")
+                          help="Indexer module to use")
     indexing.add_argument("-o", "--indexer-option", action="append", \
-        help="Pass an option to the indexer (can be used multiple times)")
+                          help="Pass an option to the indexer (can be used multiple times)")
 
     scanning = parser.add_argument_group('scanning')
     scanning.add_argument("-s", "--scanner", \
-        help="Scanner module to use")
+                          help="Scanner module to use")
     scanning.add_argument("-p", "--scanner-option", action="append", \
-        help="Pass an option to the scanner (can be used multiple times)")
+                          help="Pass an option to the scanner (can be used multiple times)")
 
     fingerprints = parser.add_argument_group('fingerprints')
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
-        help="Delete all fingerprints of previously-scanned items")
+                              help="Delete all fingerprints of previously-scanned items")
 
     blacklist = parser.add_argument_group('blacklist')
     blacklist.add_argument("-b", "--blacklist", \
-        help="Blacklist file/uri")
+                           help="Blacklist file/uri")
     blacklist.add_argument("--list-blacklist", action="store_true", \
-        help="List blacklist entries")
+                           help="List blacklist entries")
     blacklist.add_argument("--add-blacklist-item", metavar="ITEM", \
-        help="Add an ip/host/regex pattern to the blacklist")
+                           help="Add an ip/host/regex pattern to the blacklist")
     blacklist.add_argument("--delete-blacklist-item", metavar="ITEM", \
-        help="Delete an item from the blacklist")
+                           help="Delete an item from the blacklist")
     blacklist.add_argument("--flush-blacklist", action="store_true", \
-        help="Delete all blacklist items")
+                           help="Delete all blacklist items")
 
     args = parser.parse_args(other_args)
     args.directory = initial_args.directory
     return args, parser
+
 
 def index(db, blacklist, indexer, args, options):
     indexer_name = indexer.__name__.split(".")[-1]
@@ -214,6 +218,7 @@ def index(db, blacklist, indexer, args, options):
     db.connect()
     db.add_targets(targets)
     db.close()
+
 
 def prune(db, blacklist, args, options):
     fingerprints = set()
@@ -243,6 +248,7 @@ def prune(db, blacklist, args, options):
 
     db.close()
 
+
 def scan(db, blacklist, scanner, args, options):
     options["directory"] = args.directory
     report_dir = options.get("reports", os.path.join(args.directory, "reports"))
@@ -259,7 +265,7 @@ def scan(db, blacklist, scanner, args, options):
     scanned = 0
     while scanned < count or count == -1:
         db.connect()
-        target = db.get_next_target(random = options.get("random", False))
+        target = db.get_next_target(random=options.get("random", False))
         if not target:
             break
 
@@ -281,6 +287,7 @@ def scan(db, blacklist, scanner, args, options):
         target.endtime = generate_timestamp()
         target.write_report(report_dir, label, results)
 
+
 def generate_fingerprint(target):
     url_parts = urlparse(target.url)
     netloc = url_parts.netloc
@@ -293,11 +300,14 @@ def generate_fingerprint(target):
     fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
     return fingerprint
 
+
 def generate_timestamp():
     return datetime.datetime.now().astimezone().isoformat()
 
+
 def generate_hash(url):
     return hashlib.md5(url.encode("utf-8")).hexdigest()
+
 
 def parse_options(options_list):
     options = dict()
@@ -308,9 +318,10 @@ def parse_options(options_list):
                 key, value = option.split("=", 1)
             else:
                 key, value = option, True
-            options.update({key:value})
+            options.update({key: value})
 
     return options
+
 
 class TargetDatabase:
     def __init__(self, database):
@@ -369,8 +380,8 @@ class TargetDatabase:
 
     def close(self):
         self.db.close()
-       
-    def get_urls(self, unscanned_only = False):
+
+    def get_urls(self, unscanned_only=False):
         sql = "SELECT url FROM targets"
         if unscanned_only:
             sql += " WHERE scanned != 1"
@@ -385,7 +396,7 @@ class TargetDatabase:
 
         return urls
 
-    def get_next_target(self, random = False):
+    def get_next_target(self, random=False):
         sql = "SELECT url FROM targets WHERE scanned != 1"
         if random:
             sql += " ORDER BY RANDOM()"
@@ -425,7 +436,8 @@ class TargetDatabase:
     def add_targets(self, urls):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.executemany("%s INTO targets (url) VALUES (%s) %s" % (self.insert, self.param, self.conflict), [(url,) for url in urls])
+                c.executemany("%s INTO targets (url) VALUES (%s) %s" % (self.insert, self.param, self.conflict),
+                              [(url,) for url in urls])
         except self.module.Error as e:
             logging.error("Failed to add target - %s", str(e))
             sys.exit(1)
@@ -447,8 +459,10 @@ class TargetDatabase:
             logging.error("Failed to look up fingerprint - %s", str(e))
             sys.exit(1)
 
-        if row: return row[0]
-        else: return False
+        if row:
+            return row[0]
+        else:
+            return False
 
     def mark_scanned(self, url):
         try:
@@ -476,6 +490,7 @@ class TargetDatabase:
         except self.module.Error as e:
             logging.error("Failed to flush targets - %s", str(e))
             sys.exit(1)
+
 
 class Target:
     def __init__(self, url):
@@ -513,6 +528,7 @@ class Target:
         with open(filename, "w") as outfile:
             json.dump(vulns, outfile, indent=4, sort_keys=True)
             print("Report saved to: %s" % outfile.name)
+
 
 class Blacklist:
     def __init__(self, blacklist):
@@ -624,7 +640,7 @@ class Blacklist:
         return ["ip:" + item for item in parsed_ip_set] + \
                ["host:" + item for item in self.host_set] + \
                ["regex:" + item for item in self.regex_set]
-       
+
     def read_items(self):
         if self.database:
             try:
@@ -719,6 +735,6 @@ class Blacklist:
         self.ip_set = set()
         self.host_set = set()
 
+
 if __name__ == "__main__":
     main()
-
