@@ -292,13 +292,14 @@ def generate_fingerprint(target):
     url_parts = urlparse(target.url)
     netloc = url_parts.netloc
     depth = str(url_parts.path.count("/"))
+    page = url_parts.path.split("/")[-1]
     params = []
     for param in url_parts.query.split("&"):
         split = param.split("=", 1)
         if len(split) == 2 and split[1]:
             params.append(split[0])
-    fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
-    return fingerprint
+    fingerprint = "|".join((netloc, depth, page, ",".join(sorted(params))))
+    return generate_hash(fingerprint)
 
 
 def generate_timestamp():
