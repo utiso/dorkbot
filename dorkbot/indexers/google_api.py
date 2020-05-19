@@ -74,9 +74,9 @@ def issue_request(data):
                 sys.exit(1)
 
     items = []
+    if int(response['searchInformation']['totalResults']) == 0:
+        return []
     for request in response["queries"]["request"]:
-        if int(request["totalResults"]) == 0:
-            return []
         for item in response["items"]:
             items.append(urlparse(item["link"]).geturl())
 
