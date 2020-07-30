@@ -110,9 +110,9 @@ def get_page(domain, data, retries, page):
     return results
 
 
-def get_results(domain, data, num_pages, threads, retries):
+def get_results(domain, data, num_pages, num_threads, retries):
     try:
-        executor = ThreadPoolExecutor(max_workers=threads)
+        executor = ThreadPoolExecutor(max_workers=num_threads)
         threads = executor.map(get_page, repeat(domain), repeat(data), repeat(retries), range(num_pages))
     except Exception:
         logging.error("Failed to execute threads")
