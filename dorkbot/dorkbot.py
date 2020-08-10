@@ -345,7 +345,11 @@ class TargetDatabase:
             self.insert = "INSERT OR REPLACE"
             self.conflict = ""
 
-        self.module = importlib.import_module(module_name, package=None)
+        try:
+            self.module = importlib.import_module(module_name, package=None)
+        except ModuleNotFoundError:
+            logging.error("Failed to load required module - %s", module_name)
+            sys.exit(1)
 
         if self.module.paramstyle == "qmark":
             self.param = "?"
@@ -452,13 +456,20 @@ class TargetDatabase:
             sys.exit(1)
 
     def get_scanned(self, fingerprint):
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
-                row = c.fetchone()
-        except self.module.Error as e:
-            logging.error("Failed to look up fingerprint - %s", str(e))
-            sys.exit(1)
+        for i in range(3):
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
+                    row = c.fetchone()
+                    break
+            except self.module.Error as e:
+                if "connection already closed" in str(e):
+                    logging.warning("Failed to look up fingerprint (retrying) - %s", str(e))
+                    self.connect()
+                    continue
+                else:
+                    logging.error("Failed to look up fingerprint - %s", str(e))
+                    sys.exit(1)
 
         if row:
             return row[0]
@@ -466,12 +477,18 @@ class TargetDatabase:
             return False
 
     def mark_scanned(self, url):
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
-        except self.module.Error as e:
-            logging.error("Failed to mark target as scanned - %s", str(e))
-            sys.exit(1)
+        for i in range(3):
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    c.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
+            except self.module.Error as e:
+                if "connection already closed" in str(e):
+                    logging.warning("Failed to mark target as scanned (retrying) - %s", str(e))
+                    self.connect()
+                    continue
+                else:
+                    logging.error("Failed to mark target as scanned - %s", str(e))
+                    sys.exit(1)
 
     def flush_fingerprints(self):
         logging.info("Flushing fingerprints")
