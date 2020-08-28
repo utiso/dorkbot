@@ -79,8 +79,8 @@ blacklist:
 
 Requirements
 ============
-Python 3.x (cross-platform)
-[psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
+* Python 3.x (cross-platform)
+* [psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
 
 Tools
 =====
@@ -95,11 +95,11 @@ As needed, dorkbot will search for tools in the following order:
 
 Quickstart
 ==========
-Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
-<pre>$ mkdir tools</pre>, download Arachni and extract it as tools/arachni, or <pre>$ pip3 install wapiti3</pre>
-<pre>$ sudo apt install phantomjs</pre>
-<pre>$ ./dorkbot.py -i google -o engine=012345678901234567891:abc12defg3h -o query="filetype:php inurl:id"</pre>
-<pre>$ ./dorkbot.py -s arachni</pre> OR <pre>$ ./dorkbot.py -s wapiti</pre>
+* Create a Google API credential via the [Developer Console](https://console.developers.google.com)
+* Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
+<pre>$ pip3 install dorkbot wapiti3</pre>
+<pre>$ dorkbot -i google_api -o key=your_api_credential_here -o engine=your_engine_id_here -o query="filetype:php inurl:id"</pre>
+<pre>$ dorkbot -s wapiti</pre>
 
 Files
 =====
