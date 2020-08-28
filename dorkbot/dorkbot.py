@@ -463,7 +463,7 @@ class TargetDatabase:
                     row = c.fetchone()
                     break
             except self.module.Error as e:
-                if "connection already closed" in str(e):
+                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     logging.warning("Failed to look up fingerprint (retrying) - %s", str(e))
                     self.connect()
                     continue
@@ -482,7 +482,7 @@ class TargetDatabase:
                 with self.db, closing(self.db.cursor()) as c:
                     c.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
             except self.module.Error as e:
-                if "connection already closed" in str(e):
+                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     logging.warning("Failed to mark target as scanned (retrying) - %s", str(e))
                     self.connect()
                     continue
