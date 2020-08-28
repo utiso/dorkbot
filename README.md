@@ -96,7 +96,7 @@ As needed, dorkbot will search for tools in the following order:
 Quickstart
 ==========
 * Create a Google API credential via the [Developer Console](https://console.developers.google.com)
-* Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h.
+* Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h
 <pre>$ pip3 install dorkbot wapiti3</pre>
 <pre>$ dorkbot -i google_api -o key=your_api_credential_here -o engine=your_engine_id_here -o query="filetype:php inurl:id"</pre>
 <pre>$ dorkbot -s wapiti</pre>
