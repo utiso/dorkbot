@@ -23,7 +23,7 @@ Quickstart
 Usage
 =====
 <pre>
-usage: dorkbot.py [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-v] [-V]
+usage: dorkbot [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-v] [-V]
                   [-d DATABASE] [-u] [-l] [--list-unscanned]
                   [--add-target TARGET] [--delete-target TARGET]
                   [--flush-targets] [-i INDEXER] [-o INDEXER_OPTION]
@@ -82,7 +82,6 @@ blacklist:
   --delete-blacklist-item ITEM
                         Delete an item from the blacklist
   --flush-blacklist     Delete all blacklist items
-
 </pre>
 
 Requirements
