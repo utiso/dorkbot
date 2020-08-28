@@ -12,6 +12,14 @@ dorkbot is a modular command-line tool for performing vulnerability scans agains
 
 Targets are stored in a database as they are indexed. Once scanned, a standard JSON report is produced containing any vulnerabilities found. Indexing and scanning processes can be run separately or combined in a single command (up to one of each).
 
+Quickstart
+==========
+* Create a Google API credential via the [Developer Console](https://console.developers.google.com)
+* Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h
+<pre>$ pip3 install dorkbot wapiti3</pre>
+<pre>$ dorkbot -i google_api -o key=your_api_credential_here -o engine=your_engine_id_here -o query="filetype:php inurl:id"</pre>
+<pre>$ dorkbot -s wapiti</pre>
+
 Usage
 =====
 <pre>
@@ -92,14 +100,6 @@ As needed, dorkbot will search for tools in the following order:
 * Directory specified via relevant module option
 * Located in *tools* directory (within current directory, by default), with the subdirectory named after the tool
 * Available in the user's PATH (e.g. installed system-wide)
-
-Quickstart
-==========
-* Create a Google API credential via the [Developer Console](https://console.developers.google.com)
-* Create a Google [Custom Search Engine](https://www.google.com/cse/) and note the search engine ID, e.g. 012345678901234567891:abc12defg3h
-<pre>$ pip3 install dorkbot wapiti3</pre>
-<pre>$ dorkbot -i google_api -o key=your_api_credential_here -o engine=your_engine_id_here -o query="filetype:php inurl:id"</pre>
-<pre>$ dorkbot -s wapiti</pre>
 
 Files
 =====
