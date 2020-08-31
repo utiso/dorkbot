@@ -87,7 +87,8 @@ blacklist:
 Requirements
 ============
 * Python 3.x (cross-platform)
-* [psycopg2](http://initd.org/psycopg/) (if using PostgreSQL)
+* [psycopg2-binary](https://pypi.org/project/psycopg2-binary/) or [psycopg2](https://pypi.org/project/psycopg2/) (if using PostgreSQL)
+* [phoenixdb](https://pypi.org/project/phoenixdb/) (if using PhoenixDB)
 
 Tools
 =====
