@@ -234,10 +234,11 @@ def prune(db, blacklist, args, options):
         target = Target(url)
 
         fingerprint = generate_fingerprint(target)
-        if fingerprint in fingerprints or db.get_scanned(fingerprint):
-            logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
-            db.mark_scanned(target.url)
-            continue
+        with self.db, closing(self.db.cursor()) as c:
+            if fingerprint in fingerprints or db.get_scanned(fingerprint, c):
+                logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
+                db.mark_scanned(target.url, c)
+                continue
 
         if blacklist.match(target):
             logging.debug("Deleting (matches blacklist pattern): %s", target.url)
@@ -417,8 +418,8 @@ class TargetDatabase:
                     url = row[0]
                     target = Target(url)
                     fingerprint = generate_fingerprint(target)
-                    self.mark_scanned(url)
-                    if self.get_scanned(fingerprint):
+                    self.mark_scanned(url, c)
+                    if self.get_scanned(fingerprint, c):
                         logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
                         continue
                     else:
@@ -455,13 +456,12 @@ class TargetDatabase:
             logging.error("Failed to delete target - %s", str(e))
             sys.exit(1)
 
-    def get_scanned(self, fingerprint):
+    def get_scanned(self, fingerprint, cursor):
         for i in range(3):
             try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
-                    row = c.fetchone()
-                    break
+                cursor.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
+                row = cursor.fetchone()
+                break
             except self.module.Error as e:
                 if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     logging.warning("Failed to look up fingerprint (retrying) - %s", str(e))
@@ -476,11 +476,10 @@ class TargetDatabase:
         else:
             return False
 
-    def mark_scanned(self, url):
+    def mark_scanned(self, url, cursor):
         for i in range(3):
             try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
+                cursor.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
             except self.module.Error as e:
                 if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     logging.warning("Failed to mark target as scanned (retrying) - %s", str(e))
