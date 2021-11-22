@@ -20,7 +20,7 @@ def run(options, target):
     report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".afr")
 
     scan_cmd = [os.path.join(arachni_path, "arachni")]
-    if platform.system() is "Windows":
+    if platform.system() == "Windows":
         scan_cmd[0] = scan_cmd[0] + ".bat"
     scan_cmd += ["--report-save-path", report]
     scan_cmd += ["--output-only-positives"]
@@ -31,7 +31,7 @@ def run(options, target):
     scan_cmd += [target.url]
 
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]
-    if platform.system() is "Windows":
+    if platform.system() == "Windows":
         report_cmd[0] = report_cmd[0] + ".bat"
     report_cmd += ["--reporter", "json:outfile=" + report + ".json"]
     report_cmd += [report]
