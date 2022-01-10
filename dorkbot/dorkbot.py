@@ -234,7 +234,7 @@ def prune(db, blacklist, args, options):
         target = Target(url)
 
         fingerprint = generate_fingerprint(target)
-        with self.db, closing(self.db.cursor()) as c:
+        with closing(db.db.cursor()) as c:
             if fingerprint in fingerprints or db.get_scanned(fingerprint, c):
                 logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
                 db.mark_scanned(target.url, c)
