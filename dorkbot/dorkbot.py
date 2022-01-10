@@ -221,32 +221,15 @@ def index(db, blacklist, indexer, args, options):
 
 
 def prune(db, blacklist, args, options):
-    fingerprints = set()
+    if "random" in options:
+        randomize = True
+    else:
+        randomize = False
 
     logging.info("Pruning database")
+
     db.connect()
-    urls = db.get_urls()
-
-    if "random" in options:
-        random.shuffle(urls)
-
-    for url in urls:
-        target = Target(url)
-
-        fingerprint = generate_fingerprint(target)
-        with closing(db.db.cursor()) as c:
-            if fingerprint in fingerprints or db.get_scanned(fingerprint, c):
-                logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
-                db.mark_scanned(target.url, c)
-                continue
-
-        if blacklist.match(target):
-            logging.debug("Deleting (matches blacklist pattern): %s", target.url)
-            db.delete_target(target.url)
-            continue
-
-        fingerprints.add(fingerprint)
-
+    db.prune(blacklist, randomize)
     db.close()
 
 
@@ -507,6 +490,31 @@ class TargetDatabase:
         except self.module.Error as e:
             logging.error("Failed to flush targets - %s", str(e))
             sys.exit(1)
+
+    def prune(self, blacklist, randomize=False):
+        fingerprints = set()
+
+        urls = self.get_urls()
+
+        if randomize:
+            random.shuffle(urls)
+
+        for url in urls:
+            target = Target(url)
+
+            fingerprint = generate_fingerprint(target)
+            with self.db, closing(self.db.cursor()) as c:
+                if fingerprint in fingerprints or self.get_scanned(fingerprint, c):
+                    logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
+                    self.mark_scanned(target.url, c)
+                    continue
+
+            if blacklist.match(target):
+                logging.debug("Deleting (matches blacklist pattern): %s", target.url)
+                self.delete_target(target.url)
+                continue
+
+            fingerprints.add(fingerprint)
 
 
 class Target:
