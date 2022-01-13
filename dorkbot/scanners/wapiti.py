@@ -6,6 +6,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+from urllib.parse import urlparse, urlunparse, urljoin
 
 
 def run(options, target):
@@ -20,7 +21,7 @@ def run(options, target):
     report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".json")
 
     cmd = [os.path.join(wapiti_path, "wapiti")]
-    if platform.system() is "Windows":
+    if platform.system() == "Windows":
         cmd.insert(0, sys.executable)
     cmd += ["--url", target.url]
     cmd += ["--scope", "page"]
@@ -49,12 +50,21 @@ def run(options, target):
         vulns = []
         for vuln_type in data["vulnerabilities"]:
             for vulnerability in data["vulnerabilities"][vuln_type]:
+                url = urlparse(data["infos"]["target"])
+                poc_request = vulnerability["http_request"].split("\n")
+                poc_path = poc_request[0].split(" ")[1]
+
                 vuln = {}
                 vuln["vulnerability"] = vuln_type
-                vuln["url"] = data["infos"]["target"]
+                vuln["url"] = urlunparse(url)
                 vuln["parameter"] = vulnerability["parameter"]
                 vuln["method"] = vulnerability["method"]
-                vuln["poc"] = ""
+                vuln["poc"] = urljoin(vuln["url"], poc_path)
+                if vuln["method"] == "POST":
+                    vuln["poc_data"] = poc_request[-1]
+                else:
+                    vuln["poc_data"] = ""
+
                 vulns.append(vuln)
 
     os.remove(report)
