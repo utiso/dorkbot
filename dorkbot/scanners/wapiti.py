@@ -21,7 +21,7 @@ def run(options, target):
     report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".json")
 
     cmd = [os.path.join(wapiti_path, "wapiti")]
-    if platform.system() == "Windows":
+    if platform.system() == "Windows" and wapiti_path != "":
         cmd.insert(0, sys.executable)
     cmd += ["--url", target.url]
     cmd += ["--scope", "page"]
