@@ -12,6 +12,8 @@ def run(options):
             logging.error("%s must be set", r)
             sys.exit(1)
 
+    source = __name__.split(".")[-1]
+
     tools_dir = os.path.join(options["directory"], "tools")
     if "phantomjs_dir" in options:
         phantomjs_path = os.path.join(os.path.abspath(options["phantomjs_dir"]), "bin")
@@ -49,4 +51,4 @@ def run(options):
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
-    return results
+    return results, source

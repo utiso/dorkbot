@@ -19,6 +19,8 @@ def run(options):
             logging.error("%s must be set", r)
             sys.exit(1)
 
+    source = __name__.split(".")[-1]
+
     retries = int(options.get("retries", "10"))
     threads = int(options.get("threads", "1"))
     domain = options["domain"]
@@ -34,8 +36,10 @@ def run(options):
         data["filter"] = url_filter
     if time_from:
         data["from"] = time_from
+        source += f",from:{time_from}"
     if time_to:
         data["to"] = time_to
+        source += f",to:{time_to}"
 
     num_pages = get_num_pages(data, retries)
 
@@ -43,7 +47,7 @@ def run(options):
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
-    return results
+    return results, source
 
 
 def get_num_pages(data, retries):

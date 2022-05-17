@@ -19,6 +19,8 @@ def run(options):
             logging.error("%s must be set", r)
             sys.exit(1)
 
+    source = __name__.split(".")[-1]
+
     retries = int(options.get("retries", "10"))
     threads = int(options.get("threads", "10"))
     domain = options["domain"]
@@ -36,11 +38,13 @@ def run(options):
         index = get_latest_index(retries)
     num_pages = get_num_pages(index, data, retries)
 
+    source += f",index:{index}"
+
     results = get_results(domain, index, data, num_pages, threads, retries)
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
-    return results
+    return results, source
 
 
 def get_latest_index(retries):

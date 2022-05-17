@@ -56,7 +56,7 @@ def main():
         if args.flush_targets: db.flush_targets()
         if args.flush_blacklist: blacklist.flush()
         if args.flush_fingerprints: db.flush_fingerprints()
-        if args.add_target: db.add_target(args.add_target)
+        if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
         if args.delete_target: db.delete_target(args.delete_target)
         if args.list_targets:
             for url in db.get_urls(): print(url)
@@ -209,14 +209,15 @@ def index(db, blacklist, indexer, args, options):
     indexer_options = ",".join(["%s=%s" % (key, val) for key, val in options.items()])
     logging.info("Indexing: %s %s", indexer_name, indexer_options)
     options["directory"] = args.directory
-    urls = indexer.run(options)
+    urls, module_source = indexer.run(options)
+    source = options.get("source", module_source)
 
     targets = []
     for url in urls:
         if not blacklist.match(Target(url)): targets.append(url)
 
     db.connect()
-    db.add_targets(targets)
+    db.add_targets(targets, source)
     db.close()
 
 
@@ -353,7 +354,7 @@ class TargetDatabase:
         self.connect()
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY, scanned INTEGER DEFAULT 0)")
+                c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY, source VARCHAR, scanned INTEGER DEFAULT 0)")
                 c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
                 c.execute("CREATE TABLE IF NOT EXISTS blacklist (item VARCHAR PRIMARY KEY)")
         except self.module.Error as e:
@@ -414,19 +415,19 @@ class TargetDatabase:
 
         return target
 
-    def add_target(self, url):
+    def add_target(self, url, source=None):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.execute("%s INTO targets (url) VALUES (%s) %s" % (self.insert, self.param, self.conflict), (url,))
+                c.execute("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), (url, source))
         except self.module.Error as e:
             logging.error("Failed to add target - %s", str(e))
             sys.exit(1)
 
-    def add_targets(self, urls):
+    def add_targets(self, urls, source=None):
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.executemany("%s INTO targets (url) VALUES (%s) %s" % (self.insert, self.param, self.conflict),
-                              [(url,) for url in urls])
+                c.executemany("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict),
+                              [(url, source) for url in urls])
         except self.module.Error as e:
             logging.error("Failed to add target - %s", str(e))
             sys.exit(1)

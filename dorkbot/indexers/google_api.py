@@ -14,8 +14,10 @@ def run(options):
             logging.error("%s must be set", r)
             sys.exit(1)
 
+    source = __name__.split(".")[-1]
+
     results = get_results(options)
-    return results
+    return results, source
 
 
 def get_results(options):

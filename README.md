@@ -146,6 +146,11 @@ The first item will remove any target that doesn't contain a question mark, in o
 
 Indexer Modules
 ===============
+### (general options) ###
+These options are applicable regardless of module chosen
+
+* source - label stored in source field for target, overrides label provided by module
+
 ### google ###
 Search for targets in a Google Custom Search Engine (CSE) via custom search element.
 
