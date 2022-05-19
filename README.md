@@ -149,7 +149,7 @@ Indexer Modules
 ### (general options) ###
 These options are applicable regardless of module chosen
 
-* source - label stored in source field for target, overrides label provided by module
+* source - label stored in source field for target, overrides label provided by module (if present and without a value during list operations, source field will be printed along with url)
 
 ### google ###
 Search for targets in a Google Custom Search Engine (CSE) via custom search element.
