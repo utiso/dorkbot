@@ -58,10 +58,8 @@ def main():
         if args.flush_fingerprints: db.flush_fingerprints()
         if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
         if args.delete_target: db.delete_target(args.delete_target)
-        if args.list_targets:
-            for url in db.get_urls(): print(url)
-        if args.list_unscanned:
-            for url in db.get_urls(unscanned_only=True): print(url)
+        if args.list_targets or args.list_unscanned:
+            for url in db.get_urls(unscanned_only=indexer_options.get("list_unscanned"), source=indexer_options.get("source")): print(url)
         db.close()
 
         if args.add_blacklist_item: blacklist.add(args.add_blacklist_item)
@@ -371,15 +369,29 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def get_urls(self, unscanned_only=False):
-        sql = "SELECT url FROM targets"
+    def get_urls(self, unscanned_only=False, source=False):
+        fields = "url"
+        if source is True:
+            fields += ",source"
+
+        where = None
         if unscanned_only:
-            sql += " WHERE scanned != 1"
+            where = " WHERE scanned != 1"
+
+        sql = f"SELECT {fields} FROM targets"
 
         try:
             with self.db, closing(self.db.cursor()) as c:
-                c.execute(sql)
-                urls = [row[0] for row in c.fetchall()]
+                if source and source is not True:
+                    if where is None:
+                        sql += " WHERE "
+                    else:
+                        sql += " AND "
+                    sql += "source = %s" % self.param
+                    c.execute(sql, (source,))
+                else:
+                    c.execute(sql)
+                urls = [" | ".join(row) for row in c.fetchall()]
         except self.module.Error as e:
             logging.error("Failed to get targets - %s", str(e))
             sys.exit(1)
