@@ -281,7 +281,7 @@ def generate_fingerprint(target):
         split = param.split("=", 1)
         if len(split) == 2 and split[1]:
             params.append(split[0])
-    fingerprint = "|".join((netloc, depth, ",".join(sorted(params))))
+    fingerprint = "|".join((netloc, depth, page, ",".join(sorted(params))))
     return generate_hash(fingerprint)
 
 
