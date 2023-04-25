@@ -173,6 +173,20 @@ Options:
 * **query** - search query
 * domain - limit searches to specified domain
 
+### pywb ###
+Search for targets within a pywb instance's indexed results.
+
+Requirements: none
+
+Options:
+* **server** - pywb server url
+* **domain** - pull all results for given domain or subdomain
+* cdx_api_suffix - suffix after index for index api (default: /cdx)
+* index - search a specific index (default: first fixed index, or first dynamic index)
+* filter - query filter to apply to the search
+* retries - number of times to retry fetching results on error (default: 10)
+* threads - number concurrent requests to pywb server (default: 10)
+
 ### commoncrawl ###
 Search for targets within commoncrawl.org results.
 
