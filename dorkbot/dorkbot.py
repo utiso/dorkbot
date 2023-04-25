@@ -59,7 +59,12 @@ def main():
         if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
         if args.delete_target: db.delete_target(args.delete_target)
         if args.list_targets or args.list_unscanned:
-            for url in db.get_urls(unscanned_only=indexer_options.get("list_unscanned"), source=indexer_options.get("source")): print(url)
+            try:
+                for url in db.get_urls(unscanned_only=indexer_options.get("list_unscanned"), source=indexer_options.get("source")): print(url)
+            except BrokenPipeError:
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                os.dup2(devnull, sys.stdout.fileno())
+                sys.exit(1)
         db.close()
 
         if args.add_blacklist_item: blacklist.add(args.add_blacklist_item)
