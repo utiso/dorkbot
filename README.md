@@ -180,7 +180,6 @@ Requirements: none
 
 Options:
 * **domain** - pull all results for given domain or subdomain
-* server - CDX server base url (default: https://index.commoncrawl.org)
 * index - search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
 * filter - query filter to apply to the search
 * retries - number of times to retry fetching results on error (default: 10)

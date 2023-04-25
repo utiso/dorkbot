@@ -24,7 +24,6 @@ def run(options):
     retries = int(options.get("retries", "10"))
     threads = int(options.get("threads", "10"))
     domain = options["domain"]
-    server = options.get("server", "https://index.commoncrawl.org")
     index = options.get("index", "")
     url_filter = options.get("filter", "")
 
@@ -36,20 +35,20 @@ def run(options):
         data["filter"] = url_filter
 
     if not index:
-        index = get_latest_index(server, retries)
-    num_pages = get_num_pages(server, index, data, retries)
+        index = get_latest_index(retries)
+    num_pages = get_num_pages(index, data, retries)
 
     source += f",index:{index}"
 
-    results = get_results(server, domain, index, data, num_pages, threads, retries)
+    results = get_results(domain, index, data, num_pages, threads, retries)
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
     return results, source
 
 
-def get_latest_index(server, retries):
-    url = f"{server}/collinfo.json"
+def get_latest_index(retries):
+    url = "https://index.commoncrawl.org/collinfo.json"
 
     logging.debug("Fetching latest index list")
     for i in range(retries):
@@ -74,9 +73,9 @@ def get_latest_index(server, retries):
     return index
 
 
-def get_num_pages(server, index, data, retries):
+def get_num_pages(index, data, retries):
     data["showNumPages"] = "true"
-    url = f"{server}/{index}-index?" + urlencode(data)
+    url = "https://index.commoncrawl.org/" + index + "-index?" + urlencode(data)
 
     logging.debug("Fetching number of pages")
     for i in range(retries):
@@ -103,9 +102,9 @@ def get_num_pages(server, index, data, retries):
     return num_pages
 
 
-def get_page(server, domain, index, data, retries, page):
+def get_page(domain, index, data, retries, page):
     data["page"] = page
-    url = f"{server}/{index}-index?" + urlencode(data)
+    url = "https://index.commoncrawl.org/" + index + "-index?" + urlencode(data)
 
     logging.debug("Fetching page %d", page)
     for i in range(retries):
@@ -148,10 +147,10 @@ def get_page(server, domain, index, data, retries, page):
     return results
 
 
-def get_results(server, domain, index, data, num_pages, num_threads, retries):
+def get_results(domain, index, data, num_pages, num_threads, retries):
     try:
         executor = ThreadPoolExecutor(max_workers=num_threads)
-        threads = executor.map(get_page, repeat(server), repeat(domain), repeat(index), repeat(data), repeat(retries), range(num_pages))
+        threads = executor.map(get_page, repeat(domain), repeat(index), repeat(data), repeat(retries), range(num_pages))
     except Exception:
         logging.error("Failed to execute threads")
         sys.exit(1)
