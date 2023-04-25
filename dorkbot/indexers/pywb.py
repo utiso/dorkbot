@@ -72,12 +72,9 @@ def get_latest_index(server, retries):
             sys.exit(1)
         break
 
-    if "commoncrawl.org" in server:
-        index = response[0]["id"]
-    else:
-        fixed = response["fixed"]
-        dynamic = response["dynamic"]
-        index = fixed[0] if fixed else dynamic[0]
+    fixed = response["fixed"]
+    dynamic = response["dynamic"]
+    index = fixed[0] if fixed else dynamic[0]
     return index
 
 
