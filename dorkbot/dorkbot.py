@@ -60,7 +60,7 @@ def main():
         if args.delete_target: db.delete_target(args.delete_target)
         if args.list_targets or args.list_unscanned:
             try:
-                for url in db.get_urls(unscanned_only=indexer_options.get("list_unscanned"), source=indexer_options.get("source")): print(url)
+                for url in db.get_urls(unscanned_only=args.list_unscanned, source=indexer_options.get("source")): print(url)
             except BrokenPipeError:
                 devnull = os.open(os.devnull, os.O_WRONLY)
                 os.dup2(devnull, sys.stdout.fileno())
@@ -383,7 +383,7 @@ class TargetDatabase:
         if unscanned_only:
             where = " WHERE scanned != 1"
 
-        sql = f"SELECT {fields} FROM targets"
+        sql = f"SELECT {fields} FROM targets" + where
 
         try:
             with self.db, closing(self.db.cursor()) as c:
