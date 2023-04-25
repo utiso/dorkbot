@@ -379,19 +379,17 @@ class TargetDatabase:
         if source is True:
             fields += ",source"
 
-        where = None
+        sql = f"SELECT {fields} FROM targets"
         if unscanned_only:
-            where = " WHERE scanned != 1"
-
-        sql = f"SELECT {fields} FROM targets" + where
+            sql += " WHERE scanned != 1"
 
         try:
             with self.db, closing(self.db.cursor()) as c:
                 if source and source is not True:
-                    if where is None:
-                        sql += " WHERE "
-                    else:
+                    if "WHERE" in sql:
                         sql += " AND "
+                    else:
+                        sql += " WHERE "
                     sql += "source = %s" % self.param
                     c.execute(sql, (source,))
                 else:
