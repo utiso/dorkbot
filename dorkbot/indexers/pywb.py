@@ -31,7 +31,6 @@ def run(options):
 
     data = {}
     data["url"] = "*.%s" % domain
-    data["fl"] = "url"
     data["output"] = "json"
     if url_filter:
         data["filter"] = url_filter
