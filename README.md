@@ -28,8 +28,8 @@ usage: dorkbot [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-v] [-V]
                   [--add-target TARGET] [--delete-target TARGET]
                   [--flush-targets] [-i INDEXER] [-o INDEXER_OPTION]
                   [-s SCANNER] [-p SCANNER_OPTION] [-f] [-b BLACKLIST]
-                  [--list-blacklist] [--add-blacklist-item ITEM]
-                  [--delete-blacklist-item ITEM] [--flush-blacklist]
+                  [--list-blocklist] [--add-blocklist-item ITEM]
+                  [--delete-blocklist-item ITEM] [--flush-blocklist]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -45,7 +45,7 @@ optional arguments:
 database:
   -d DATABASE, --database DATABASE
                         Database file/uri
-  -u, --prune           Apply fingerprinting and blacklist without scanning
+  -u, --prune           Apply fingerprinting and blocklist without scanning
 
 targets:
   -l, --list-targets    List targets in database
@@ -73,15 +73,15 @@ fingerprints:
   -f, --flush-fingerprints
                         Delete all fingerprints of previously-scanned items
 
-blacklist:
-  -b BLACKLIST, --blacklist BLACKLIST
-                        Blacklist file/uri
-  --list-blacklist      List blacklist entries
-  --add-blacklist-item ITEM
-                        Add an ip/host/regex pattern to the blacklist
-  --delete-blacklist-item ITEM
-                        Delete an item from the blacklist
-  --flush-blacklist     Delete all blacklist items
+blocklist:
+  -b BLACKLIST, --blocklist BLACKLIST
+                        Blocklist file/uri
+  --list-blocklist      List blocklist entries
+  --add-blocklist-item ITEM
+                        Add an ip/host/regex pattern to the blocklist
+  --delete-blocklist-item ITEM
+                        Delete an item from the blocklist
+  --flush-blocklist     Delete all blocklist items
 </pre>
 
 Requirements
@@ -123,17 +123,17 @@ Example dorkbot.ini:
 database=/opt/dorkbot/dorkbot.db
 </pre>
 
-Blacklist
+Blocklist
 =========
-The blacklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. By default the blacklist is stored in the dorkbot database, but a separate database or file can be specified by passing the appropriate connection uri or file path to --blacklist. Note: --add-blacklist-item / --delete-blacklist-item are not implemented for file-based blacklists, and --flush-blacklist deletes the file.
+The blocklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. By default the blocklist is stored in the dorkbot database, but a separate database or file can be specified by passing the appropriate connection uri or file path to --blocklist. Note: --add-blocklist-item / --delete-blocklist-item are not implemented for file-based blocklists, and --flush-blocklist deletes the file.
 
-Supported external blacklists:
+Supported external blocklists:
 * postgresql://[server info]
 * phoenixdb://[server info]
-* sqlite3:///path/to/blacklist.db
-* /path/to/blacklist.txt
+* sqlite3:///path/to/blocklist.db
+* /path/to/blocklist.txt
 
-Example blacklist items:
+Example blocklist items:
 <pre>
 regex:^[^\?]+$
 regex:.*login.*
@@ -142,7 +142,7 @@ host:www.google.com
 ip:127.0.0.1
 </pre>
 
-The first item will remove any target that doesn't contain a question mark, in other words any url that doesn't contain any GET parameters to test. The second attempts to avoid login functions, and the third blacklists all target urls on example.com. The fourth excludes targets with a hostname of www.google.com and the fifth excludes targets whose host resolves to 127.0.0.1.
+The first item will remove any target that doesn't contain a question mark, in other words any url that doesn't contain any GET parameters to test. The second attempts to avoid login functions, and the third blocklists all target urls on example.com. The fourth excludes targets with a hostname of www.google.com and the fifth excludes targets whose host resolves to 127.0.0.1.
 
 Indexer Modules
 ===============
@@ -256,7 +256,7 @@ Options:
 
 Prune
 =====
-The prune flag iterates through all targets, computes the fingerprints in memory, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blacklist item. The result is a database where --list-unscanned returns only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
+The prune flag iterates through all targets, computes the fingerprints in memory, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-unscanned returns only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
 
 * random - evaluate urls in random order when computing fingerprints
 

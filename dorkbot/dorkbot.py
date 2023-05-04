@@ -38,23 +38,23 @@ def main():
     if args.indexer or args.prune or args.scanner \
             or args.list_targets or args.flush_targets \
             or args.add_target or args.delete_target \
-            or args.list_blacklist or args.flush_blacklist \
-            or args.add_blacklist_item or args.delete_blacklist_item \
+            or args.list_blocklist or args.flush_blocklist \
+            or args.add_blocklist_item or args.delete_blocklist_item \
             or args.flush_fingerprints or args.list_unscanned:
 
         db = TargetDatabase(args.database)
-        if args.blacklist:
-            blacklist = Blacklist(args.blacklist)
+        if args.blocklist:
+            blocklist = Blocklist(args.blocklist)
         else:
             pattern = "^[^:]+://.*$"
             regex = re.compile(pattern)
             if (regex.match(args.database)):
-                blacklist = Blacklist(args.database)
+                blocklist = Blocklist(args.database)
             else:
-                blacklist = Blacklist("sqlite3://" + args.database)
+                blocklist = Blocklist("sqlite3://" + args.database)
 
         if args.flush_targets: db.flush_targets()
-        if args.flush_blacklist: blacklist.flush()
+        if args.flush_blocklist: blocklist.flush()
         if args.flush_fingerprints: db.flush_fingerprints()
         if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
         if args.delete_target: db.delete_target(args.delete_target)
@@ -67,19 +67,19 @@ def main():
                 sys.exit(1)
         db.close()
 
-        if args.add_blacklist_item: blacklist.add(args.add_blacklist_item)
-        if args.delete_blacklist_item: blacklist.delete(args.delete_blacklist_item)
-        if args.list_blacklist:
-            for item in blacklist.get_parsed_items(): print(item)
+        if args.add_blocklist_item: blocklist.add(args.add_blocklist_item)
+        if args.delete_blocklist_item: blocklist.delete(args.delete_blocklist_item)
+        if args.list_blocklist:
+            for item in blocklist.get_parsed_items(): print(item)
 
         if args.indexer:
-            index(db, blacklist, load_module("indexers", args.indexer), args, indexer_options)
+            index(db, blocklist, load_module("indexers", args.indexer), args, indexer_options)
 
         if args.prune:
-            prune(db, blacklist, args, scanner_options)
+            prune(db, blocklist, args, scanner_options)
 
         if args.scanner:
-            scan(db, blacklist, load_module("scanners", args.scanner), args, scanner_options)
+            scan(db, blocklist, load_module("scanners", args.scanner), args, scanner_options)
 
     else:
         parser.print_usage()
@@ -160,7 +160,7 @@ def get_args_parser():
     database.add_argument("-d", "--database", \
                           help="Database file/uri")
     database.add_argument("-u", "--prune", action="store_true", \
-                          help="Apply fingerprinting and blacklist without scanning")
+                          help="Apply fingerprinting and blocklist without scanning")
 
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true", \
@@ -190,24 +190,24 @@ def get_args_parser():
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
                               help="Delete all fingerprints of previously-scanned items")
 
-    blacklist = parser.add_argument_group('blacklist')
-    blacklist.add_argument("-b", "--blacklist", \
-                           help="Blacklist file/uri")
-    blacklist.add_argument("--list-blacklist", action="store_true", \
-                           help="List blacklist entries")
-    blacklist.add_argument("--add-blacklist-item", metavar="ITEM", \
-                           help="Add an ip/host/regex pattern to the blacklist")
-    blacklist.add_argument("--delete-blacklist-item", metavar="ITEM", \
-                           help="Delete an item from the blacklist")
-    blacklist.add_argument("--flush-blacklist", action="store_true", \
-                           help="Delete all blacklist items")
+    blocklist = parser.add_argument_group('blocklist')
+    blocklist.add_argument("-b", "--blocklist", \
+                           help="Blocklist file/uri")
+    blocklist.add_argument("--list-blocklist", action="store_true", \
+                           help="List blocklist entries")
+    blocklist.add_argument("--add-blocklist-item", metavar="ITEM", \
+                           help="Add an ip/host/regex pattern to the blocklist")
+    blocklist.add_argument("--delete-blocklist-item", metavar="ITEM", \
+                           help="Delete an item from the blocklist")
+    blocklist.add_argument("--flush-blocklist", action="store_true", \
+                           help="Delete all blocklist items")
 
     args = parser.parse_args(other_args)
     args.directory = initial_args.directory
     return args, parser
 
 
-def index(db, blacklist, indexer, args, options):
+def index(db, blocklist, indexer, args, options):
     indexer_name = indexer.__name__.split(".")[-1]
     indexer_options = ",".join(["%s=%s" % (key, val) for key, val in options.items()])
     logging.info("Indexing: %s %s", indexer_name, indexer_options)
@@ -217,14 +217,14 @@ def index(db, blacklist, indexer, args, options):
 
     targets = []
     for url in urls:
-        if not blacklist.match(Target(url)): targets.append(url)
+        if not blocklist.match(Target(url)): targets.append(url)
 
     db.connect()
     db.add_targets(targets, source)
     db.close()
 
 
-def prune(db, blacklist, args, options):
+def prune(db, blocklist, args, options):
     if "random" in options:
         randomize = True
     else:
@@ -233,11 +233,11 @@ def prune(db, blacklist, args, options):
     logging.info("Pruning database")
 
     db.connect()
-    db.prune(blacklist, randomize)
+    db.prune(blocklist, randomize)
     db.close()
 
 
-def scan(db, blacklist, scanner, args, options):
+def scan(db, blocklist, scanner, args, options):
     options["directory"] = args.directory
     report_dir = options.get("reports", os.path.join(args.directory, "reports"))
     if not os.path.isdir(report_dir):
@@ -257,8 +257,8 @@ def scan(db, blacklist, scanner, args, options):
         if not target:
             break
 
-        if blacklist.match(target):
-            logging.debug("Deleting (matches blacklist pattern): %s", target.url)
+        if blocklist.match(target):
+            logging.debug("Deleting (matches blocklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
 
@@ -359,7 +359,7 @@ class TargetDatabase:
             with self.db, closing(self.db.cursor()) as c:
                 c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY, source VARCHAR, scanned INTEGER DEFAULT 0)")
                 c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
-                c.execute("CREATE TABLE IF NOT EXISTS blacklist (item VARCHAR PRIMARY KEY)")
+                c.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
         except self.module.Error as e:
             logging.error("Failed to load database - %s", str(e))
             sys.exit(1)
@@ -507,7 +507,7 @@ class TargetDatabase:
             logging.error("Failed to flush targets - %s", str(e))
             sys.exit(1)
 
-    def prune(self, blacklist, randomize=False):
+    def prune(self, blocklist, randomize=False):
         fingerprints = set()
 
         urls = self.get_urls()
@@ -525,8 +525,8 @@ class TargetDatabase:
                     self.mark_scanned(target.url, c)
                     continue
 
-            if blacklist.match(target):
-                logging.debug("Deleting (matches blacklist pattern): %s", target.url)
+            if blocklist.match(target):
+                logging.debug("Deleting (matches blocklist pattern): %s", target.url)
                 self.delete_target(target.url)
                 continue
 
@@ -571,26 +571,26 @@ class Target:
             print("Report saved to: %s" % outfile.name)
 
 
-class Blacklist:
-    def __init__(self, blacklist):
+class Blocklist:
+    def __init__(self, blocklist):
         self.connect_kwargs = {}
         self.ip_set = set()
         self.host_set = set()
         self.regex_set = set()
 
-        if blacklist.startswith("postgresql://"):
-            self.database = blacklist
+        if blocklist.startswith("postgresql://"):
+            self.database = blocklist
             module_name = "psycopg2"
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
-        elif blacklist.startswith("phoenixdb://"):
-            self.database = blacklist[12:]
+        elif blocklist.startswith("phoenixdb://"):
+            self.database = blocklist[12:]
             module_name = "phoenixdb"
             self.insert = "UPSERT"
             self.conflict = ""
             self.connect_kwargs["autocommit"] = True
-        elif blacklist.startswith("sqlite3://"):
-            self.database = os.path.expanduser(blacklist[10:])
+        elif blocklist.startswith("sqlite3://"):
+            self.database = os.path.expanduser(blocklist[10:])
             module_name = "sqlite3"
             database_dir = os.path.dirname(self.database)
             self.insert = "INSERT OR REPLACE"
@@ -603,11 +603,11 @@ class Blacklist:
                     sys.exit(1)
         else:
             self.database = False
-            self.filename = blacklist
+            self.filename = blocklist
             try:
-                self.blacklist_file = open(self.filename, "r")
+                self.blocklist_file = open(self.filename, "r")
             except Exception as e:
-                logging.error("Failed to read blacklist file - %s", str(e))
+                logging.error("Failed to read blocklist file - %s", str(e))
                 sys.exit(1)
 
         if self.database:
@@ -621,9 +621,9 @@ class Blacklist:
             self.connect()
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    c.execute("CREATE TABLE IF NOT EXISTS blacklist (item VARCHAR PRIMARY KEY)")
+                    c.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
             except self.module.Error as e:
-                logging.error("Failed to load blacklist database - %s", str(e))
+                logging.error("Failed to load blocklist database - %s", str(e))
                 sys.exit(1)
 
         self.parse_list(self.read_items())
@@ -637,16 +637,16 @@ class Blacklist:
                 sys.exit(1)
         else:
             try:
-                self.blacklist_file = open(self.filename, "a")
+                self.blocklist_file = open(self.filename, "a")
             except Exception as e:
-                logging.error("Failed to read blacklist file - %s", str(e))
+                logging.error("Failed to read blocklist file - %s", str(e))
                 sys.exit(1)
 
     def close(self):
         if self.database:
             self.db.close()
         else:
-            self.blacklist_file.close()
+            self.blocklist_file.close()
 
     def parse_list(self, items):
         for item in items:
@@ -655,14 +655,14 @@ class Blacklist:
                 try:
                     ip_net = ipaddress.ip_network(ip)
                 except ValueError as e:
-                    logging.error("Could not parse blacklist item as ip - %s", str(e))
+                    logging.error("Could not parse blocklist item as ip - %s", str(e))
                 self.ip_set.add(ip_net)
             elif item.startswith("host:"):
                 self.host_set.add(item.split(":")[1])
             elif item.startswith("regex:"):
                 self.regex_set.add(item.split(":")[1])
             else:
-                logging.warning("Could not parse blacklist item - %s", item)
+                logging.warning("Could not parse blocklist item - %s", item)
 
         pattern = "|".join(self.regex_set)
         if pattern:
@@ -686,13 +686,13 @@ class Blacklist:
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    c.execute("SELECT item FROM blacklist")
+                    c.execute("SELECT item FROM blocklist")
                     items = [row[0] for row in c.fetchall()]
             except self.module.Error as e:
                 logging.error("Failed to get targets - %s", str(e))
                 sys.exit(1)
         else:
-            items = self.blacklist_file.read().splitlines()
+            items = self.blocklist_file.read().splitlines()
 
         return items
 
@@ -704,7 +704,7 @@ class Blacklist:
             try:
                 ip_net = ipaddress.ip_network(ip)
             except ValueError as e:
-                logging.error("Could not parse blacklist item as ip - %s", str(e))
+                logging.error("Could not parse blocklist item as ip - %s", str(e))
                 sys.exit(1)
             self.ip_set.add(ip_net)
         elif item.startswith("host:"):
@@ -712,18 +712,18 @@ class Blacklist:
         elif item.startswith("regex:"):
             self.regex_set.add(item.split(":")[1])
         else:
-            logging.error("Could not parse blacklist item - %s", item)
+            logging.error("Could not parse blocklist item - %s", item)
             sys.exit(1)
 
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    c.execute("%s INTO blacklist VALUES (%s)" % (self.insert, self.param), (item,))
+                    c.execute("%s INTO blocklist VALUES (%s)" % (self.insert, self.param), (item,))
             except self.module.Error as e:
-                logging.error("Failed to add blacklist item - %s", str(e))
+                logging.error("Failed to add blocklist item - %s", str(e))
                 sys.exit(1)
         else:
-            logging.warning("Add ignored (not implemented for file-based blacklist)")
+            logging.warning("Add ignored (not implemented for file-based blocklist)")
 
         self.close()
 
@@ -733,12 +733,12 @@ class Blacklist:
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    c.execute("DELETE FROM blacklist WHERE item=(%s)" % self.param, (item,))
+                    c.execute("DELETE FROM blocklist WHERE item=(%s)" % self.param, (item,))
             except self.module.Error as e:
-                logging.error("Failed to delete blacklist item - %s", str(e))
+                logging.error("Failed to delete blocklist item - %s", str(e))
                 sys.exit(1)
         else:
-            logging.warning("Delete ignored (not implemented for file-based blacklist)")
+            logging.warning("Delete ignored (not implemented for file-based blocklist)")
 
         self.close()
 
@@ -756,19 +756,19 @@ class Blacklist:
         return False
 
     def flush(self):
-        logging.info("Flushing blacklist")
+        logging.info("Flushing blocklist")
         if self.database:
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    c.execute("DELETE FROM blacklist")
+                    c.execute("DELETE FROM blocklist")
             except self.module.Error as e:
-                logging.error("Failed to flush blacklist - %s", str(e))
+                logging.error("Failed to flush blocklist - %s", str(e))
                 sys.exit(1)
         else:
             try:
                 os.unlink(self.filename)
             except OSError as e:
-                logging.error("Failed to delete blacklist file - %s", str(e))
+                logging.error("Failed to delete blocklist file - %s", str(e))
                 sys.exit(1)
 
         self.regex = None
