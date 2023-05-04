@@ -53,24 +53,18 @@ def main():
             else:
                 blocklist = Blocklist("sqlite3://" + args.database)
 
-        if args.flush_targets: db.flush_targets()
         if args.flush_blocklist: blocklist.flush()
-        if args.flush_fingerprints: db.flush_fingerprints()
-        if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
-        if args.delete_target: db.delete_target(args.delete_target)
-        if args.list_targets or args.list_unscanned:
-            try:
-                for url in db.get_urls(unscanned_only=args.list_unscanned, source=indexer_options.get("source")): print(url)
-            except BrokenPipeError:
-                devnull = os.open(os.devnull, os.O_WRONLY)
-                os.dup2(devnull, sys.stdout.fileno())
-                sys.exit(1)
-        db.close()
-
         if args.add_blocklist_item: blocklist.add(args.add_blocklist_item)
         if args.delete_blocklist_item: blocklist.delete(args.delete_blocklist_item)
         if args.list_blocklist:
             for item in blocklist.get_parsed_items(): print(item)
+
+        if args.flush_fingerprints: db.flush_fingerprints()
+
+        if args.flush_targets: db.flush_targets()
+        if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
+        if args.delete_target: db.delete_target(args.delete_target)
+        db.close()
 
         if args.indexer:
             index(db, blocklist, load_module("indexers", args.indexer), args, indexer_options)
@@ -81,6 +75,15 @@ def main():
         if args.scanner:
             scan(db, blocklist, load_module("scanners", args.scanner), args, scanner_options)
 
+        db = TargetDatabase(args.database)
+        if args.list_targets or args.list_unscanned:
+            try:
+                for url in db.get_urls(unscanned_only=args.list_unscanned, source=indexer_options.get("source")): print(url)
+            except BrokenPipeError:
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                os.dup2(devnull, sys.stdout.fileno())
+                sys.exit(1)
+        db.close()
     else:
         parser.print_usage()
 
