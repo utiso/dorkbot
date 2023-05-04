@@ -27,7 +27,7 @@ usage: dorkbot [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-v] [-V]
                   [-d DATABASE] [-u] [-l] [--list-unscanned]
                   [--add-target TARGET] [--delete-target TARGET]
                   [--flush-targets] [-i INDEXER] [-o INDEXER_OPTION]
-                  [-s SCANNER] [-p SCANNER_OPTION] [-f] [-b BLACKLIST]
+                  [-s SCANNER] [-p SCANNER_OPTION] [-f] [-b BLOCKLIST]
                   [--list-blocklist] [--add-blocklist-item ITEM]
                   [--delete-blocklist-item ITEM] [--flush-blocklist]
 
@@ -74,7 +74,7 @@ fingerprints:
                         Delete all fingerprints of previously-scanned items
 
 blocklist:
-  -b BLACKLIST, --blocklist BLACKLIST
+  -b BLOCKLIST, --blocklist BLOCKLIST
                         Blocklist file/uri
   --list-blocklist      List blocklist entries
   --add-blocklist-item ITEM
