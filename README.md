@@ -22,7 +22,12 @@ Quickstart
 
 Help
 ====
-Use -h/--help for general dorkbot arguments. If -i/--indexer or -s/--scanner arguments are present, -h/--help will display module-specific arguments. Adding --show-defaults in either case will show the default values for each argument, including those parsed from the configuration file.
+<pre>
+ -h, --help            Show program (or specified module) help
+</pre>
+<pre>
+  --show-defaults       Show default values in help output
+</pre>
 
 Usage
 =====
@@ -96,15 +101,11 @@ blocklist:
   --flush-blocklist     Delete all blocklist items
 </pre>
 
-Requirements
-============
-* Python 3.x (cross-platform)
+Tools / Dependencies
+=====
 * [psycopg2-binary](https://pypi.org/project/psycopg2-binary/) or [psycopg2](https://pypi.org/project/psycopg2/) (if using PostgreSQL)
 * [phoenixdb](https://pypi.org/project/phoenixdb/) (if using PhoenixDB)
-
-Tools
-=====
-* [PhantomJS](http://phantomjs.org/)
+* [PhantomJS](http://phantomjs.org/) (if using non-api google indexer)
 * [Arachni](http://www.arachni-scanner.com/)
 * [Wapiti](http://wapiti.sourceforge.net/)
 
@@ -168,11 +169,12 @@ The prune flag iterates through all targets, computes the fingerprints in memory
 
 General Options
 ===============
-These options are applicable regardless of module chosen
-
-* source - label stored in source field for target, overrides label provided by module (if present and without a value during list operations, source field will be printed along with url)
-* count - number of urls to scan or list, or -1 to scan all urls (default: -1)
-* random - scan or list urls in random order
+These options are applicable regardless of module chosen:
+<pre>
+  --source [SOURCE]     Label associated with targets
+  --count COUNT         number of urls to scan, or -1 to scan all urls
+  --random              retrieve urls in random order
+</pre>
 
 Indexer Modules
 ===============
@@ -249,13 +251,6 @@ Indexer Modules
 
 Scanner Modules
 ===============
-
-### global scanner options ###
-<pre>
-  --count COUNT         number of urls to scan, or -1 to scan all urls
-  --random              retrieve urls in random order
-</pre>
-
 ### arachni ###
 <pre>
   Scans with the arachni command-line scanner
