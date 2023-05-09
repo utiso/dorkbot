@@ -1,4 +1,9 @@
+import argparse
 from urllib.parse import urlparse
+
+
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Example module that returns a few urls")
 
 
 def run(args):

@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import subprocess
@@ -5,34 +6,34 @@ import sys
 from urllib.parse import urlparse
 
 
-def run(options):
-    required = ["engine", "query"]
-    for r in required:
-        if r not in options:
-            logging.error("%s must be set", r)
-            sys.exit(1)
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Searches google.com via scraping")
+    module_group.add_argument("--engine", required=True, \
+                          help="CSE id")
+    module_group.add_argument("--query", required=True, \
+                          help="search query")
+    module_group.add_argument("--phantomjs-dir", \
+                          help="phantomjs base dir containing bin/phantomjs")
+    module_group.add_argument("--domain", \
+                          help="limit searches to specified domain")
 
+
+def run(args):
     source = __name__.split(".")[-1]
-
-    tools_dir = os.path.join(options["directory"], "tools")
-    if "phantomjs_dir" in options:
-        phantomjs_path = os.path.join(os.path.abspath(options["phantomjs_dir"]), "bin")
+    tools_dir = os.path.join(args.directory, "tools")
+    if args.phantomjs_dir:
+        phantomjs_path = os.path.join(os.path.abspath(argsphantomjs_dir, "bin"))
     elif os.path.isdir(os.path.join(tools_dir, "phantomjs", "bin")):
         phantomjs_path = os.path.join(tools_dir, "phantomjs", "bin")
     else:
         phantomjs_path = ""
 
-    if "domain" in options:
-        domain = options["domain"]
-    else:
-        domain = ""
-
     index_cmd = [os.path.join(phantomjs_path, "phantomjs")]
     index_cmd += ["--ignore-ssl-errors=true"]
     index_cmd += [os.path.join(os.path.dirname(os.path.abspath(__file__)), "google.js")]
-    index_cmd += [options["engine"]]
-    index_cmd += [options["query"]]
-    if domain: index_cmd += [domain]
+    index_cmd += [args.engine]
+    index_cmd += [args.query]
+    if args.domain: index_cmd += [args.domain]
 
     try:
         output = subprocess.run(index_cmd, check=True, stdout=subprocess.PIPE).stdout

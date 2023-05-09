@@ -22,10 +22,8 @@ from urllib.parse import urlparse
 
 
 def main():
-    args, parser = get_args_parser()
+    args, parser = get_main_args_parser()
     initialize_logger(args.log, args.verbose)
-    indexer_options = parse_options(args.indexer_option)
-    scanner_options = parse_options(args.scanner_option)
 
     if args.directory and not os.path.isdir(args.directory):
         logging.debug("Creating directory - %s", args.directory)
@@ -34,6 +32,19 @@ def main():
         except OSError as e:
             logging.error("Failed to create directory - %s", str(e))
             sys.exit(1)
+
+    if args.help:
+        indexer_parser = None
+        if args.indexer:
+            indexer_parser, other_args = get_module_parser(load_module("indexers", args.indexer))
+            if not args.scanner:
+                indexer_parser.print_help()
+        if args.scanner:
+            scanner_parser, other_args = get_module_parser(load_module("scanners", args.scanner), parent_parser=indexer_parser)
+            scanner_parser.print_help()
+        if not args.indexer and not args.scanner:
+            parser.print_help()
+        sys.exit(0)
 
     if args.indexer or args.prune or args.scanner \
             or args.list_targets or args.flush_targets \
@@ -62,23 +73,39 @@ def main():
         if args.flush_fingerprints: db.flush_fingerprints()
 
         if args.flush_targets: db.flush_targets()
-        if args.add_target: db.add_target(args.add_target, indexer_options.get("source"))
+        if args.add_target: db.add_target(args.add_target, args.source)
         if args.delete_target: db.delete_target(args.delete_target)
         db.close()
 
         if args.indexer:
-            index(db, blocklist, load_module("indexers", args.indexer), args, indexer_options)
+            indexer_module = load_module("indexers", args.indexer)
+            indexer_parser, other_args = get_module_parser(indexer_module)
+            indexer_args = indexer_parser.parse_args(format_module_args(args.indexer_arg))
+            try:
+                index(db, blocklist, indexer_module, args, indexer_args)
+            except KeyboardInterrupt:
+                sys.exit(1)
 
         if args.prune:
-            prune(db, blocklist, args, scanner_options)
+            prune(db, blocklist, args)
 
         if args.scanner:
-            scan(db, blocklist, load_module("scanners", args.scanner), args, scanner_options)
+            scanner_module = load_module("scanners", args.scanner)
+            scanner_parser, other_args = get_module_parser(scanner_module)
+            scanner_args = scanner_parser.parse_args(format_module_args(args.scanner_arg))
+            try:
+                scan(db, blocklist, scanner_module, args, scanner_args)
+            except KeyboardInterrupt:
+                sys.exit(1)
 
         db = TargetDatabase(args.database)
         if args.list_targets or args.list_unscanned:
             try:
-                for url in db.get_urls(unscanned_only=args.list_unscanned, source=indexer_options.get("source")): print(url)
+                urls = db.get_urls(unscanned_only=args.list_unscanned, source=args.source, randomize=args.random)
+                if args.count > 0:
+                    urls = urls[:args.count]
+                for url in urls:
+                    print(url)
             except BrokenPipeError:
                 devnull = os.open(os.devnull, os.O_WRONLY)
                 os.dup2(devnull, sys.stdout.fileno())
@@ -123,7 +150,7 @@ def load_module(category, name):
     return module
 
 
-def get_args_parser():
+def get_initial_args_parser():
     config_dir = os.path.abspath(os.path.expanduser(
         os.environ.get("XDG_CONFIG_HOME") or
         os.environ.get("APPDATA") or
@@ -138,20 +165,47 @@ def get_args_parser():
     initial_parser.add_argument("-r", "--directory", \
                                 default=os.getcwd(), \
                                 help="Dorkbot directory (default location of db, tools, reports)")
+    initial_parser.add_argument("--source", nargs="?", const=True, default=False, \
+                                help="Label associated with targets")
+    initial_parser.add_argument("--show-defaults", action="store_true", \
+                                help="Show default values in help output")
+    global_scanner_options = initial_parser.add_argument_group("global scanner options")
+    global_scanner_options.add_argument("--count", type=int, default=-1, \
+                          help="number of urls to scan, or -1 to scan all urls")
+    global_scanner_options.add_argument("--random", action="store_true", \
+                          help="retrieve urls in random order")
     initial_args, other_args = initial_parser.parse_known_args()
+
+    return initial_args, other_args, initial_parser
+
+
+def get_main_args_parser():
+    initial_args, other_args, initial_parser = get_initial_args_parser()
 
     defaults = {
         "database": os.path.join(initial_args.directory, "dorkbot.db"),
     }
 
     if os.path.isfile(initial_args.config):
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.read(initial_args.config)
-        options = config.items("dorkbot")
-        defaults.update(dict(options))
+        try:
+            config_items = config.items("dorkbot")
+            defaults.update(dict(config_items))
+        except KeyError:
+            pass
+        except configparser.NoSectionError as e:
+            logging.debug(e)
 
-    parser = argparse.ArgumentParser(parents=[initial_parser])
+    if initial_args.show_defaults:
+        parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False, \
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False)
+
     parser.set_defaults(**defaults)
+    parser.add_argument("-h", "--help", action="store_true", \
+                        help="Show program (or specified module) help")
     parser.add_argument("--log", \
                         help="Path to log file")
     parser.add_argument("-v", "--verbose", action="store_true", \
@@ -180,14 +234,14 @@ def get_args_parser():
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer", \
                           help="Indexer module to use")
-    indexing.add_argument("-o", "--indexer-option", action="append", \
-                          help="Pass an option to the indexer (can be used multiple times)")
+    indexing.add_argument("-o", "--indexer-arg", action="append", \
+                          help="Pass an argument to the indexer module (can be used multiple times)")
 
     scanning = parser.add_argument_group('scanning')
     scanning.add_argument("-s", "--scanner", \
                           help="Scanner module to use")
-    scanning.add_argument("-p", "--scanner-option", action="append", \
-                          help="Pass an option to the scanner (can be used multiple times)")
+    scanning.add_argument("-p", "--scanner-arg", action="append", \
+                          help="Pass an argument to the scanner module (can be used multiple times)")
 
     fingerprints = parser.add_argument_group('fingerprints')
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
@@ -205,18 +259,77 @@ def get_args_parser():
     blocklist.add_argument("--flush-blocklist", action="store_true", \
                            help="Delete all blocklist items")
 
-    args = parser.parse_args(other_args)
-    args.directory = initial_args.directory
+    args = parser.parse_args(other_args, namespace=initial_args)
     return args, parser
 
 
-def index(db, blocklist, indexer, args, options):
+def get_module_parser(module, parent_parser=None):
+    initial_args, other_args, initial_parser = get_initial_args_parser()
+
+    defaults = {}
+    module_defaults = {}
+
+    if os.path.isfile(initial_args.config):
+        config = configparser.ConfigParser()
+        config.read(initial_args.config)
+
+        try:
+            config_items = config.items("dorkbot")
+            defaults.update(dict(config_items))
+        except KeyError:
+            pass
+        except configparser.NoSectionError as e:
+            logging.debug(e)
+
+        try:
+            module_config_items = config.items(module.__name__)
+            module_defaults.update(dict(module_config_items))
+        except KeyError:
+            pass
+        except configparser.NoSectionError as e:
+            logging.debug(e)
+
+    if parent_parser:
+        initial_parser = parent_parser
+
+    usage="%(prog)s [args] -i/-s [module] -o/-p [module_arg[=value]] ..."
+    epilog="NOTE: module args are passed via -o/-p as key=value and do not themselves require hyphens"
+
+    if initial_args.show_defaults:
+        parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False, \
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False)
+
+    parser.set_defaults(**defaults)
+    module.populate_parser(initial_args, parser)
+    parser.set_defaults(**module_defaults)
+
+    return parser, other_args
+
+
+def format_module_args(args_list):
+    args = []
+
+    if args_list:
+        for arg in args_list:
+            if arg.startswith("--"):
+                args.add(arg)
+            else:
+                args.append("--" + arg)
+
+    return args
+
+
+def index(db, blocklist, indexer, args, indexer_args):
     indexer_name = indexer.__name__.split(".")[-1]
-    indexer_options = ",".join(["%s=%s" % (key, val) for key, val in options.items()])
-    logging.info("Indexing: %s %s", indexer_name, indexer_options)
-    options["directory"] = args.directory
-    urls, module_source = indexer.run(options)
-    source = options.get("source", module_source)
+    logging.info("Indexing: %s %s", indexer_name, vars(indexer_args))
+    setattr(indexer_args, "directory", args.directory)
+    urls, module_source = indexer.run(indexer_args)
+    if args.source:
+        source = args.source
+    else:
+        source = module_source
 
     targets = []
     for url in urls:
@@ -227,36 +340,26 @@ def index(db, blocklist, indexer, args, options):
     db.close()
 
 
-def prune(db, blocklist, args, options):
-    if "random" in options:
-        randomize = True
-    else:
-        randomize = False
-
+def prune(db, blocklist, args):
     logging.info("Pruning database")
 
     db.connect()
-    db.prune(blocklist, randomize)
+    db.prune(blocklist, args.random)
     db.close()
 
 
-def scan(db, blocklist, scanner, args, options):
-    options["directory"] = args.directory
-    report_dir = options.get("reports", os.path.join(args.directory, "reports"))
-    if not os.path.isdir(report_dir):
+def scan(db, blocklist, scanner, args, scanner_args):
+    if not os.path.isdir(scanner_args.report_dir):
         try:
-            os.makedirs(report_dir)
+            os.makedirs(scanner_args.report_dir)
         except OSError as e:
             logging.error("Failed to create report directory - %s", str(e))
             sys.exit(1)
 
-    count = int(options.get("count", "-1"))
-    label = options.get("label", "")
-
     scanned = 0
-    while scanned < count or count == -1:
+    while scanned < args.count or args.count == -1:
         db.connect()
-        target = db.get_next_target(random=options.get("random", False))
+        target = db.get_next_target(random=args.random)
         if not target:
             break
 
@@ -268,7 +371,7 @@ def scan(db, blocklist, scanner, args, options):
         db.close()
 
         logging.info("Scanning: %s", target.url)
-        results = scanner.run(options, target)
+        results = scanner.run(scanner_args, target)
         scanned += 1
 
         if results == False:
@@ -276,7 +379,7 @@ def scan(db, blocklist, scanner, args, options):
             continue
 
         target.endtime = generate_timestamp()
-        target.write_report(report_dir, label, results)
+        target.write_report(scanner_args.report_dir, scanner_args.label, results)
 
 
 def generate_fingerprint(target):
@@ -299,20 +402,6 @@ def generate_timestamp():
 
 def generate_hash(url):
     return hashlib.md5(url.encode("utf-8")).hexdigest()
-
-
-def parse_options(options_list):
-    options = dict()
-
-    if options_list:
-        for option in options_list:
-            if "=" in option:
-                key, value = option.split("=", 1)
-            else:
-                key, value = option, True
-            options.update({key: value})
-
-    return options
 
 
 class TargetDatabase:
@@ -377,7 +466,7 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def get_urls(self, unscanned_only=False, source=False):
+    def get_urls(self, unscanned_only=False, source=False, randomize=False):
         fields = "url"
         if source is True:
             fields += ",source"
@@ -401,6 +490,9 @@ class TargetDatabase:
         except self.module.Error as e:
             logging.error("Failed to get targets - %s", str(e))
             sys.exit(1)
+
+        if randomize:
+            random.shuffle(urls)
 
         return urls
 

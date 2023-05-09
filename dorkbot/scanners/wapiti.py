@@ -1,3 +1,4 @@
+import argparse
 import io
 import json
 import logging
@@ -9,14 +10,25 @@ import tempfile
 from urllib.parse import urlparse, urlunparse, urljoin
 
 
-def run(options, target):
-    default_wapiti_path = os.path.join(options["directory"], "tools", "wapiti", "bin")
-    if not os.path.isdir(default_wapiti_path): default_wapiti_path = ""
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Scans with the wapiti3 command-line scanner")
+    module_group.add_argument("--wapiti-dir", default=os.path.join(args.directory, "tools", "wapiti"), \
+                          help="wapiti base dir containing bin/wapiti")
+    module_group.add_argument("--args", \
+                          help="space-delimited list of additional arguments")
+    module_group.add_argument("--report-dir", default=os.path.join(args.directory, "reports"),\
+                          help="directory to save vulnerability report")
+    module_group.add_argument("--label", default="", \
+                          help="friendly name field to include in vulnerability report")
 
-    if "wapiti_dir" in options:
-        wapiti_path = os.path.join(os.path.abspath(options["wapiti_dir"]), "bin")
+
+def run(args, target):
+    if not os.path.isdir(args.wapiti_dir): args.wapiti_dir = ""
+
+    if args.wapiti_dir:
+        wapiti_path = os.path.join(os.path.abspath(args.wapiti_dir), "bin")
     else:
-        wapiti_path = default_wapiti_path
+        wapiti_path = args.wapiti_dir
 
     report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".json")
 
@@ -28,8 +40,8 @@ def run(options, target):
     cmd += ["--flush-session"]
     cmd += ["--format", "json"]
     cmd += ["--output", report]
-    if "args" in options:
-        cmd += options["args"].split()
+    if args.args:
+        cmd += args.args.split()
 
     try:
         subprocess.run(cmd, check=True)

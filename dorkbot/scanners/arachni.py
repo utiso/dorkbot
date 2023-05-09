@@ -1,3 +1,4 @@
+import argparse
 import io
 import json
 import logging
@@ -8,14 +9,25 @@ import sys
 import tempfile
 
 
-def run(options, target):
-    default_arachni_path = os.path.join(options["directory"], "tools", "arachni", "bin")
-    if not os.path.isdir(default_arachni_path): default_arachni_path = ""
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Scans with the arachni command-line scanner")
+    module_group.add_argument("--arachni-dir", default=os.path.join(args.directory, "tools", "arachni"), \
+                          help="arachni base dir containing bin/arachni and bin/arachni_reporter")
+    module_group.add_argument("--args", \
+                          help="space-delimited list of additional arguments")
+    module_group.add_argument("--report-dir", default=os.path.join(args.directory, "reports"), \
+                          help="directory to save vulnerability report")
+    module_group.add_argument("--label", default="", \
+                          help="friendly name field to include in vulnerability report")
 
-    if "arachni_dir" in options:
-        arachni_path = os.path.join(os.path.abspath(options["arachni_dir"]), "bin")
+
+def run(args, target):
+    if not os.path.isdir(args.arachni_dir): args.arachni_dir = ""
+
+    if args.arachni_dir:
+        arachni_path = os.path.join(os.path.abspath(args.arachni_dir), "bin")
     else:
-        arachni_path = default_arachni_path
+        arachni_path = args.arachni_dir
 
     report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".afr")
 
@@ -26,8 +38,8 @@ def run(options, target):
     scan_cmd += ["--output-only-positives"]
     scan_cmd += ["--scope-page-limit", "1"]
     scan_cmd += ["--scope-include-pattern", target.url.split("?", 1)[0]]
-    if "args" in options:
-        scan_cmd += options["args"].split()
+    if args.args:
+        scan_cmd += args.args.split()
     scan_cmd += [target.url]
 
     report_cmd = [os.path.join(arachni_path, "arachni_reporter")]

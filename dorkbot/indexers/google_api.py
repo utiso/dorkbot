@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import sys
@@ -7,29 +8,34 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
 
 
-def run(options):
-    required = ["key", "engine", "query"]
-    for r in required:
-        if r not in options:
-            logging.error("%s must be set", r)
-            sys.exit(1)
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Searches google.com")
+    module_group.add_argument("--key", required=True, \
+                          help="API key")
+    module_group.add_argument("--engine", required=True, \
+                          help="CSE id")
+    module_group.add_argument("--query", required=True, \
+                          help="search query")
+    module_group.add_argument("--domain", \
+                          help="limit searches to specified domain")
 
+
+def run(args):
     source = __name__.split(".")[-1]
-
-    results = get_results(options)
+    results = get_results(args.key, args.engine, args.query, args.domain)
     return results, source
 
 
-def get_results(options):
+def get_results(key, engine, query, domain):
     data = {}
-    data["key"] = options["key"]
-    data["cx"] = options["engine"]
-    data["q"] = options["query"]
+    data["key"] = key
+    data["cx"] = engine
+    data["q"] = query
     data["num"] = 10
     data["start"] = 0
 
-    if "domain" in options:
-        data["siteSearch"] = options["domain"]
+    if domain:
+        data["siteSearch"] = domain
 
     results = []
     while True:

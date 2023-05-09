@@ -20,27 +20,39 @@ Quickstart
 <pre>$ dorkbot -i google_api -o key=your_api_credential_here -o engine=your_engine_id_here -o query="filetype:php inurl:id"</pre>
 <pre>$ dorkbot -s wapiti</pre>
 
+Help
+====
+Use -h/--help for general dorkbot arguments. If -i/--indexer or -s/--scanner arguments are present, -h/--help will display module-specific arguments. Adding --show-defaults in either case will show the default values for each argument, including those parsed from the configuration file.
+
 Usage
 =====
 <pre>
-usage: dorkbot [-h] [-c CONFIG] [-r DIRECTORY] [--log LOG] [-v] [-V]
-                  [-d DATABASE] [-u] [-l] [--list-unscanned]
-                  [--add-target TARGET] [--delete-target TARGET]
-                  [--flush-targets] [-i INDEXER] [-o INDEXER_OPTION]
-                  [-s SCANNER] [-p SCANNER_OPTION] [-f] [-b BLOCKLIST]
-                  [--list-blocklist] [--add-blocklist-item ITEM]
-                  [--delete-blocklist-item ITEM] [--flush-blocklist]
+usage: dorkbot.py [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
+                  [--show-defaults] [--count COUNT] [--random] [-h]
+                  [--log LOG] [-v] [-V] [-d DATABASE] [-u] [-l]
+                  [--list-unscanned] [--add-target TARGET]
+                  [--delete-target TARGET] [--flush-targets] [-i INDEXER]
+                  [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-f]
+                  [-b BLOCKLIST] [--list-blocklist]
+                  [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
+                  [--flush-blocklist]
 
-optional arguments:
-  -h, --help            show this help message and exit
+options:
   -c CONFIG, --config CONFIG
                         Configuration file
   -r DIRECTORY, --directory DIRECTORY
                         Dorkbot directory (default location of db, tools,
                         reports)
+  --source [SOURCE]     Label associated with targets
+  --show-defaults       Show default values in help output
+  -h, --help            Show program (or specified module) help
   --log LOG             Path to log file
   -v, --verbose         Enable verbose logging (DEBUG output)
   -V, --version         Print version
+
+global scanner options:
+  --count COUNT         number of urls to scan, or -1 to scan all urls
+  --random              retrieve urls in random order
 
 database:
   -d DATABASE, --database DATABASE
@@ -58,16 +70,16 @@ targets:
 indexing:
   -i INDEXER, --indexer INDEXER
                         Indexer module to use
-  -o INDEXER_OPTION, --indexer-option INDEXER_OPTION
-                        Pass an option to the indexer (can be used multiple
-                        times)
+  -o INDEXER_ARG, --indexer-arg INDEXER_ARG
+                        Pass an argument to the indexer module (can be used
+                        multiple times)
 
 scanning:
   -s SCANNER, --scanner SCANNER
                         Scanner module to use
-  -p SCANNER_OPTION, --scanner-option SCANNER_OPTION
-                        Pass an option to the scanner (can be used multiple
-                        times)
+  -p SCANNER_ARG, --scanner-arg SCANNER_ARG
+                        Pass an argument to the scanner module (can be used
+                        multiple times)
 
 fingerprints:
   -f, --flush-fingerprints
@@ -121,6 +133,12 @@ Example dorkbot.ini:
 <pre>
 [dorkbot]
 database=/opt/dorkbot/dorkbot.db
+[indexers.wayback]
+domain=example.com
+from=2022
+[scanners.arachni]
+arachni_dir=/opt/arachni
+report_dir=/tmp/reports
 </pre>
 
 Blocklist
@@ -144,119 +162,121 @@ ip:127.0.0.1
 
 The first item will remove any target that doesn't contain a question mark, in other words any url that doesn't contain any GET parameters to test. The second attempts to avoid login functions, and the third blocklists all target urls on example.com. The fourth excludes targets with a hostname of www.google.com and the fifth excludes targets whose host resolves to 127.0.0.1.
 
-Indexer Modules
+Prune
+=====
+The prune flag iterates through all targets, computes the fingerprints in memory, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-unscanned returns only scannable urls. It honors the **random** flag to compute fingerprints in random order.
+
+General Options
 ===============
-### (general options) ###
 These options are applicable regardless of module chosen
 
 * source - label stored in source field for target, overrides label provided by module (if present and without a value during list operations, source field will be printed along with url)
+* count - number of urls to scan or list, or -1 to scan all urls (default: -1)
+* random - scan or list urls in random order
 
+Indexer Modules
+===============
 ### google ###
-Search for targets in a Google Custom Search Engine (CSE) via custom search element.
+<pre>
+  Searches google.com via scraping
 
-Requirements: [PhantomJS](http://phantomjs.org/)
-
-Options:
-* **engine** - CSE id
-* **query** - search query
-* phantomjs_dir - phantomjs base directory containing bin/phantomjs (default: tools/phantomjs/)
-* domain - limit searches to specified domain
+  --engine ENGINE       CSE id
+  --query QUERY         search query
+  --phantomjs-dir PHANTOMJS_DIR
+                        phantomjs base dir containing bin/phantomjs
+  --domain DOMAIN       limit searches to specified domain
+</pre>
 
 ### google_api ###
-Search for targets in a Google Custom Search Engine (CSE) via JSON API.
+<pre>
+  Searches google.com
 
-Requirements: none
-
-Options:
-* **key** - API key
-* **engine** - CSE id
-* **query** - search query
-* domain - limit searches to specified domain
+  --key KEY             API key
+  --engine ENGINE       CSE id
+  --query QUERY         search query
+  --domain DOMAIN       limit searches to specified domain
+</pre>
 
 ### pywb ###
-Search for targets within a pywb instance's indexed results.
+<pre>
+  Searches a given pywb server's crawl data
 
-Requirements: none
-
-Options:
-* **server** - pywb server url
-* **domain** - pull all results for given domain or subdomain
-* cdx_api_suffix - suffix after index for index api (default: /cdx)
-* index - search a specific index (default: first fixed index, or first dynamic index)
-* filter - query filter to apply to the search
-* retries - number of times to retry fetching results on error (default: 10)
-* threads - number concurrent requests to pywb server (default: 10)
+  --server SERVER       pywb server url
+  --domain DOMAIN       pull all results for given domain or subdomain
+  --cdx-api-suffix CDX_API_SUFFIX
+                        suffix after index for index api
+  --index INDEX         search a specific index
+  --filter FILTER       query filter to apply to the search
+  --retries RETRIES     number of times to retry fetching results on error
+  --threads THREADS     number of concurrent requests to wayback.org
+</pre>
 
 ### commoncrawl ###
-Search for targets within commoncrawl.org results.
+<pre>
+  Searches commoncrawl.org crawl data
 
-Requirements: none
-
-Options:
-* **domain** - pull all results for given domain or subdomain
-* index - search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
-* filter - query filter to apply to the search
-* retries - number of times to retry fetching results on error (default: 10)
-* threads - number concurrent requests to commoncrawl.org (default: 10)
+  --domain DOMAIN       pull all results for given domain or subdomain
+  --index INDEX         search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
+  --filter FILTER       query filter to apply to the search
+  --retries RETRIES     number of times to retry fetching results on error
+  --threads THREADS     number of concurrent requests to commoncrawl.org
+</pre>
 
 ### wayback ###
-Search for targets within archive.org results.
+<pre>
+  Searches archive.org crawl data
 
-Requirements: none
-
-Options:
-* **domain** - pull all results for given domain or subdomain
-* filter - query filter to apply to the search
-* from - beginning timestamp
-* to - end timestamp
+  --domain DOMAIN       pull all results for given domain or subdomain
+  --filter FILTER       query filter to apply to the search
+  --from FROM           beginning timestamp
+  --to TO               end timestamp
+  --retries RETRIES     number of times to retry fetching results on error
+  --threads THREADS     number of concurrent requests to wayback.org
+</pre>
 
 ### bing_api ###
-Search for targets via Bing Web Search API.
+<pre>
+  Searches bing.com
 
-Requirements: none
-
-Options:
-* **key** - API key
-* **query** - search query
+  --key KEY             API key
+  --query QUERY         search query
+</pre>
 
 ### stdin ###
-Read targets from standard input, one per line.
-
-Requirements: none
-
-Options: none
+<pre>
+  Accepts urls from stdin, one per line
+</pre>
 
 Scanner Modules
 ===============
-### (general options) ###
-These options are applicable regardless of module chosen
 
-* report_dir - directory to save vulnerability report (default: reports/)
-* label - friendly name field to include in vulnerability report
-* count - number of urls to scan, or -1 to scan all urls (default: -1)
-* random - scan urls in random order
+### global scanner options ###
+<pre>
+  --count COUNT         number of urls to scan, or -1 to scan all urls
+  --random              retrieve urls in random order
+</pre>
 
 ### arachni ###
-Scan targets with Arachni command-line scanner.
+<pre>
+  Scans with the arachni command-line scanner
 
-Requirements: [Arachni](http://www.arachni-scanner.com/)
-
-Options:
-* arachni_dir - arachni base directory containing bin/arachni and bin/arachni_reporter (default: tools/arachni/)
-* args - space-delimited list of additional arguments, e.g. args="--http-user-agent Dorkbot/1.0 --timeout 00:15:00"
+  --arachni-dir ARACHNI_DIR
+                        arachni base dir containing bin/arachni and bin/arachni_reporter
+  --args ARGS           space-delimited list of additional arguments
+  --report-dir REPORT_DIR
+                        directory to save vulnerability report
+  --label LABEL         friendly name field to include in vulnerability report
+</pre>
 
 ### wapiti ###
-Scan targets with Wapiti command-line scanner.
+<pre>
+  Scans with the wapiti3 command-line scanner
 
-Requirements: [Wapiti](http://wapiti.sourceforge.net/)
-
-Options:
-* wapiti_dir - wapiti base directory containing bin/wapiti (default: tools/wapiti/)
-* args - space-delimited list of additional arguments
-
-Prune
-=====
-The prune flag iterates through all targets, computes the fingerprints in memory, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-unscanned returns only scannable urls. It honors (a subset of) the options specified in SCANNER_OPTIONS as follows:
-
-* random - evaluate urls in random order when computing fingerprints
+  --wapiti-dir WAPITI_DIR
+                        wapiti base dir containing bin/wapiti
+  --args ARGS           space-delimited list of additional arguments
+  --report-dir REPORT_DIR
+                        directory to save vulnerability report
+  --label LABEL         friendly name field to include in vulnerability report
+</pre>
 

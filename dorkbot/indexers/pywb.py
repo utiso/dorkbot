@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import random
@@ -12,37 +13,40 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
 
 
-def run(options):
-    required = ["server", "domain"]
-    for r in required:
-        if r not in options:
-            logging.error("%s must be set", r)
-            sys.exit(1)
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Searches a given pywb server's crawl data")
+    module_group.add_argument("--server", required=True, \
+                          help="pywb server url")
+    module_group.add_argument("--domain", required=True, \
+                          help="pull all results for given domain or subdomain")
+    module_group.add_argument("--cdx-api-suffix", default="/cdx", \
+                          help="suffix after index for index api")
+    module_group.add_argument("--index", \
+                          help="search a specific index")
+    module_group.add_argument("--filter", \
+                          help="query filter to apply to the search")
+    module_group.add_argument("--retries", type=int, default=10, \
+                          help="number of times to retry fetching results on error")
+    module_group.add_argument("--threads", type=int, default=1, \
+                          help="number of concurrent requests to wayback.org")
 
+
+def run(args):
     source = __name__.split(".")[-1]
-
-    retries = int(options.get("retries", "10"))
-    threads = int(options.get("threads", "10"))
-    server = options["server"]
-    domain = options["domain"]
-    index = options.get("index", "")
-    url_filter = options.get("filter", "")
-    cdx_api_suffix = options.get("cdx_api_suffix", "/cdx")
-
     data = {}
-    data["url"] = "*.%s" % domain
+    data["url"] = "*.%s" % args.domain
     data["output"] = "json"
-    if url_filter:
-        data["filter"] = url_filter
+    if args.filter:
+        data["filter"] = args.filter
 
-    if not index:
-        index = get_latest_index(server, retries)
-    base_url = f"{server}/{index}{cdx_api_suffix}"
-    num_pages = get_num_pages(base_url, data, retries)
+    if not args.index:
+        index = get_latest_index(args.server, int(args.retries))
+    base_url = f"{args.server}/{args.index}{args.cdx_api_suffix}"
+    num_pages = get_num_pages(base_url, data, int(args.retries))
 
-    source += f",index:{index}"
+    source += f",index:{args.index}"
 
-    results = get_results(base_url, data, retries, num_pages, threads, domain)
+    results = get_results(base_url, data, args.retries, num_pages, args.threads, args.domain)
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))

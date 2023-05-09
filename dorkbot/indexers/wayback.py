@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import random
@@ -12,38 +13,40 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
 
 
-def run(options):
-    required = ["domain"]
-    for r in required:
-        if r not in options:
-            logging.error("%s must be set", r)
-            sys.exit(1)
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Searches archive.org crawl data")
+    module_group.add_argument("--domain", required=True, \
+                          help="pull all results for given domain or subdomain")
+    module_group.add_argument("--filter", \
+                          help="query filter to apply to the search")
+    module_group.add_argument("--from", dest="from_", metavar="FROM", \
+                          help="beginning timestamp")
+    module_group.add_argument("--to", \
+                          help="end timestamp")
+    module_group.add_argument("--retries", type=int, default=10, \
+                          help="number of times to retry fetching results on error")
+    module_group.add_argument("--threads", type=int, default=1, \
+                          help="number of concurrent requests to wayback.org")
 
+
+def run(args):
     source = __name__.split(".")[-1]
-
-    retries = int(options.get("retries", "10"))
-    threads = int(options.get("threads", "1"))
-    domain = options["domain"]
-    time_from = options.get("from", "")
-    time_to = options.get("to", "")
-    url_filter = options.get("filter", "")
-
     data = {}
-    data["url"] = "*.%s" % domain
+    data["url"] = "*.%s" % args.domain
     data["fl"] = "original"
     data["output"] = "json"
-    if url_filter:
-        data["filter"] = url_filter
-    if time_from:
-        data["from"] = time_from
-        source += f",from:{time_from}"
-    if time_to:
-        data["to"] = time_to
-        source += f",to:{time_to}"
+    if args.filter:
+        data["filter"] = args.filter
+    if args.from_:
+        data["from"] = args.from_
+        source += f",from:{args.from_}"
+    if args.to:
+        data["to"] = args.to
+        source += f",to:{args.to}"
 
-    num_pages = get_num_pages(data, retries)
+    num_pages = get_num_pages(data, int(args.retries))
 
-    results = get_results(domain, data, num_pages, threads, retries)
+    results = get_results(args.domain, data, num_pages, args.threads, args.retries)
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
