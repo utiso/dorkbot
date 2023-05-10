@@ -27,7 +27,7 @@ def populate_parser(args, parser):
                           help="query filter to apply to the search")
     module_group.add_argument("--retries", type=int, default=10, \
                           help="number of times to retry fetching results on error")
-    module_group.add_argument("--threads", type=int, default=1, \
+    module_group.add_argument("--threads", type=int, default=10, \
                           help="number of concurrent requests to wayback.org")
 
 
@@ -40,7 +40,7 @@ def run(args):
         data["filter"] = args.filter
 
     if not args.index:
-        index = get_latest_index(args.server, int(args.retries))
+        args.index = get_latest_index(args.server, int(args.retries))
     base_url = f"{args.server}/{args.index}{args.cdx_api_suffix}"
     num_pages = get_num_pages(base_url, data, int(args.retries))
 
