@@ -38,9 +38,9 @@ usage: dorkbot.py [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                   [--list-unscanned] [--add-target TARGET]
                   [--delete-target TARGET] [--flush-targets] [-i INDEXER]
                   [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-f]
-                  [-b BLOCKLIST] [--list-blocklist]
-                  [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
-                  [--flush-blocklist]
+                  [--list-blocklist] [--add-blocklist-item ITEM]
+                  [--delete-blocklist-item ITEM] [--flush-blocklist]
+                  [-b EXTERNAL_BLOCKLIST]
 
 options:
   -c CONFIG, --config CONFIG
@@ -91,14 +91,15 @@ fingerprints:
                         Delete all fingerprints of previously-scanned items
 
 blocklist:
-  -b BLOCKLIST, --blocklist BLOCKLIST
-                        Blocklist file/uri
-  --list-blocklist      List blocklist entries
+  --list-blocklist      List internal blocklist entries
   --add-blocklist-item ITEM
-                        Add an ip/host/regex pattern to the blocklist
+                        Add an ip/host/regex pattern to the internal blocklist
   --delete-blocklist-item ITEM
-                        Delete an item from the blocklist
-  --flush-blocklist     Delete all blocklist items
+                        Delete an item from the internal blocklist
+  --flush-blocklist     Delete all internal blocklist items
+  -b EXTERNAL_BLOCKLIST, --external-blocklist EXTERNAL_BLOCKLIST
+                        Supplemental external blocklist file/db (can be used
+                        multiple times)
 </pre>
 
 Tools / Dependencies
@@ -144,7 +145,7 @@ report_dir=/tmp/reports
 
 Blocklist
 =========
-The blocklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. By default the blocklist is stored in the dorkbot database, but a separate database or file can be specified by passing the appropriate connection uri or file path to --blocklist. Note: --add-blocklist-item / --delete-blocklist-item are not implemented for file-based blocklists, and --flush-blocklist deletes the file.
+The blocklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. The internal blocklist is maintained in the dorkbot database, but a separate file or databasecan be specified by passing the appropriate file path or connection uri to --external-blocklist. Targets are matched first against the internal blocklist and then optionally against any provided external blocklists.
 
 Supported external blocklists:
 * postgresql://[server info]

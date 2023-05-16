@@ -54,15 +54,18 @@ def main():
             or args.flush_fingerprints or args.list_unscanned:
 
         db = TargetDatabase(args.database)
-        if args.blocklist:
-            blocklist = Blocklist(args.blocklist)
+
+        pattern = "^[^:]+://.*$"
+        regex = re.compile(pattern)
+        if (regex.match(args.database)):
+            blocklist = Blocklist(args.database)
         else:
-            pattern = "^[^:]+://.*$"
-            regex = re.compile(pattern)
-            if (regex.match(args.database)):
-                blocklist = Blocklist(args.database)
-            else:
-                blocklist = Blocklist("sqlite3://" + args.database)
+            blocklist = Blocklist("sqlite3://" + args.database)
+
+        blocklists = [blocklist]
+        if args.external_blocklist:
+            for external_blocklist in args.external_blocklist:
+                blocklists.append(Blocklist(external_blocklist))
 
         if args.flush_blocklist: blocklist.flush()
         if args.add_blocklist_item: blocklist.add(args.add_blocklist_item)
@@ -82,19 +85,19 @@ def main():
             indexer_parser, other_args = get_module_parser(indexer_module)
             indexer_args = indexer_parser.parse_args(format_module_args(args.indexer_arg))
             try:
-                index(db, blocklist, indexer_module, args, indexer_args)
+                index(db, blocklists, indexer_module, args, indexer_args)
             except KeyboardInterrupt:
                 sys.exit(1)
 
         if args.prune:
-            prune(db, blocklist, args)
+            prune(db, blocklists, args)
 
         if args.scanner:
             scanner_module = load_module("scanners", args.scanner)
             scanner_parser, other_args = get_module_parser(scanner_module)
             scanner_args = scanner_parser.parse_args(format_module_args(args.scanner_arg))
             try:
-                scan(db, blocklist, scanner_module, args, scanner_args)
+                scan(db, blocklists, scanner_module, args, scanner_args)
             except KeyboardInterrupt:
                 sys.exit(1)
 
@@ -248,16 +251,16 @@ def get_main_args_parser():
                               help="Delete all fingerprints of previously-scanned items")
 
     blocklist = parser.add_argument_group('blocklist')
-    blocklist.add_argument("-b", "--blocklist", \
-                           help="Blocklist file/uri")
     blocklist.add_argument("--list-blocklist", action="store_true", \
-                           help="List blocklist entries")
+                           help="List internal blocklist entries")
     blocklist.add_argument("--add-blocklist-item", metavar="ITEM", \
-                           help="Add an ip/host/regex pattern to the blocklist")
+                           help="Add an ip/host/regex pattern to the internal blocklist")
     blocklist.add_argument("--delete-blocklist-item", metavar="ITEM", \
-                           help="Delete an item from the blocklist")
+                           help="Delete an item from the internal blocklist")
     blocklist.add_argument("--flush-blocklist", action="store_true", \
-                           help="Delete all blocklist items")
+                           help="Delete all internal blocklist items")
+    blocklist.add_argument("-b", "--external-blocklist", action="append", \
+                           help="Supplemental external blocklist file/db (can be used multiple times)")
 
     args = parser.parse_args(other_args, namespace=initial_args)
     return args, parser
@@ -321,7 +324,7 @@ def format_module_args(args_list):
     return args
 
 
-def index(db, blocklist, indexer, args, indexer_args):
+def index(db, blocklists, indexer, args, indexer_args):
     indexer_name = indexer.__name__.split(".")[-1]
     logging.info("Indexing: %s %s", indexer_name, vars(indexer_args))
     setattr(indexer_args, "directory", args.directory)
@@ -333,22 +336,25 @@ def index(db, blocklist, indexer, args, indexer_args):
 
     targets = []
     for url in urls:
-        if not blocklist.match(Target(url)): targets.append(url)
+            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+                logging.debug("Ignoring (matches blocklist pattern): %s", url)
+                continue
+            targets.append(url)
 
     db.connect()
     db.add_targets(targets, source)
     db.close()
 
 
-def prune(db, blocklist, args):
+def prune(db, blocklists, args):
     logging.info("Pruning database")
 
     db.connect()
-    db.prune(blocklist, args.random)
+    db.prune(blocklists, args.random)
     db.close()
 
 
-def scan(db, blocklist, scanner, args, scanner_args):
+def scan(db, blocklists, scanner, args, scanner_args):
     if not os.path.isdir(scanner_args.report_dir):
         try:
             os.makedirs(scanner_args.report_dir)
@@ -363,7 +369,7 @@ def scan(db, blocklist, scanner, args, scanner_args):
         if not target:
             break
 
-        if blocklist.match(target):
+        if True in [blocklist.match(target) for blocklist in blocklists]:
             logging.debug("Deleting (matches blocklist pattern): %s", target.url)
             db.delete_target(target.url)
             continue
@@ -602,7 +608,7 @@ class TargetDatabase:
             logging.error("Failed to flush targets - %s", str(e))
             sys.exit(1)
 
-    def prune(self, blocklist, randomize=False):
+    def prune(self, blocklists, randomize=False):
         fingerprints = set()
 
         urls = self.get_urls()
@@ -620,7 +626,7 @@ class TargetDatabase:
                     self.mark_scanned(target.url, c)
                     continue
 
-            if blocklist.match(target):
+            if True in [blocklist.match(target) for blocklist in blocklists]:
                 logging.debug("Deleting (matches blocklist pattern): %s", target.url)
                 self.delete_target(target.url)
                 continue
