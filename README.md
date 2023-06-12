@@ -137,7 +137,6 @@ Example dorkbot.ini:
 database=/opt/dorkbot/dorkbot.db
 [dorkbot.indexers.wayback]
 domain=example.com
-from=2022
 [dorkbot.scanners.arachni]
 arachni_dir=/opt/arachni
 report_dir=/tmp/reports
