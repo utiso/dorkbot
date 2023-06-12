@@ -135,10 +135,10 @@ Example dorkbot.ini:
 <pre>
 [dorkbot]
 database=/opt/dorkbot/dorkbot.db
-[indexers.wayback]
+[dorkbot.indexers.wayback]
 domain=example.com
 from=2022
-[scanners.arachni]
+[dorkbot.scanners.arachni]
 arachni_dir=/opt/arachni
 report_dir=/tmp/reports
 </pre>
