@@ -1,4 +1,3 @@
-import argparse
 import io
 import logging
 import sys
