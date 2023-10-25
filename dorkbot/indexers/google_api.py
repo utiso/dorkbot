@@ -82,10 +82,10 @@ def issue_request(data):
                 sys.exit(1)
 
     items = []
-    if int(response['searchInformation']['totalResults']) == 0:
+    # https://developers.google.com/custom-search/v1/reference/rest/v1/Search
+    if int(response['searchInformation'].get('totalResults', 0)) == 0:
         return []
-    for request in response["queries"]["request"]:
-        for item in response["items"]:
-            items.append(urlparse(item["link"]).geturl())
+    for item in response["items"]:
+        items.append(urlparse(item["link"]).geturl())
 
     return items
