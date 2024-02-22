@@ -123,7 +123,7 @@ def main():
 def initialize_logger(log_file, verbose):
     log = logging.getLogger()
 
-    if verbose:
+    if verbose and verbose >= 2:
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
@@ -211,8 +211,8 @@ def get_main_args_parser():
                         help="Show program (or specified module) help")
     parser.add_argument("--log", \
                         help="Path to log file")
-    parser.add_argument("-v", "--verbose", action="store_true", \
-                        help="Enable verbose logging (DEBUG output)")
+    parser.add_argument("-v", "--verbose", action="count", \
+                        help="Enable verbose logging (can be used multiple times to increase verbosity)")
     parser.add_argument("-V", "--version", action="version", \
                         version="%(prog)s " + __version__, help="Print version")
 
@@ -326,7 +326,7 @@ def format_module_args(args_list):
 
 def index(db, blocklists, indexer, args, indexer_args):
     indexer_name = indexer.__name__.split(".")[-1]
-    logging.info("Indexing: %s %s", indexer_name, vars(indexer_args))
+    logging.info("Indexing: %s %s", indexer_name, vars(indexer_args) if args.verbose else "")
     setattr(indexer_args, "directory", args.directory)
     urls, module_source = indexer.run(indexer_args)
     if args.source:
@@ -376,7 +376,7 @@ def scan(db, blocklists, scanner, args, scanner_args):
 
         db.close()
 
-        logging.info("Scanning: %s", target.url)
+        logging.info("Scanning: %s %s", target.url, vars(scanner_args) if args.verbose else "")
         results = scanner.run(scanner_args, target)
         scanned += 1
 
