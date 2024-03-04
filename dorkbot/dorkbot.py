@@ -539,20 +539,22 @@ class TargetDatabase:
             logging.error("Failed to add target - %s", str(e))
             sys.exit(1)
 
-    def add_targets(self, urls, source=None):
-        for i in range(3):
-            try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.executemany("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict),
-                                  [(url, source) for url in urls])
-            except self.module.Error as e:
-                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
-                    logging.warning("Failed to add target (retrying) - %s", str(e))
-                    self.connect()
-                    continue
-                else:
-                    logging.error("Failed to add target - %s", str(e))
-                    sys.exit(1)
+    def add_targets(self, urls, source=None, chunk_size=1000):
+        for x in range(0, len(urls), chunk_size):
+            urls_chunk = urls[x:x+chunk_size]
+            for i in range(3):
+                try:
+                    with self.db, closing(self.db.cursor()) as c:
+                        c.executemany("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict),
+                                      [(url, source) for url in urls_chunk])
+                except self.module.Error as e:
+                    if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
+                        logging.warning("Failed to add target (retrying) - %s", str(e))
+                        self.connect()
+                        continue
+                    else:
+                        logging.error("Failed to add target - %s", str(e))
+                        sys.exit(1)
 
     def delete_target(self, url):
         try:
