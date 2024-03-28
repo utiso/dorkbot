@@ -571,7 +571,7 @@ class TargetDatabase:
                 row = cursor.fetchone()
                 break
             except self.module.Error as e:
-                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
+                if "connection already closed" in str(e) or "cursor already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     logging.warning("Failed to look up fingerprint (retrying) - %s", str(e))
                     self.connect()
                     continue
