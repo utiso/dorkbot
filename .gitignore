@@ -2,3 +2,6 @@ __pycache__/
 build/
 dist/
 dorkbot.egg-info/
+bin/
+lib/
+pyvenv.cfg
