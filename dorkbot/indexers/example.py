@@ -1,4 +1,3 @@
-import argparse
 from urllib.parse import urlparse
 
 
