@@ -62,7 +62,9 @@ def get_num_pages(data, retries):
             response = urlopen(url)
             response = response.read().decode("utf-8")
         except (HTTPError, IncompleteRead) as e:
-            if i == retries - 1:
+            if e.code == 400:
+                response = "1"
+            elif i == retries - 1:
                 logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
                 sys.exit(1)
             else:
