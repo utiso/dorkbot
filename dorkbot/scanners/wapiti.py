@@ -44,7 +44,7 @@ def run(args, target):
         cmd += args.args.split()
 
     try:
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, capture_output=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
@@ -53,7 +53,7 @@ def run(args, target):
         else:
             raise
     except subprocess.CalledProcessError as e:
-        logging.error("Failed to execute wapiti command - %s", str(e))
+        logging.error(f"Failed to execute wapiti command - {str(e)}\n{e.stderr.decode()}")
         return False
 
     with io.open(report, encoding="utf-8") as data_file:

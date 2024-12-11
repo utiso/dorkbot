@@ -49,8 +49,8 @@ def run(args, target):
     report_cmd += [report]
 
     try:
-        subprocess.run(scan_cmd, cwd=arachni_path, check=True)
-        subprocess.run(report_cmd, cwd=arachni_path, check=True)
+        subprocess.run(scan_cmd, cwd=arachni_path, check=True, capture_output=True)
+        subprocess.run(report_cmd, cwd=arachni_path, check=True, capture_output=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
@@ -59,7 +59,7 @@ def run(args, target):
         else:
             raise
     except subprocess.CalledProcessError as e:
-        logging.error("Failed to execute arachni command - %s", str(e))
+        logging.error(f"Failed to execute arachni command - {str(e)}\n{e.stderr.decode()}")
         return False
 
     with io.open(report + ".json", encoding="utf-8") as data_file:
