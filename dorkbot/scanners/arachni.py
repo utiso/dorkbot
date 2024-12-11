@@ -54,7 +54,7 @@ def run(args, target):
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
-                "Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni_dir option to correct directory.")
+                "Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni-dir option to correct directory.")
             sys.exit(1)
         else:
             raise

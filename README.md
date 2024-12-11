@@ -138,8 +138,8 @@ database=/opt/dorkbot/dorkbot.db
 [dorkbot.indexers.wayback]
 domain=example.com
 [dorkbot.scanners.arachni]
-arachni_dir=/opt/arachni
-report_dir=/tmp/reports
+arachni-dir=/opt/arachni
+report-dir=/tmp/reports
 </pre>
 
 Blocklist

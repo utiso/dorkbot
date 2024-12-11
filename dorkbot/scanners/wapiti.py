@@ -48,7 +48,7 @@ def run(args, target):
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
-                "Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti_dir option to correct directory.")
+                "Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti-dir option to correct directory.")
             sys.exit(1)
         else:
             raise
