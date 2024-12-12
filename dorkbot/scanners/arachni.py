@@ -8,17 +8,14 @@ import subprocess
 import sys
 import tempfile
 
+from scanners.general import populate_general_options
+
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Scans with the arachni command-line scanner")
+    populate_general_options(args, module_group)
     module_group.add_argument("--arachni-dir", default=os.path.join(args.directory, "tools", "arachni"), \
                           help="arachni base dir containing bin/arachni and bin/arachni_reporter")
-    module_group.add_argument("--args", \
-                          help="space-delimited list of additional arguments")
-    module_group.add_argument("--report-dir", default=os.path.join(args.directory, "reports"), \
-                          help="directory to save vulnerability report")
-    module_group.add_argument("--label", default="", \
-                          help="friendly name field to include in vulnerability report")
 
 
 def run(args, target):

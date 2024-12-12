@@ -32,35 +32,35 @@ Help
 Usage
 =====
 <pre>
-usage: dorkbot.py [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
-                  [--show-defaults] [--count COUNT] [--random] [-h]
-                  [--log LOG] [-v] [-V] [-d DATABASE] [-u] [-l]
-                  [--list-unscanned] [--add-target TARGET]
-                  [--delete-target TARGET] [--flush-targets] [-i INDEXER]
-                  [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-f]
-                  [--list-blocklist] [--add-blocklist-item ITEM]
-                  [--delete-blocklist-item ITEM] [--flush-blocklist]
-                  [-b EXTERNAL_BLOCKLIST]
+usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
+               [--show-defaults] [--count COUNT] [--random] [-h]
+               [--log LOG] [-v] [-V] [-d DATABASE] [-u] [-l]
+               [--list-unscanned] [--add-target TARGET]
+               [--delete-target TARGET] [--flush-targets] [-i INDEXER]
+               [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-f]
+               [--list-blocklist] [--add-blocklist-item ITEM]
+               [--delete-blocklist-item ITEM] [--flush-blocklist]
+               [-b EXTERNAL_BLOCKLIST]
 
 options:
-  -c CONFIG, --config CONFIG
-                        Configuration file
-  -r DIRECTORY, --directory DIRECTORY
+  -c, --config CONFIG   Configuration file
+  -r, --directory DIRECTORY
                         Dorkbot directory (default location of db, tools,
                         reports)
   --source [SOURCE]     Label associated with targets
   --show-defaults       Show default values in help output
   -h, --help            Show program (or specified module) help
   --log LOG             Path to log file
-  -v, --verbose         Enable verbose logging (DEBUG output)
+  -v, --verbose         Enable verbose logging (can be used multiple times to
+                        increase verbosity)
   -V, --version         Print version
 
-global scanner options:
-  --count COUNT         number of urls to scan, or -1 to scan all urls
-  --random              retrieve urls in random order
+retrieval:
+  --count COUNT         number of targets to retrieve, or -1 for all
+  --random              retrieve targets in random order
 
 database:
-  -d DATABASE, --database DATABASE
+  -d, --database DATABASE
                         Database file/uri
   -u, --prune           Apply fingerprinting and blocklist without scanning
 
@@ -73,16 +73,16 @@ targets:
   --flush-targets       Delete all targets
 
 indexing:
-  -i INDEXER, --indexer INDEXER
+  -i, --indexer INDEXER
                         Indexer module to use
-  -o INDEXER_ARG, --indexer-arg INDEXER_ARG
+  -o, --indexer-arg INDEXER_ARG
                         Pass an argument to the indexer module (can be used
                         multiple times)
 
 scanning:
-  -s SCANNER, --scanner SCANNER
+  -s, --scanner SCANNER
                         Scanner module to use
-  -p SCANNER_ARG, --scanner-arg SCANNER_ARG
+  -p, --scanner-arg SCANNER_ARG
                         Pass an argument to the scanner module (can be used
                         multiple times)
 
@@ -97,9 +97,10 @@ blocklist:
   --delete-blocklist-item ITEM
                         Delete an item from the internal blocklist
   --flush-blocklist     Delete all internal blocklist items
-  -b EXTERNAL_BLOCKLIST, --external-blocklist EXTERNAL_BLOCKLIST
+  -b, --external-blocklist EXTERNAL_BLOCKLIST
                         Supplemental external blocklist file/db (can be used
                         multiple times)
+
 </pre>
 
 Tools / Dependencies
@@ -138,8 +139,8 @@ database=/opt/dorkbot/dorkbot.db
 [dorkbot.indexers.wayback]
 domain=example.com
 [dorkbot.scanners.arachni]
-arachni-dir=/opt/arachni
-report-dir=/tmp/reports
+arachni_dir=/opt/arachni
+report_dir=/tmp/reports
 </pre>
 
 Blocklist
@@ -182,66 +183,66 @@ Indexer Modules
 <pre>
   Searches google.com via scraping
 
-  --engine ENGINE       CSE id
-  --query QUERY         search query
-  --phantomjs-dir PHANTOMJS_DIR
-                        phantomjs base dir containing bin/phantomjs
-  --domain DOMAIN       limit searches to specified domain
+  engine ENGINE       CSE id
+  query QUERY         search query
+  phantomjs-dir PHANTOMJS_DIR
+                      phantomjs base dir containing bin/phantomjs
+  domain DOMAIN       limit searches to specified domain
 </pre>
 
 ### google_api ###
 <pre>
   Searches google.com
 
-  --key KEY             API key
-  --engine ENGINE       CSE id
-  --query QUERY         search query
-  --domain DOMAIN       limit searches to specified domain
+  key KEY             API key
+  engine ENGINE       CSE id
+  query QUERY         search query
+  domain DOMAIN       limit searches to specified domain
 </pre>
 
 ### pywb ###
 <pre>
   Searches a given pywb server's crawl data
 
-  --server SERVER       pywb server url
-  --domain DOMAIN       pull all results for given domain or subdomain
-  --cdx-api-suffix CDX_API_SUFFIX
-                        suffix after index for index api
-  --index INDEX         search a specific index
-  --filter FILTER       query filter to apply to the search
-  --retries RETRIES     number of times to retry fetching results on error
-  --threads THREADS     number of concurrent requests to wayback.org
+  server SERVER       pywb server url
+  domain DOMAIN       pull all results for given domain or subdomain
+  cdx-api-suffix CDX_API_SUFFIX
+                      suffix after index for index api
+  index INDEX         search a specific index
+  filter FILTER       query filter to apply to the search
+  retries RETRIES     number of times to retry fetching results on error
+  threads THREADS     number of concurrent requests to wayback.org
 </pre>
 
 ### commoncrawl ###
 <pre>
   Searches commoncrawl.org crawl data
 
-  --domain DOMAIN       pull all results for given domain or subdomain
-  --index INDEX         search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
-  --filter FILTER       query filter to apply to the search
-  --retries RETRIES     number of times to retry fetching results on error
-  --threads THREADS     number of concurrent requests to commoncrawl.org
+  domain DOMAIN       pull all results for given domain or subdomain
+  index INDEX         search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
+  filter FILTER       query filter to apply to the search
+  retries RETRIES     number of times to retry fetching results on error
+  threads THREADS     number of concurrent requests to commoncrawl.org
 </pre>
 
 ### wayback ###
 <pre>
   Searches archive.org crawl data
 
-  --domain DOMAIN       pull all results for given domain or subdomain
-  --filter FILTER       query filter to apply to the search
-  --from FROM           beginning timestamp
-  --to TO               end timestamp
-  --retries RETRIES     number of times to retry fetching results on error
-  --threads THREADS     number of concurrent requests to wayback.org
+  domain DOMAIN       pull all results for given domain or subdomain
+  filter FILTER       query filter to apply to the search
+  from FROM           beginning timestamp
+  to TO               end timestamp
+  retries RETRIES     number of times to retry fetching results on error
+  threads THREADS     number of concurrent requests to wayback.org
 </pre>
 
 ### bing_api ###
 <pre>
   Searches bing.com
 
-  --key KEY             API key
-  --query QUERY         search query
+  key KEY             API key
+  query QUERY         search query
 </pre>
 
 ### stdin ###
@@ -251,27 +252,33 @@ Indexer Modules
 
 Scanner Modules
 ===============
+### General Options ###
+<pre>
+  args ARGS           space-delimited list of additional arguments
+  report-dir REPORT_DIR
+                      directory to save report file
+  report-filename REPORT_FILENAME
+                      filename to save vulnerability report as
+  report-append       append to report file if it exists
+  report-indent REPORT_INDENT
+                      indent level for vulnerability report json
+  label LABEL         friendly name field to include in vulnerability report
+</pre>
+
 ### arachni ###
 <pre>
   Scans with the arachni command-line scanner
 
-  --arachni-dir ARACHNI_DIR
-                        arachni base dir containing bin/arachni and bin/arachni_reporter
-  --args ARGS           space-delimited list of additional arguments
-  --report-dir REPORT_DIR
-                        directory to save vulnerability report
-  --label LABEL         friendly name field to include in vulnerability report
+  arachni-dir ARACHNI_DIR
+                      arachni base dir containing bin/arachni and
+                      bin/arachni_reporter
 </pre>
 
 ### wapiti ###
 <pre>
   Scans with the wapiti3 command-line scanner
 
-  --wapiti-dir WAPITI_DIR
-                        wapiti base dir containing bin/wapiti
-  --args ARGS           space-delimited list of additional arguments
-  --report-dir REPORT_DIR
-                        directory to save vulnerability report
-  --label LABEL         friendly name field to include in vulnerability report
+  wapiti-dir WAPITI_DIR
+                      wapiti base dir containing bin/wapiti
 </pre>
 

@@ -9,17 +9,14 @@ import sys
 import tempfile
 from urllib.parse import urlparse, urlunparse, urljoin
 
+from scanners.general import populate_general_options
+
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Scans with the wapiti3 command-line scanner")
+    populate_general_options(args, module_group)
     module_group.add_argument("--wapiti-dir", default=os.path.join(args.directory, "tools", "wapiti"), \
                           help="wapiti base dir containing bin/wapiti")
-    module_group.add_argument("--args", \
-                          help="space-delimited list of additional arguments")
-    module_group.add_argument("--report-dir", default=os.path.join(args.directory, "reports"),\
-                          help="directory to save vulnerability report")
-    module_group.add_argument("--label", default="", \
-                          help="friendly name field to include in vulnerability report")
 
 
 def run(args, target):

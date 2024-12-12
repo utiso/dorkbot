@@ -173,11 +173,11 @@ def get_initial_args_parser():
                                 help="Label associated with targets")
     initial_parser.add_argument("--show-defaults", action="store_true", \
                                 help="Show default values in help output")
-    global_scanner_options = initial_parser.add_argument_group("global scanner options")
-    global_scanner_options.add_argument("--count", type=int, default=-1, \
-                          help="number of urls to scan, or -1 to scan all urls")
-    global_scanner_options.add_argument("--random", action="store_true", \
-                          help="retrieve urls in random order")
+    retrieval_options = initial_parser.add_argument_group("retrieval")
+    retrieval_options.add_argument("--count", type=int, default=-1, \
+                          help="number of targets to retrieve, or -1 for all")
+    retrieval_options.add_argument("--random", action="store_true", \
+                          help="retrieve targets in random order")
     initial_args, other_args = initial_parser.parse_known_args()
 
     return initial_args, other_args, initial_parser
@@ -386,7 +386,7 @@ def scan(db, blocklists, scanner, args, scanner_args):
             continue
 
         target.endtime = generate_timestamp()
-        target.write_report(scanner_args.report_dir, scanner_args.label, results)
+        target.write_report(scanner_args, results)
 
 
 def generate_fingerprint(target):
@@ -666,18 +666,33 @@ class Target:
             self.hash = generate_hash(self.url)
         return self.hash
 
-    def write_report(self, report_dir, label, vulnerabilities):
+    def write_report(self, scanner_args, vulnerabilities):
         vulns = {}
         vulns["vulnerabilities"] = vulnerabilities
         vulns["starttime"] = str(self.starttime)
         vulns["endtime"] = str(self.endtime)
         vulns["url"] = self.url
-        vulns["label"] = label
+        vulns["label"] = scanner_args.label
 
-        filename = os.path.join(report_dir, self.get_hash() + ".json")
+        if scanner_args.report_filename:
+            report_filename = scanner_args.report_filename
+        else:
+            report_filename = self.get_hash() + ".json"
 
-        with open(filename, "w") as outfile:
-            json.dump(vulns, outfile, indent=4, sort_keys=True)
+        filename = os.path.join(scanner_args.report_dir, report_filename)
+
+        if scanner_args.report_append:
+            report_mode = "a"
+        else:
+            report_mode = "w"
+
+        indent = scanner_args.report_indent
+        if indent and indent.isdigit():
+                indent = int(indent)
+
+        with open(filename, report_mode) as outfile:
+            json.dump(vulns, outfile, indent=indent, sort_keys=True)
+            outfile.write('\n')
             print("Report saved to: %s" % outfile.name)
 
 
