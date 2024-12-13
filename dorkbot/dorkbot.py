@@ -136,10 +136,23 @@ def initialize_logger(log_file, verbose):
         log_filehandler.setFormatter(log_formatter)
         log.addHandler(log_filehandler)
     else:
-        log_streamhandler = logging.StreamHandler()
-        log_streamhandler.setLevel(logging.DEBUG)
-        log_streamhandler.setFormatter(log_formatter)
-        log.addHandler(log_streamhandler)
+        class LogFilter(logging.Filter):
+            def __init__(self, level):
+                self.level = level
+            def filter(self, record):
+                return record.levelno < self.level
+
+        log_stdouthandler = logging.StreamHandler(sys.stdout)
+        log_stdouthandler.setLevel(logging.DEBUG)
+        log_stdouthandler.setFormatter(log_formatter)
+        log_stdouthandler.addFilter(LogFilter(logging.WARNING))
+        log.addHandler(log_stdouthandler)
+
+        log_stderrhandler = logging.StreamHandler(sys.stderr)
+        log_stderrhandler.setLevel(logging.ERROR)
+        log_stderrhandler.setFormatter(log_formatter)
+        log.addHandler(log_stderrhandler)
+
 
 
 def load_module(category, name):
