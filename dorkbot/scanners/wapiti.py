@@ -9,7 +9,10 @@ import sys
 import tempfile
 from urllib.parse import urlparse, urlunparse, urljoin
 
-from scanners.general import populate_general_options
+if __package__:
+    from .general import populate_general_options
+else:
+    from scanners.general import populate_general_options
 
 
 def populate_parser(args, parser):
