@@ -693,7 +693,7 @@ class Target:
         with open(filename, report_mode) as outfile:
             json.dump(vulns, outfile, indent=indent, sort_keys=True)
             outfile.write('\n')
-            print("Report saved to: %s" % outfile.name)
+            logging.info("Report saved to: %s" % outfile.name)
 
 
 class Blocklist:
