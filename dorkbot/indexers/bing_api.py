@@ -1,7 +1,5 @@
-import argparse
 import json
 import logging
-import sys
 import time
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
