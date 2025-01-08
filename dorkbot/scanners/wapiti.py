@@ -15,47 +15,47 @@ else:
 
 
 def populate_parser(args, parser):
-    module_group = parser.add_argument_group(__name__, "Scans with the wapiti3 command-line scanner")
+    scanner = __name__.split(".")[-1]
+    module_group = parser.add_argument_group(__name__, f"Scans with the {scanner} command-line scanner")
     populate_general_options(args, module_group)
-    module_group.add_argument("--wapiti-dir", default=os.path.join(args.directory, "tools", "wapiti"), \
-                          help="wapiti base dir containing bin/wapiti")
+    module_group.add_argument("--path", default=os.path.join(args.directory, "tools", scanner, "bin"), \
+                          help="path to scanner binary")
 
 
 def run(args, target):
-    if not os.path.isdir(args.wapiti_dir): args.wapiti_dir = ""
-
-    if args.wapiti_dir:
-        wapiti_path = os.path.join(os.path.abspath(args.wapiti_dir), "bin")
+    if os.path.isdir(args.path):
+        path = os.path.abspath(args.path)
     else:
-        wapiti_path = args.wapiti_dir
+        path = ""
 
-    report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".json")
+    scanner = __name__.split(".")[-1]
+    report = os.path.join(tempfile.gettempdir(), target.get_hash())
 
-    cmd = [os.path.join(wapiti_path, "wapiti")]
-    if platform.system() == "Windows" and wapiti_path != "":
-        cmd.insert(0, sys.executable)
-    cmd += ["--url", target.url]
-    cmd += ["--scope", "page"]
-    cmd += ["--flush-session"]
-    cmd += ["--format", "json"]
-    cmd += ["--output", report]
+    scan_cmd = [os.path.join(path, scanner)]
+    if platform.system() == "Windows" and path != "":
+        scan_cmd.insert(0, sys.executable)
+    scan_cmd += ["--url", target.url]
+    scan_cmd += ["--scope", "page"]
+    scan_cmd += ["--flush-session"]
+    scan_cmd += ["--format", "json"]
+    scan_cmd += ["--output", f"{report}.json"]
     if args.args:
-        cmd += args.args.split()
+        scan_cmd += args.args.split()
 
     try:
-        subprocess.run(cmd, check=True, capture_output=True)
+        subprocess.run(scan_cmd, check=True, capture_output=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
-                "Could not find wapiti. If not in PATH, extract or symlink as [directory]/tools/wapiti or set wapiti-dir option to correct directory.")
+                f"Could not find {scanner}. If not in PATH, extract or symlink as [directory]/tools/{scanner} or set path option to correct directory.")
             sys.exit(1)
         else:
             raise
     except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to execute wapiti command - {str(e)}\n{e.stderr.decode()}")
+        logging.error(f"Failed to execute command - {str(e)}\n{e.stderr.decode()}")
         return False
 
-    with io.open(report, encoding="utf-8") as data_file:
+    with io.open(report + ".json", encoding="utf-8") as data_file:
         contents = data_file.read()
         data = json.loads(contents)
         vulns = []
@@ -78,6 +78,6 @@ def run(args, target):
 
                 vulns.append(vuln)
 
-    os.remove(report)
+    os.remove(report + ".json")
 
     return vulns

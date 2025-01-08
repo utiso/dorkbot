@@ -14,26 +14,26 @@ else:
 
 
 def populate_parser(args, parser):
-    module_group = parser.add_argument_group(__name__, "Scans with the arachni command-line scanner")
+    scanner = __name__.split(".")[-1]
+    module_group = parser.add_argument_group(__name__, f"Scans with the {scanner} command-line scanner")
     populate_general_options(args, module_group)
-    module_group.add_argument("--arachni-dir", default=os.path.join(args.directory, "tools", "arachni"), \
-                          help="arachni base dir containing bin/arachni and bin/arachni_reporter")
+    module_group.add_argument("--path", default=os.path.join(args.directory, "tools", scanner, "bin"), \
+                          help="path to scanner binary")
 
 
 def run(args, target):
-    if not os.path.isdir(args.arachni_dir): args.arachni_dir = ""
-
-    if args.arachni_dir:
-        arachni_path = os.path.join(os.path.abspath(args.arachni_dir), "bin")
+    if os.path.isdir(args.path):
+        path = os.path.abspath(args.path)
     else:
-        arachni_path = args.arachni_dir
+        path = ""
 
-    report = os.path.join(tempfile.gettempdir(), target.get_hash() + ".afr")
+    scanner = __name__.split(".")[-1]
+    report = os.path.join(tempfile.gettempdir(), target.get_hash())
 
-    scan_cmd = [os.path.join(arachni_path, "arachni")]
+    scan_cmd = [os.path.join(path, scanner)]
     if platform.system() == "Windows":
-        scan_cmd[0] = scan_cmd[0] + ".bat"
-    scan_cmd += ["--report-save-path", report]
+        scan_cmd[0] = f"{scan_cmd[0]}.bat"
+    scan_cmd += ["--report-save-path", f"{report}.bin"]
     scan_cmd += ["--output-only-positives"]
     scan_cmd += ["--scope-page-limit", "1"]
     scan_cmd += ["--scope-include-pattern", target.url.split("?", 1)[0]]
@@ -41,24 +41,24 @@ def run(args, target):
         scan_cmd += args.args.split()
     scan_cmd += [target.url]
 
-    report_cmd = [os.path.join(arachni_path, "arachni_reporter")]
+    report_cmd = [os.path.join(path, f"{scanner}_reporter")]
     if platform.system() == "Windows":
-        report_cmd[0] = report_cmd[0] + ".bat"
-    report_cmd += ["--reporter", "json:outfile=" + report + ".json"]
-    report_cmd += [report]
+        report_cmd[0] = f"{report_cmd[0]}.bat"
+    report_cmd += ["--reporter", f"json:outfile={report}.json"]
+    report_cmd += [f"{report}.bin"]
 
     try:
-        subprocess.run(scan_cmd, cwd=arachni_path, check=True, capture_output=True)
-        subprocess.run(report_cmd, cwd=arachni_path, check=True, capture_output=True)
+        subprocess.run(scan_cmd, check=True, capture_output=True)
+        subprocess.run(report_cmd, check=True, capture_output=True)
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
-                "Could not find arachni. If not in PATH, extract or symlink as [directory]/tools/arachni or set arachni-dir option to correct directory.")
+                f"Could not find {scanner}. If not in PATH, extract or symlink as [directory]/tools/{scanner} or set path option to correct directory.")
             sys.exit(1)
         else:
             raise
     except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to execute arachni command - {str(e)}\n{e.stderr.decode()}")
+        logging.error(f"Failed to execute command - {str(e)}\n{e.stderr.decode()}")
         return False
 
     with io.open(report + ".json", encoding="utf-8") as data_file:
@@ -79,7 +79,7 @@ def run(args, target):
                 vuln["poc_data"] = ""
             vulns.append(vuln)
 
-    os.remove(report)
+    os.remove(report + ".bin")
     os.remove(report + ".json")
 
     return vulns

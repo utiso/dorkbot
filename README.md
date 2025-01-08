@@ -108,7 +108,8 @@ Tools / Dependencies
 * [psycopg2-binary](https://pypi.org/project/psycopg2-binary/) or [psycopg2](https://pypi.org/project/psycopg2/) (if using PostgreSQL)
 * [phoenixdb](https://pypi.org/project/phoenixdb/) (if using PhoenixDB)
 * [PhantomJS](http://phantomjs.org/) (if using non-api google indexer)
-* [Arachni](http://www.arachni-scanner.com/)
+* [Arachni](https://github.com/Arachni/arachni)
+* [Codename SCNR](https://github.com/scnr/installer)
 * [Wapiti](http://wapiti.sourceforge.net/)
 
 As needed, dorkbot will search for tools in the following order:
@@ -139,7 +140,7 @@ database=/opt/dorkbot/dorkbot.db
 [dorkbot.indexers.wayback]
 domain=example.com
 [dorkbot.scanners.arachni]
-arachni_dir=/opt/arachni
+path=/opt/arachni/bin
 report_dir=/tmp/reports
 </pre>
 
@@ -269,16 +270,20 @@ Scanner Modules
 <pre>
   Scans with the arachni command-line scanner
 
-  arachni-dir ARACHNI_DIR
-                      arachni base dir containing bin/arachni and
-                      bin/arachni_reporter
+  path PATH           path to scanner binary
+</pre>
+
+### scnr ###
+<pre>
+  Scans with the scnr command-line scanner
+
+  path PATH           path to scanner binary
 </pre>
 
 ### wapiti ###
 <pre>
-  Scans with the wapiti3 command-line scanner
+  Scans with the wapiti command-line scanner
 
-  wapiti-dir WAPITI_DIR
-                      wapiti base dir containing bin/wapiti
+  path PATH           path to scanner binary
 </pre>
 
