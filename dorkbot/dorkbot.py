@@ -71,7 +71,8 @@ def main():
         if args.add_blocklist_item: blocklist.add(args.add_blocklist_item)
         if args.delete_blocklist_item: blocklist.delete(args.delete_blocklist_item)
         if args.list_blocklist:
-            for item in blocklist.get_parsed_items(): print(item)
+            for blocklist in blocklists:
+                for item in blocklist.get_parsed_items(): print(item)
 
         if args.flush_fingerprints: db.flush_fingerprints()
 
