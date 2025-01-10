@@ -470,12 +470,19 @@ class TargetDatabase:
         self.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
         self.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
 
-    def connect(self):
-        try:
-            self.db = self.module.connect(self.database, **self.connect_kwargs)
-        except self.module.Error as e:
-            logging.error("Error loading database - %s", str(e))
-            sys.exit(1)
+    def connect(self, retries=3):
+        for i in range(retries):
+            try:
+                self.db = self.module.connect(self.database, **self.connect_kwargs)
+                break
+            except self.module.Error as e:
+                retry_conditions = ["Connection timed out"]
+                if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database connection failed (retrying) - {str(e)}")
+                    continue
+                else:
+                    logging.error(f"Database connection failed (will not retry) - {str(e)}")
+                    sys.exit(1)
 
     def close(self):
         self.db.close()
@@ -501,11 +508,16 @@ class TargetDatabase:
                         result = c.fetchall()
                     return result
             except self.module.Error as e:
-                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
+                retry_conditions = [
+                    "connection already closed",
+                    "server closed the connection unexpectedly"
+                ]
+                if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database execution failed (retrying) - {str(e)}")
                     self.connect()
                     continue
                 else:
-                    logging.error(str(e))
+                    logging.error(f"Database execution failed (will not retry) - {str(e)}")
                     sys.exit(1)
 
     def get_urls(self, unscanned_only=False, source=False, randomize=False):
@@ -719,13 +731,21 @@ class Blocklist:
 
         self.parse_list(self.read_items())
 
-    def connect(self):
+    def connect(self, retries=3):
         if self.database:
-            try:
-                self.db = self.module.connect(self.database, **self.connect_kwargs)
-            except self.module.Error as e:
-                logging.error("Error loading database - %s", str(e))
-                sys.exit(1)
+            for i in range(retries):
+                try:
+                    self.db = self.module.connect(self.database, **self.connect_kwargs)
+                    break
+                except self.module.Error as e:
+                    retry_conditions = ["Connection timed out"]
+                    if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                        logging.warning(f"Blocklist database connection failed (retrying) - {str(e)}")
+                        continue
+                    else:
+                        logging.error(f"Blocklist database connection failed (will not retry) - {str(e)}")
+                        sys.exit(1)
+
         else:
             try:
                 self.blocklist_file = open(self.filename, "a")
@@ -760,11 +780,16 @@ class Blocklist:
                         result = c.fetchall()
                     return result
             except self.module.Error as e:
-                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
+                retry_conditions = [
+                    "connection already closed",
+                    "server closed the connection unexpectedly"
+                ]
+                if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database execution failed (retrying) - {str(e)}")
                     self.connect()
                     continue
                 else:
-                    logging.error(str(e))
+                    logging.error(f"Database execution failed (will not retry) - {str(e)}")
                     sys.exit(1)
 
     def parse_list(self, items):
