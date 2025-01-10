@@ -465,14 +465,9 @@ class TargetDatabase:
                     sys.exit(1)
 
         self.connect()
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY, source VARCHAR, scanned INTEGER DEFAULT 0)")
-                c.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
-                c.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
-        except self.module.Error as e:
-            logging.error("Failed to load database - %s", str(e))
-            sys.exit(1)
+        self.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY, source VARCHAR, scanned INTEGER DEFAULT 0)")
+        self.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
+        self.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
 
     def connect(self):
         try:
@@ -484,6 +479,32 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
+    def execute(self, *sql, single=False, retries=3):
+        if len(sql) == 2:
+            statement, arguments = sql
+        else:
+            statement = sql[0]
+            arguments = ""
+
+        for i in range(retries):
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    if isinstance(statement, str):
+                        c.execute(statement, arguments)
+                    elif isinstance(statement, list):
+                        c.executemany(statement, arguments)
+                    if single:
+                        return c.fetchone()
+                    else:
+                        return c.fetchall()
+            except self.module.Error as e:
+                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
+                    self.connect()
+                    continue
+                else:
+                    logging.error(str(e))
+                    sys.exit(1)
+
     def get_urls(self, unscanned_only=False, source=False, randomize=False):
         fields = "url"
         if source is True:
@@ -493,21 +514,16 @@ class TargetDatabase:
         if unscanned_only:
             sql += " WHERE scanned != 1"
 
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                if source and source is not True:
-                    if "WHERE" in sql:
-                        sql += " AND "
-                    else:
-                        sql += " WHERE "
-                    sql += "source = %s" % self.param
-                    c.execute(sql, (source,))
-                else:
-                    c.execute(sql)
-                urls = [" | ".join(row) for row in c.fetchall()]
-        except self.module.Error as e:
-            logging.error("Failed to get targets - %s", str(e))
-            sys.exit(1)
+        if source and source is not True:
+            if "WHERE" in sql:
+                sql += " AND "
+            else:
+                sql += " WHERE "
+            sql += "source = %s" % self.param
+            rows = self.execute(sql, (source,))
+        else:
+            rows = self.execute(sql)
+        urls = [" | ".join(row) for row in rows]
 
         if randomize:
             random.shuffle(urls)
@@ -519,114 +535,53 @@ class TargetDatabase:
         if random:
             sql += " ORDER BY RANDOM()"
 
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute(sql)
-                while True:
-                    row = c.fetchone()
-                    if not row:
-                        target = None
-                        break
-                    url = row[0]
-                    target = Target(url)
-                    fingerprint = generate_fingerprint(target)
-                    self.mark_scanned(url, c)
-                    if self.get_scanned(fingerprint, c):
-                        logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
-                        continue
-                    else:
-                        c.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
-                        break
-        except self.module.Error as e:
-            logging.error("Failed to get next target - %s", str(e))
-            sys.exit(1)
+        while True:
+            row = self.execute(sql, single=True)
+            if not row:
+                target = None
+                break
+            url = row[0]
+            target = Target(url)
+            fingerprint = generate_fingerprint(target)
+            self.mark_scanned(url)
+            if self.get_scanned(fingerprint):
+                logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
+                continue
+            else:
+                self.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
+                break
 
         return target
 
     def add_target(self, url, source=None):
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), (url, source))
-        except self.module.Error as e:
-            logging.error("Failed to add target - %s", str(e))
-            sys.exit(1)
+        self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), (url, source))
 
     def add_targets(self, urls, source=None, chunk_size=1000):
         for x in range(0, len(urls), chunk_size):
             urls_chunk = urls[x:x+chunk_size]
-            for i in range(3):
-                try:
-                    with self.db, closing(self.db.cursor()) as c:
-                        c.executemany("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict),
-                                      [(url, source) for url in urls_chunk])
-                except self.module.Error as e:
-                    if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
-                        logging.warning("Failed to add target (retrying) - %s", str(e))
-                        self.connect()
-                        continue
-                    else:
-                        logging.error("Failed to add target - %s", str(e))
-                        sys.exit(1)
+            self.executemany("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), [(url, source) for url in urls_chunk])
 
     def delete_target(self, url):
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
-        except self.module.Error as e:
-            logging.error("Failed to delete target - %s", str(e))
-            sys.exit(1)
+        self.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
 
-    def get_scanned(self, fingerprint, cursor):
-        for i in range(3):
-            try:
-                cursor.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,))
-                row = cursor.fetchone()
-                break
-            except self.module.Error as e:
-                if "connection already closed" in str(e) or "cursor already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
-                    logging.warning("Failed to look up fingerprint (retrying) - %s", str(e))
-                    self.connect()
-                    continue
-                else:
-                    logging.error("Failed to look up fingerprint - %s", str(e))
-                    sys.exit(1)
-
+    def get_scanned(self, fingerprint):
+        row = self.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,), single=True)
         if row:
             return row[0]
         else:
             return False
 
-    def mark_scanned(self, url, cursor):
-        for i in range(3):
-            try:
-                cursor.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
-            except self.module.Error as e:
-                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
-                    logging.warning("Failed to mark target as scanned (retrying) - %s", str(e))
-                    self.connect()
-                    continue
-                else:
-                    logging.error("Failed to mark target as scanned - %s", str(e))
-                    sys.exit(1)
+    def mark_scanned(self, url):
+        self.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
 
     def flush_fingerprints(self):
         logging.info("Flushing fingerprints")
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("DELETE FROM fingerprints")
-                c.execute("UPDATE targets SET scanned = 0")
-        except self.module.Error as e:
-            logging.error("Failed to flush fingerprints - %s", str(e))
-            sys.exit(1)
+        self.execute("DELETE FROM fingerprints")
+        self.execute("UPDATE targets SET scanned = 0")
 
     def flush_targets(self):
         logging.info("Flushing targets")
-        try:
-            with self.db, closing(self.db.cursor()) as c:
-                c.execute("DELETE FROM targets")
-        except self.module.Error as e:
-            logging.error("Failed to flush targets - %s", str(e))
-            sys.exit(1)
+        self.execute("DELETE FROM targets")
 
     def prune(self, blocklists, randomize=False):
         fingerprints = set()
@@ -641,9 +596,9 @@ class TargetDatabase:
 
             fingerprint = generate_fingerprint(target)
             with self.db, closing(self.db.cursor()) as c:
-                if fingerprint in fingerprints or self.get_scanned(fingerprint, c):
+                if fingerprint in fingerprints or self.get_scanned(fingerprint):
                     logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
-                    self.mark_scanned(target.url, c)
+                    self.mark_scanned(target.url)
                     continue
 
             if True in [blocklist.match(target) for blocklist in blocklists]:
@@ -755,12 +710,7 @@ class Blocklist:
                 self.param = "%s"
 
             self.connect()
-            try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
-            except self.module.Error as e:
-                logging.error("Failed to load blocklist database - %s", str(e))
-                sys.exit(1)
+            self.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
 
         self.parse_list(self.read_items())
 
@@ -783,6 +733,32 @@ class Blocklist:
             self.db.close()
         else:
             self.blocklist_file.close()
+
+    def execute(self, *sql, single=False, retries=3):
+        if len(sql) == 2:
+            statement, arguments = sql
+        else:
+            statement = sql[0]
+            arguments = ""
+
+        for i in range(retries):
+            try:
+                with self.db, closing(self.db.cursor()) as c:
+                    if isinstance(statement, str):
+                        c.execute(statement, arguments)
+                    elif isinstance(statement, list):
+                        c.executemany(statement, arguments)
+                    if single:
+                        return c.fetchone()
+                    else:
+                        return c.fetchall()
+            except self.module.Error as e:
+                if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
+                    self.connect()
+                    continue
+                else:
+                    logging.error(str(e))
+                    sys.exit(1)
 
     def parse_list(self, items):
         for item in items:
@@ -820,13 +796,8 @@ class Blocklist:
 
     def read_items(self):
         if self.database:
-            try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("SELECT item FROM blocklist")
-                    items = [row[0] for row in c.fetchall()]
-            except self.module.Error as e:
-                logging.error("Failed to get targets - %s", str(e))
-                sys.exit(1)
+            rows = self.execute("SELECT item FROM blocklist")
+            items = [row[0] for row in rows]
         else:
             items = self.blocklist_file.read().splitlines()
 
@@ -852,12 +823,7 @@ class Blocklist:
             sys.exit(1)
 
         if self.database:
-            try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("%s INTO blocklist VALUES (%s)" % (self.insert, self.param), (item,))
-            except self.module.Error as e:
-                logging.error("Failed to add blocklist item - %s", str(e))
-                sys.exit(1)
+            self.execute("%s INTO blocklist VALUES (%s)" % (self.insert, self.param), (item,))
         else:
             logging.warning("Add ignored (not implemented for file-based blocklist)")
 
@@ -867,12 +833,7 @@ class Blocklist:
         self.connect()
 
         if self.database:
-            try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("DELETE FROM blocklist WHERE item=(%s)" % self.param, (item,))
-            except self.module.Error as e:
-                logging.error("Failed to delete blocklist item - %s", str(e))
-                sys.exit(1)
+            self.execute("DELETE FROM blocklist WHERE item=(%s)" % self.param, (item,))
         else:
             logging.warning("Delete ignored (not implemented for file-based blocklist)")
 
@@ -894,12 +855,7 @@ class Blocklist:
     def flush(self):
         logging.info("Flushing blocklist")
         if self.database:
-            try:
-                with self.db, closing(self.db.cursor()) as c:
-                    c.execute("DELETE FROM blocklist")
-            except self.module.Error as e:
-                logging.error("Failed to flush blocklist - %s", str(e))
-                sys.exit(1)
+            self.execute("DELETE FROM blocklist")
         else:
             try:
                 os.unlink(self.filename)
