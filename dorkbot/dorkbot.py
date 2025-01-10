@@ -144,13 +144,11 @@ def initialize_logger(log_file, verbose):
 
         log_stdouthandler = logging.StreamHandler(sys.stdout)
         log_stdouthandler.setLevel(logging.DEBUG)
-        log_stdouthandler.setFormatter(log_formatter)
         log_stdouthandler.addFilter(LogFilter(logging.WARNING))
         log.addHandler(log_stdouthandler)
 
         log_stderrhandler = logging.StreamHandler(sys.stderr)
         log_stderrhandler.setLevel(logging.ERROR)
-        log_stderrhandler.setFormatter(log_formatter)
         log.addHandler(log_stderrhandler)
 
 
