@@ -479,7 +479,7 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def execute(self, *sql, single=False, retries=3):
+    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
         if len(sql) == 2:
             statement, arguments = sql
         else:
@@ -489,14 +489,16 @@ class TargetDatabase:
         for i in range(retries):
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    if isinstance(statement, str):
-                        c.execute(statement, arguments)
-                    elif isinstance(statement, list):
+                    result = None
+                    if many:
                         c.executemany(statement, arguments)
-                    if single:
-                        return c.fetchone()
                     else:
-                        return c.fetchall()
+                        c.execute(statement, arguments)
+                    if fetchone:
+                        result = c.fetchone()
+                    elif fetchall:
+                        result = c.fetchall()
+                    return result
             except self.module.Error as e:
                 if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     self.connect()
@@ -520,9 +522,9 @@ class TargetDatabase:
             else:
                 sql += " WHERE "
             sql += "source = %s" % self.param
-            rows = self.execute(sql, (source,))
+            rows = self.execute(sql, (source,), fetchall=True)
         else:
-            rows = self.execute(sql)
+            rows = self.execute(sql, fetchall=True)
         urls = [" | ".join(row) for row in rows]
 
         if randomize:
@@ -536,7 +538,7 @@ class TargetDatabase:
             sql += " ORDER BY RANDOM()"
 
         while True:
-            row = self.execute(sql, single=True)
+            row = self.execute(sql, fetchone=True)
             if not row:
                 target = None
                 break
@@ -548,7 +550,7 @@ class TargetDatabase:
                 logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
                 continue
             else:
-                self.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
+                self.add_fingerprint(fingerprint)
                 break
 
         return target
@@ -559,17 +561,20 @@ class TargetDatabase:
     def add_targets(self, urls, source=None, chunk_size=1000):
         for x in range(0, len(urls), chunk_size):
             urls_chunk = urls[x:x+chunk_size]
-            self.executemany("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), [(url, source) for url in urls_chunk])
+            self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), [(url, source) for url in urls_chunk], many=True)
 
     def delete_target(self, url):
         self.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
 
     def get_scanned(self, fingerprint):
-        row = self.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,), single=True)
+        row = self.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,), fetchone=True)
         if row:
-            return row[0]
+            return True
         else:
             return False
+
+    def add_fingerprint(self, fingerprint):
+        self.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
 
     def mark_scanned(self, url):
         self.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
@@ -595,11 +600,10 @@ class TargetDatabase:
             target = Target(url)
 
             fingerprint = generate_fingerprint(target)
-            with self.db, closing(self.db.cursor()) as c:
-                if fingerprint in fingerprints or self.get_scanned(fingerprint):
-                    logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
-                    self.mark_scanned(target.url)
-                    continue
+            if fingerprint in fingerprints or self.get_scanned(fingerprint):
+                logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
+                self.mark_scanned(target.url)
+                continue
 
             if True in [blocklist.match(target) for blocklist in blocklists]:
                 logging.debug("Deleting (matches blocklist pattern): %s", target.url)
@@ -734,7 +738,7 @@ class Blocklist:
         else:
             self.blocklist_file.close()
 
-    def execute(self, *sql, single=False, retries=3):
+    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
         if len(sql) == 2:
             statement, arguments = sql
         else:
@@ -744,14 +748,16 @@ class Blocklist:
         for i in range(retries):
             try:
                 with self.db, closing(self.db.cursor()) as c:
-                    if isinstance(statement, str):
-                        c.execute(statement, arguments)
-                    elif isinstance(statement, list):
+                    result = None
+                    if many:
                         c.executemany(statement, arguments)
-                    if single:
-                        return c.fetchone()
                     else:
-                        return c.fetchall()
+                        c.execute(statement, arguments)
+                    if fetchone:
+                        result = c.fetchone()
+                    elif fetchall:
+                        result = c.fetchall()
+                    return result
             except self.module.Error as e:
                 if "connection already closed" in str(e) or "server closed the connection unexpectedly" in str(e):
                     self.connect()
@@ -796,7 +802,7 @@ class Blocklist:
 
     def read_items(self):
         if self.database:
-            rows = self.execute("SELECT item FROM blocklist")
+            rows = self.execute("SELECT item FROM blocklist", fetchall=True)
             items = [row[0] for row in rows]
         else:
             items = self.blocklist_file.read().splitlines()
