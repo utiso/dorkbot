@@ -21,7 +21,7 @@ def run(args):
     source = __name__.split(".")[-1]
     tools_dir = os.path.join(args.directory, "tools")
     if args.phantomjs_dir:
-        phantomjs_path = os.path.join(os.path.abspath(argsphantomjs_dir, "bin"))
+        phantomjs_path = os.path.join(os.path.abspath(args.phantomjs_dir, "bin"))
     elif os.path.isdir(os.path.join(tools_dir, "phantomjs", "bin")):
         phantomjs_path = os.path.join(tools_dir, "phantomjs", "bin")
     else:
