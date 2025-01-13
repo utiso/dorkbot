@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dorkbot"
+authors = [
+    { name = "John Gordon", email = "jgor@utexas.edu" }
+]
+description = "Command-line tool to scan search results for vulnerabilities"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: Free for non-commercial use",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "http://dorkbot.io"
+GitHub = "https://github.com/utiso/dorkbot"
+
+[project.scripts]
+dorkbot = "dorkbot.dorkbot:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "dorkbot.__version__"}
