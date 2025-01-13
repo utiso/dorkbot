@@ -1,10 +1,9 @@
+# python
 __pycache__/
 build/
 dist/
-dorkbot.egg-info/
-bin/
-lib/
-include/
-pyvenv.cfg
+*.egg-info/
+
+# dorkbot-specific
 reports/
 tools/
