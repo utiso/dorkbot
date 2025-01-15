@@ -14,18 +14,18 @@ from urllib.request import urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches archive.org crawl data")
-    module_group.add_argument("--domain", required=True, \
-                          help="pull all results for given domain or subdomain")
-    module_group.add_argument("--filter", \
-                          help="query filter to apply to the search")
-    module_group.add_argument("--from", dest="from_", metavar="FROM", \
-                          help="beginning timestamp")
-    module_group.add_argument("--to", \
-                          help="end timestamp")
-    module_group.add_argument("--retries", type=int, default=10, \
-                          help="number of times to retry fetching results on error")
-    module_group.add_argument("--threads", type=int, default=1, \
-                          help="number of concurrent requests to wayback.org")
+    module_group.add_argument("--domain", required=True,
+                              help="pull all results for given domain or subdomain")
+    module_group.add_argument("--filter",
+                              help="query filter to apply to the search")
+    module_group.add_argument("--from", dest="from_", metavar="FROM",
+                              help="beginning timestamp")
+    module_group.add_argument("--to",
+                              help="end timestamp")
+    module_group.add_argument("--retries", type=int, default=10,
+                              help="number of times to retry fetching results on error")
+    module_group.add_argument("--threads", type=int, default=1,
+                              help="number of concurrent requests to wayback.org")
 
 
 def run(args):

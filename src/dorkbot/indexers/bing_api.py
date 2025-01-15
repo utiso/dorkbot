@@ -8,10 +8,10 @@ from urllib.request import Request, urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches bing.com")
-    module_group.add_argument("--key", required=True, \
-                          help="API key")
-    module_group.add_argument("--query", required=True, \
-                          help="search query")
+    module_group.add_argument("--key", required=True,
+                              help="API key")
+    module_group.add_argument("--query", required=True,
+                              help="search query")
 
 
 def run(args):

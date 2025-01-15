@@ -60,7 +60,7 @@ class Target:
 
         indent = scanner_args.report_indent
         if indent and indent.isdigit():
-                indent = int(indent)
+            indent = int(indent)
 
         with open(filename, report_mode) as outfile:
             json.dump(vulns, outfile, indent=indent, sort_keys=True)

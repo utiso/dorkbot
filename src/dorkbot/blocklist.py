@@ -68,7 +68,7 @@ class Blocklist:
                     break
                 except self.module.Error as e:
                     retry_conditions = ["Connection timed out"]
-                    if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                    if i < retries - 1 and any(error in str(e) for error in retry_conditions):
                         logging.warning(f"Blocklist database connection failed (retrying) - {str(e)}")
                         continue
                     else:
@@ -113,7 +113,7 @@ class Blocklist:
                     "connection already closed",
                     "server closed the connection unexpectedly"
                 ]
-                if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                if i < retries - 1 and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retrying) - {str(e)}")
                     self.connect()
                     continue

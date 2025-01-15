@@ -14,16 +14,16 @@ from urllib.request import urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches commoncrawl.org crawl data")
-    module_group.add_argument("--domain", required=True, \
-                          help="pull all results for given domain or subdomain")
-    module_group.add_argument("--index", \
-                          help="search a specific index, e.g. CC-MAIN-2019-22 (default: latest)")
-    module_group.add_argument("--filter", \
-                          help="query filter to apply to the search")
-    module_group.add_argument("--retries", type=int, default=10, \
-                          help="number of times to retry fetching results on error")
-    module_group.add_argument("--threads", type=int, default=1, \
-                          help="number of concurrent requests to commoncrawl.org")
+    module_group.add_argument("--domain", required=True,
+                              help="pull all results for given domain or subdomain")
+    module_group.add_argument("--index",
+                              help="search a specific index, e.g. CC-MAIN-2019-22 (default: latest)")
+    module_group.add_argument("--filter",
+                              help="query filter to apply to the search")
+    module_group.add_argument("--retries", type=int, default=10,
+                              help="number of times to retry fetching results on error")
+    module_group.add_argument("--threads", type=int, default=1,
+                              help="number of concurrent requests to commoncrawl.org")
 
 
 def run(args):

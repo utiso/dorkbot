@@ -67,18 +67,26 @@ def main():
             for external_blocklist in args.external_blocklist:
                 blocklists.append(Blocklist(external_blocklist))
 
-        if args.flush_blocklist: blocklist.flush()
-        if args.add_blocklist_item: blocklist.add(args.add_blocklist_item)
-        if args.delete_blocklist_item: blocklist.delete(args.delete_blocklist_item)
+        if args.flush_blocklist:
+            blocklist.flush()
+        if args.add_blocklist_item:
+            blocklist.add(args.add_blocklist_item)
+        if args.delete_blocklist_item:
+            blocklist.delete(args.delete_blocklist_item)
         if args.list_blocklist:
             for blocklist in blocklists:
-                for item in blocklist.get_parsed_items(): print(item)
+                for item in blocklist.get_parsed_items():
+                    print(item)
 
-        if args.flush_fingerprints: db.flush_fingerprints()
+        if args.flush_fingerprints:
+            db.flush_fingerprints()
 
-        if args.flush_targets: db.flush_targets()
-        if args.add_target: db.add_target(args.add_target, args.source)
-        if args.delete_target: db.delete_target(args.delete_target)
+        if args.flush_targets:
+            db.flush_targets()
+        if args.add_target:
+            db.add_target(args.add_target, args.source)
+        if args.delete_target:
+            db.delete_target(args.delete_target)
         db.close()
 
         if args.indexer:
@@ -140,6 +148,7 @@ def initialize_logger(log_file, verbose):
         class LogFilter(logging.Filter):
             def __init__(self, level):
                 self.level = level
+
             def filter(self, record):
                 return record.levelno < self.level
 
@@ -153,10 +162,10 @@ def initialize_logger(log_file, verbose):
         log.addHandler(log_stderrhandler)
 
 
-
 def load_module(category, name):
     module_name = "%s.%s" % (category, name)
-    if __package__: module_name = "." + module_name
+    if __package__:
+        module_name = "." + module_name
     try:
         module = importlib.import_module(module_name, package=__package__)
     except ImportError:
@@ -168,28 +177,28 @@ def load_module(category, name):
 
 def get_initial_args_parser():
     config_dir = os.path.abspath(os.path.expanduser(
-        os.environ.get("XDG_CONFIG_HOME") or
-        os.environ.get("APPDATA") or
-        os.path.join(os.environ["HOME"], ".config")
+        os.environ.get("XDG_CONFIG_HOME")
+        or os.environ.get("APPDATA")
+        or os.path.join(os.environ["HOME"], ".config")
     ))
 
     initial_parser = argparse.ArgumentParser(
         description="dorkbot", add_help=False)
-    initial_parser.add_argument("-c", "--config", \
-                                default=os.path.join(config_dir, "dorkbot", "dorkbot.ini"), \
+    initial_parser.add_argument("-c", "--config",
+                                default=os.path.join(config_dir, "dorkbot", "dorkbot.ini"),
                                 help="Configuration file")
-    initial_parser.add_argument("-r", "--directory", \
-                                default=os.getcwd(), \
+    initial_parser.add_argument("-r", "--directory",
+                                default=os.getcwd(),
                                 help="Dorkbot directory (default location of db, tools, reports)")
-    initial_parser.add_argument("--source", nargs="?", const=True, default=False, \
+    initial_parser.add_argument("--source", nargs="?", const=True, default=False,
                                 help="Label associated with targets")
-    initial_parser.add_argument("--show-defaults", action="store_true", \
+    initial_parser.add_argument("--show-defaults", action="store_true",
                                 help="Show default values in help output")
     retrieval_options = initial_parser.add_argument_group("retrieval")
-    retrieval_options.add_argument("--count", type=int, default=-1, \
-                          help="number of targets to retrieve, or -1 for all")
-    retrieval_options.add_argument("--random", action="store_true", \
-                          help="retrieve targets in random order")
+    retrieval_options.add_argument("--count", type=int, default=-1,
+                                   help="number of targets to retrieve, or -1 for all")
+    retrieval_options.add_argument("--random", action="store_true",
+                                   help="retrieve targets in random order")
     initial_args, other_args = initial_parser.parse_known_args()
 
     return initial_args, other_args, initial_parser
@@ -214,65 +223,65 @@ def get_main_args_parser():
             logging.debug(e)
 
     if initial_args.show_defaults:
-        parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False, \
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False,
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     else:
         parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False)
 
     parser.set_defaults(**defaults)
-    parser.add_argument("-h", "--help", action="store_true", \
+    parser.add_argument("-h", "--help", action="store_true",
                         help="Show program (or specified module) help")
-    parser.add_argument("--log", \
+    parser.add_argument("--log",
                         help="Path to log file")
-    parser.add_argument("-v", "--verbose", action="count", \
+    parser.add_argument("-v", "--verbose", action="count",
                         help="Enable verbose logging (can be used multiple times to increase verbosity)")
-    parser.add_argument("-V", "--version", action="version", \
+    parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + __version__, help="Print version")
 
     database = parser.add_argument_group('database')
-    database.add_argument("-d", "--database", \
+    database.add_argument("-d", "--database",
                           help="Database file/uri")
-    database.add_argument("-u", "--prune", action="store_true", \
+    database.add_argument("-u", "--prune", action="store_true",
                           help="Apply fingerprinting and blocklist without scanning")
 
     targets = parser.add_argument_group('targets')
-    targets.add_argument("-l", "--list-targets", action="store_true", \
+    targets.add_argument("-l", "--list-targets", action="store_true",
                          help="List targets in database")
-    targets.add_argument("--list-unscanned", action="store_true", \
+    targets.add_argument("--list-unscanned", action="store_true",
                          help="List unscanned targets in database")
-    targets.add_argument("--add-target", metavar="TARGET", \
+    targets.add_argument("--add-target", metavar="TARGET",
                          help="Add a url to the target database")
-    targets.add_argument("--delete-target", metavar="TARGET", \
+    targets.add_argument("--delete-target", metavar="TARGET",
                          help="Delete a url from the target database")
-    targets.add_argument("--flush-targets", action="store_true", \
+    targets.add_argument("--flush-targets", action="store_true",
                          help="Delete all targets")
 
     indexing = parser.add_argument_group('indexing')
-    indexing.add_argument("-i", "--indexer", \
+    indexing.add_argument("-i", "--indexer",
                           help="Indexer module to use")
-    indexing.add_argument("-o", "--indexer-arg", action="append", \
+    indexing.add_argument("-o", "--indexer-arg", action="append",
                           help="Pass an argument to the indexer module (can be used multiple times)")
 
     scanning = parser.add_argument_group('scanning')
-    scanning.add_argument("-s", "--scanner", \
+    scanning.add_argument("-s", "--scanner",
                           help="Scanner module to use")
-    scanning.add_argument("-p", "--scanner-arg", action="append", \
+    scanning.add_argument("-p", "--scanner-arg", action="append",
                           help="Pass an argument to the scanner module (can be used multiple times)")
 
     fingerprints = parser.add_argument_group('fingerprints')
-    fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true", \
+    fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true",
                               help="Delete all fingerprints of previously-scanned items")
 
     blocklist = parser.add_argument_group('blocklist')
-    blocklist.add_argument("--list-blocklist", action="store_true", \
+    blocklist.add_argument("--list-blocklist", action="store_true",
                            help="List internal blocklist entries")
-    blocklist.add_argument("--add-blocklist-item", metavar="ITEM", \
+    blocklist.add_argument("--add-blocklist-item", metavar="ITEM",
                            help="Add an ip/host/regex pattern to the internal blocklist")
-    blocklist.add_argument("--delete-blocklist-item", metavar="ITEM", \
+    blocklist.add_argument("--delete-blocklist-item", metavar="ITEM",
                            help="Delete an item from the internal blocklist")
-    blocklist.add_argument("--flush-blocklist", action="store_true", \
+    blocklist.add_argument("--flush-blocklist", action="store_true",
                            help="Delete all internal blocklist items")
-    blocklist.add_argument("-b", "--external-blocklist", action="append", \
+    blocklist.add_argument("-b", "--external-blocklist", action="append",
                            help="Supplemental external blocklist file/db (can be used multiple times)")
 
     args = parser.parse_args(other_args, namespace=initial_args)
@@ -308,12 +317,12 @@ def get_module_parser(module, parent_parser=None):
     if parent_parser:
         initial_parser = parent_parser
 
-    usage="%(prog)s [args] -i/-s [module] -o/-p [module_arg[=value]] ..."
-    epilog="NOTE: module args are passed via -o/-p as key=value and do not themselves require hyphens"
+    usage = "%(prog)s [args] -i/-s [module] -o/-p [module_arg[=value]] ..."
+    epilog = "NOTE: module args are passed via -o/-p as key=value and do not themselves require hyphens"
 
     if initial_args.show_defaults:
-        parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False, \
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False,
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     else:
         parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False)
 
@@ -349,10 +358,10 @@ def index(db, blocklists, indexer, args, indexer_args):
 
     targets = []
     for url in urls:
-            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-                logging.debug("Ignoring (matches blocklist pattern): %s", url)
-                continue
-            targets.append(url)
+        if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+            logging.debug("Ignoring (matches blocklist pattern): %s", url)
+            continue
+        targets.append(url)
 
     db.connect()
     db.add_targets(targets, source)
@@ -393,7 +402,7 @@ def scan(db, blocklists, scanner, args, scanner_args):
         results = scanner.run(scanner_args, target)
         scanned += 1
 
-        if results == False:
+        if results is False:
             logging.error("Scan failed: %s", target.url)
             continue
 

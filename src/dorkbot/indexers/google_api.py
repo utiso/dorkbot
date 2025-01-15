@@ -9,14 +9,14 @@ from urllib.request import urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches google.com")
-    module_group.add_argument("--key", required=True, \
-                          help="API key")
-    module_group.add_argument("--engine", required=True, \
-                          help="CSE id")
-    module_group.add_argument("--query", required=True, \
-                          help="search query")
-    module_group.add_argument("--domain", \
-                          help="limit searches to specified domain")
+    module_group.add_argument("--key", required=True,
+                              help="API key")
+    module_group.add_argument("--engine", required=True,
+                              help="CSE id")
+    module_group.add_argument("--query", required=True,
+                              help="search query")
+    module_group.add_argument("--domain",
+                              help="limit searches to specified domain")
 
 
 def run(args):

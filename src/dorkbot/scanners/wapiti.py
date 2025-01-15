@@ -18,8 +18,8 @@ def populate_parser(args, parser):
     scanner = __name__.split(".")[-1]
     module_group = parser.add_argument_group(__name__, f"Scans with the {scanner} command-line scanner")
     populate_general_options(args, module_group)
-    module_group.add_argument("--path", default=os.path.join(args.directory, "tools", scanner, "bin"), \
-                          help="path to scanner binary")
+    module_group.add_argument("--path", default=os.path.join(args.directory, "tools", scanner, "bin"),
+                              help="path to scanner binary")
 
 
 def run(args, target):
@@ -47,7 +47,8 @@ def run(args, target):
     except OSError as e:
         if "No such file or directory" in str(e) or "The system cannot find the file specified" in str(e):
             logging.critical(
-                f"Could not find {scanner}. If not in PATH, extract or symlink as [directory]/tools/{scanner} or set path option to correct directory.")
+                f"Could not find {scanner}. If not in PATH, extract or symlink as [directory]/tools/{scanner}"
+                "or set path option to correct directory.")
             sys.exit(1)
         else:
             raise

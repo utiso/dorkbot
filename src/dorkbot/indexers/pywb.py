@@ -14,20 +14,20 @@ from urllib.request import urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches a given pywb server's crawl data")
-    module_group.add_argument("--server", required=True, \
-                          help="pywb server url")
-    module_group.add_argument("--domain", required=True, \
-                          help="pull all results for given domain or subdomain")
-    module_group.add_argument("--cdx-api-suffix", default="/cdx", \
-                          help="suffix after index for index api")
-    module_group.add_argument("--index", \
-                          help="search a specific index")
-    module_group.add_argument("--filter", \
-                          help="query filter to apply to the search")
-    module_group.add_argument("--retries", type=int, default=10, \
-                          help="number of times to retry fetching results on error")
-    module_group.add_argument("--threads", type=int, default=10, \
-                          help="number of concurrent requests to wayback.org")
+    module_group.add_argument("--server", required=True,
+                              help="pywb server url")
+    module_group.add_argument("--domain", required=True,
+                              help="pull all results for given domain or subdomain")
+    module_group.add_argument("--cdx-api-suffix", default="/cdx",
+                              help="suffix after index for index api")
+    module_group.add_argument("--index",
+                              help="search a specific index")
+    module_group.add_argument("--filter",
+                              help="query filter to apply to the search")
+    module_group.add_argument("--retries", type=int, default=10,
+                              help="number of times to retry fetching results on error")
+    module_group.add_argument("--threads", type=int, default=10,
+                              help="number of concurrent requests to wayback.org")
 
 
 def run(args):

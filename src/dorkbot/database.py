@@ -67,7 +67,7 @@ class TargetDatabase:
                 break
             except self.module.Error as e:
                 retry_conditions = ["Connection timed out"]
-                if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                if i < retries - 1 and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database connection failed (retrying) - {str(e)}")
                     continue
                 else:
@@ -102,7 +102,7 @@ class TargetDatabase:
                     "connection already closed",
                     "server closed the connection unexpectedly"
                 ]
-                if i < retries-1 and any(error in str(e) for error in retry_conditions):
+                if i < retries - 1 and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retrying) - {str(e)}")
                     self.connect()
                     continue
@@ -159,18 +159,22 @@ class TargetDatabase:
         return target
 
     def add_target(self, url, source=None):
-        self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), (url, source))
+        self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s"
+                     % (self.insert, self.param, self.param, self.conflict), (url, source))
 
     def add_targets(self, urls, source=None, chunk_size=1000):
         for x in range(0, len(urls), chunk_size):
-            urls_chunk = urls[x:x+chunk_size]
-            self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s" % (self.insert, self.param, self.param, self.conflict), [(url, source) for url in urls_chunk], many=True)
+            urls_chunk = urls[x:x + chunk_size]
+            self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s"
+                         % (self.insert, self.param, self.param, self.conflict),
+                         [(url, source) for url in urls_chunk], many=True)
 
     def delete_target(self, url):
         self.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
 
     def get_scanned(self, fingerprint):
-        row = self.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)" % self.param, (fingerprint,), fetchone=True)
+        row = self.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)"
+                           % self.param, (fingerprint,), fetchone=True)
         if row:
             return True
         else:
