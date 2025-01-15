@@ -104,7 +104,7 @@ def get_page(domain, data, retries, page):
             sys.exit(1)
         break
 
-    pattern = "http[s]?://([^/.]*\.)*" + domain + "(/|$)"
+    pattern = r"http[s]?://([^/.]*\.)*" + domain + "(/|$)"
     domain_url = re.compile(pattern)
 
     results = set()
