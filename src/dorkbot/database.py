@@ -17,8 +17,8 @@ class TargetDatabase:
     def __init__(self, database):
         self.connect_kwargs = {}
         if database.startswith("postgresql://"):
-            self.database = database
             module_name = "psycopg2"
+            self.database = database
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
         elif database.startswith("phoenixdb://"):
