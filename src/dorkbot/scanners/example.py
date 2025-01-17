@@ -2,10 +2,18 @@ import argparse
 import os
 import subprocess
 
+if __package__:
+    from .general import populate_general_options
+else:
+    from scanners.general import populate_general_options
 
-def get_parser(initial_parser):
-    parser = argparse.ArgumentParser(parents=[initial_parser])
-    module_group = parser.add_argument_group(__name__, "Example module that returns a few vulnerabilities")
+
+def populate_parser(args, parser):
+    scanner = __name__.split(".")[-1]
+    module_group = parser.add_argument_group(__name__, f"Scans with the {scanner} command-line scanner")
+    populate_general_options(args, module_group)
+    module_group.add_argument("--path", default=os.path.join(args.directory, "tools", scanner, "bin"),
+                              help="path to scanner binary")
 
     return parser
 
