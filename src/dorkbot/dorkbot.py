@@ -78,10 +78,10 @@ def main():
                     print(item)
 
         db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
-        if args.generate_fingerprints:
-            db.generate_fingerprints()
         if args.flush_fingerprints:
             db.flush_fingerprints()
+        if args.generate_fingerprints:
+            db.generate_fingerprints(args.source)
         if args.reset_scanned:
             db.reset_scanned()
         if args.flush_targets:
@@ -376,7 +376,7 @@ def index(db, blocklists, indexer, args, indexer_args):
 def prune(db, blocklists, args):
     logging.info("Pruning database")
 
-    db.prune(blocklists, args.random)
+    db.prune(blocklists, args.source, args.random)
 
 
 def scan(db, blocklists, scanner, args, scanner_args):
@@ -389,7 +389,7 @@ def scan(db, blocklists, scanner, args, scanner_args):
 
     scanned = 0
     while scanned < args.count or args.count == -1:
-        url = db.get_next_target(random=args.random)
+        url = db.get_next_target(source=args.source, random=args.random)
         if not url:
             break
 
