@@ -209,9 +209,9 @@ class TargetDatabase:
 
     def add_target(self, url, source=None):
         if source:
-            source_id = get_source_id(source)  # noqa:F821
+            source_id = self.get_source_id(source)
             if not source_id:
-                source_id = add_source(source, return_id=True)  # noqa:F821
+                source_id = self.add_source(source)
         else:
             source_id = None
 
@@ -222,9 +222,9 @@ class TargetDatabase:
 
     def add_targets(self, urls, source=None, chunk_size=1000):
         if source:
-            source_id = get_source_id(source)  # noqa:F821
+            source_id = self.get_source_id(source)
             if not source_id:
-                source_id = add_source(source, return_id=True)  # noqa:F821
+                source_id = self.add_source(source)
         else:
             source_id = None
 
@@ -250,6 +250,14 @@ class TargetDatabase:
                                  % (self.insert, self.param, self.conflict),
                                  (source,), lastrowid=True)
         return source_id
+
+    def get_source_id(self, source):
+        row = self.execute("SELECT id FROM sources WHERE source = %s"
+                           % self.param, (source,), fetchone=True)
+        if row:
+            return row[0]
+        else:
+            return False
 
     def add_fingerprint(self, fingerprint, scanned=False):
         fingerprint_id = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s"
