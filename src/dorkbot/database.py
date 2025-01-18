@@ -138,7 +138,6 @@ class TargetDatabase:
                     sys.exit(1)
 
     def get_urls(self, unscanned_only=False, source=False, random=False):
-        parameters = None
         if source and source is not True:
             sql = "SELECT t.url FROM targets t" \
                   + " INNER JOIN sources s on s.id = t.source_id"
@@ -158,6 +157,8 @@ class TargetDatabase:
             else:
                 sql += " WHERE s.source = %s" % self.param
             parameters = (source,)
+        else:
+            parameters = None
 
         if random:
             sql += " ORDER BY RANDOM()"
@@ -167,11 +168,11 @@ class TargetDatabase:
         return urls
 
     def get_next_target(self, source=False, random=False):
-        sql = "SELECT t.url, t.id, f.id FROM targets t" \
-            + " LEFT JOIN fingerprints f on f.id = t.fingerprint_id"
+        sql = "SELECT t.url, t.id, f.id FROM targets t"
         if source and source is not True:
             sql += " INNER JOIN sources s on s.id = t.source_id"
-        sql += " WHERE (t.fingerprint_id IS NULL AND t.scanned = '0') OR f.scanned = '0'"
+        sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
+            + " WHERE (t.fingerprint_id IS NULL AND t.scanned = '0') OR f.scanned = '0'"
         if source and source is not True:
             sql += " AND s.source = %s" % self.param
             parameters = (source,)
@@ -232,7 +233,7 @@ class TargetDatabase:
             urls_chunk = urls[x:x + chunk_size]
             self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
                          % (self.insert, self.param, self.param, self.conflict),
-                         [(url, source) for url in urls_chunk], many=True)
+                         [(url, source_id) for url in urls_chunk], many=True)
 
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
