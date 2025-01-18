@@ -291,14 +291,13 @@ class TargetDatabase:
         self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
 
     def prune(self, blocklists, random):
-        self.generate_fingerprints()
         sql = "SELECT t.url, t.id, f.id FROM targets t" \
             + " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
             + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
         if random:
             sql += " ORDER BY RANDOM()"
 
-        fingerprints = set()
+        fingerprints = {}
         rows = self.execute(sql, fetchall=True)
         for row in rows:
             url = row[0]
@@ -307,9 +306,16 @@ class TargetDatabase:
 
             if not fingerprint_id:
                 fingerprint = generate_fingerprint(url)
-                fingerprint_id = self.get_fingerprint_id(fingerprint)
+
+                if fingerprint in fingerprints:
+                    self.update_target_fingerprint(target_id, fingerprint_id)
+                    fingerprint_id = fingerprints[fingerprint]
+                else:
+                    fingerprint_id = self.get_fingerprint_id(fingerprint)
+                    fingerprints[fingerprint] = fingerprint_id
+
                 if fingerprint_id:
-                    fingerprints.add(fingerprint_id)
+                    fingerprints[fingerprint] = fingerprint_id
                     self.mark_target_scanned(target_id)
                     self.update_target_fingerprint(target_id, fingerprint_id)
                     logging.debug("Skipping (matches scanned fingerprint): %s", url)
@@ -320,8 +326,6 @@ class TargetDatabase:
             else:
                 if fingerprint_id in fingerprints:
                     self.mark_target_scanned(target_id)
-                else:
-                    fingerprints.add(fingerprint_id)
 
             if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
                 logging.debug("Deleting (matches blocklist pattern): %s", url)
