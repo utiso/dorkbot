@@ -3,7 +3,6 @@ if __package__:
     from dorkbot.util import generate_timestamp, generate_hash
 else:
     from util import generate_timestamp, generate_hash
-import hashlib
 import ipaddress
 import json
 import logging
@@ -15,7 +14,7 @@ from urllib.parse import urlparse
 class Target:
     def __init__(self, url):
         self.url = url
-        self.hash = ""
+        self.hash = None
         self.starttime = generate_timestamp()
 
         url_parts = urlparse(url)
@@ -29,9 +28,6 @@ class Target:
             pass
         except Exception:
             logging.exception("Failed to resolve hostname: %s", self.host)
-
-    def generate_hash(url):
-        return hashlib.md5(url.encode("utf-8")).hexdigest()
 
     def get_hash(self):
         if not self.hash:

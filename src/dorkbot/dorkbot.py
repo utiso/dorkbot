@@ -51,9 +51,8 @@ def main():
             or args.add_target or args.delete_target \
             or args.list_blocklist or args.flush_blocklist \
             or args.add_blocklist_item or args.delete_blocklist_item \
-            or args.flush_fingerprints or args.list_unscanned:
-
-        db = TargetDatabase(args.database)
+            or args.flush_fingerprints or args.generate_fingerprints \
+            or args.list_unscanned or args.reset_scanned:
 
         pattern = "^[^:]+://.*$"
         regex = re.compile(pattern)
@@ -78,16 +77,19 @@ def main():
                 for item in blocklist.get_parsed_items():
                     print(item)
 
+        db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
+        if args.generate_fingerprints:
+            db.generate_fingerprints()
         if args.flush_fingerprints:
             db.flush_fingerprints()
-
+        if args.reset_scanned:
+            db.reset_scanned()
         if args.flush_targets:
             db.flush_targets()
         if args.add_target:
             db.add_target(args.add_target, args.source)
         if args.delete_target:
             db.delete_target(args.delete_target)
-        db.close()
 
         if args.indexer:
             indexer_module = load_module("indexers", args.indexer)
@@ -110,10 +112,9 @@ def main():
             except KeyboardInterrupt:
                 sys.exit(1)
 
-        db = TargetDatabase(args.database)
         if args.list_targets or args.list_unscanned:
             try:
-                urls = db.get_urls(unscanned_only=args.list_unscanned, source=args.source, randomize=args.random)
+                urls = db.get_urls(unscanned_only=args.list_unscanned, source=args.source, random=args.random)
                 if args.count > 0:
                     urls = urls[:args.count]
                 for url in urls:
@@ -255,6 +256,8 @@ def get_main_args_parser():
                          help="Delete a url from the target database")
     targets.add_argument("--flush-targets", action="store_true",
                          help="Delete all targets")
+    targets.add_argument("--drop-tables", action="store_true",
+                         help="Delete and recreate tables")
 
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer",
@@ -267,10 +270,14 @@ def get_main_args_parser():
                           help="Scanner module to use")
     scanning.add_argument("-p", "--scanner-arg", action="append",
                           help="Pass an argument to the scanner module (can be used multiple times)")
+    scanning.add_argument("-x", "--reset-scanned", action="store_true",
+                          help="Reset scanned status of all targets")
 
     fingerprints = parser.add_argument_group('fingerprints')
+    fingerprints.add_argument("-g", "--generate-fingerprints", action="store_true",
+                              help="Generate fingerprints for all targets")
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true",
-                              help="Delete all fingerprints of previously-scanned items")
+                              help="Delete all generated fingerprints")
 
     blocklist = parser.add_argument_group('blocklist')
     blocklist.add_argument("--list-blocklist", action="store_true",
@@ -363,17 +370,13 @@ def index(db, blocklists, indexer, args, indexer_args):
             continue
         targets.append(url)
 
-    db.connect()
     db.add_targets(targets, source)
-    db.close()
 
 
 def prune(db, blocklists, args):
     logging.info("Pruning database")
 
-    db.connect()
     db.prune(blocklists, args.random)
-    db.close()
 
 
 def scan(db, blocklists, scanner, args, scanner_args):
@@ -386,19 +389,18 @@ def scan(db, blocklists, scanner, args, scanner_args):
 
     scanned = 0
     while scanned < args.count or args.count == -1:
-        db.connect()
-        target = db.get_next_target(random=args.random)
-        if not target:
+        url = db.get_next_target(random=args.random)
+        if not url:
             break
 
+        target = Target(url)
+
         if True in [blocklist.match(target) for blocklist in blocklists]:
-            logging.debug("Deleting (matches blocklist pattern): %s", target.url)
-            db.delete_target(target.url)
+            logging.debug("Deleting (matches blocklist pattern): %s", url)
+            db.delete_target(url)
             continue
 
-        db.close()
-
-        logging.info("Scanning: %s %s", target.url, vars(scanner_args) if args.verbose else "")
+        logging.info("Scanning: %s %s", url, vars(scanner_args) if args.verbose else "")
         results = scanner.run(scanner_args, target)
         scanned += 1
 

@@ -3,8 +3,8 @@ import hashlib
 from urllib.parse import urlparse
 
 
-def generate_fingerprint(target):
-    url_parts = urlparse(target.url)
+def generate_fingerprint(url):
+    url_parts = urlparse(url)
     netloc = url_parts.netloc
     depth = str(url_parts.path.count("/"))
     page = url_parts.path.split("/")[-1]

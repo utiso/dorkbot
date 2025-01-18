@@ -36,11 +36,11 @@ usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                [--show-defaults] [--count COUNT] [--random] [-h]
                [--log LOG] [-v] [-V] [-d DATABASE] [-u] [-l]
                [--list-unscanned] [--add-target TARGET]
-               [--delete-target TARGET] [--flush-targets] [-i INDEXER]
-               [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-f]
-               [--list-blocklist] [--add-blocklist-item ITEM]
-               [--delete-blocklist-item ITEM] [--flush-blocklist]
-               [-b EXTERNAL_BLOCKLIST]
+               [--delete-target TARGET] [--flush-targets] [--drop-tables]
+               [-i INDEXER] [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG]
+               [-x] [-g] [-f] [--list-blocklist]
+               [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
+               [--flush-blocklist] [-b EXTERNAL_BLOCKLIST]
 
 options:
   -c, --config CONFIG   Configuration file
@@ -71,6 +71,7 @@ targets:
   --delete-target TARGET
                         Delete a url from the target database
   --flush-targets       Delete all targets
+  --drop-tables         Delete and recreate tables
 
 indexing:
   -i, --indexer INDEXER
@@ -85,10 +86,13 @@ scanning:
   -p, --scanner-arg SCANNER_ARG
                         Pass an argument to the scanner module (can be used
                         multiple times)
+  -x, --reset-scanned   Reset scanned status of all targets
 
 fingerprints:
+  -g, --generate-fingerprints
+                        Generate fingerprints for all targets
   -f, --flush-fingerprints
-                        Delete all fingerprints of previously-scanned items
+                        Delete all generated fingerprints
 
 blocklist:
   --list-blocklist      List internal blocklist entries
@@ -100,7 +104,6 @@ blocklist:
   -b, --external-blocklist EXTERNAL_BLOCKLIST
                         Supplemental external blocklist file/db (can be used
                         multiple times)
-
 </pre>
 
 Tools / Dependencies

@@ -8,22 +8,23 @@ else:
 import importlib
 import logging
 import os
-import random
 import sys
 from contextlib import closing
 
 
 class TargetDatabase:
-    def __init__(self, database):
+    def __init__(self, database, drop_tables=False, create_tables=False):
         self.connect_kwargs = {}
         if database.startswith("postgresql://"):
             module_name = "psycopg2"
             self.database = database
+            self.id_type = "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
         elif database.startswith("phoenixdb://"):
             module_name = "phoenixdb"
             self.database = database[12:]
+            self.id_type = "INTEGER PRIMARY KEY"
             self.insert = "UPSERT"
             self.conflict = ""
             self.connect_kwargs["autocommit"] = True
@@ -31,6 +32,7 @@ class TargetDatabase:
             module_name = "sqlite3"
             self.database = os.path.expanduser(database)
             database_dir = os.path.dirname(self.database)
+            self.id_type = "INTEGER PRIMARY KEY"
             self.insert = "INSERT OR REPLACE"
             self.conflict = ""
 
@@ -56,9 +58,30 @@ class TargetDatabase:
                     sys.exit(1)
 
         self.connect()
-        self.execute("CREATE TABLE IF NOT EXISTS targets (url VARCHAR PRIMARY KEY, source VARCHAR, scanned INTEGER DEFAULT 0)")
-        self.execute("CREATE TABLE IF NOT EXISTS fingerprints (fingerprint VARCHAR PRIMARY KEY)")
-        self.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
+
+        if drop_tables:
+            self.execute("DROP TABLE IF EXISTS targets")
+            self.execute("DROP TABLE IF EXISTS sources")
+            self.execute("DROP TABLE IF EXISTS fingerprints")
+            self.execute("DROP TABLE IF EXISTS blocklist")
+
+        if create_tables:
+            self.execute("CREATE TABLE IF NOT EXISTS targets"
+                         f" (id {self.id_type},"
+                         " url VARCHAR UNIQUE,"
+                         " source_id INTEGER,"
+                         " fingerprint_id INTEGER,"
+                         " scanned INTEGER DEFAULT 0)")
+            self.execute("CREATE TABLE IF NOT EXISTS sources"
+                         f" (id {self.id_type},"
+                         " source VARCHAR UNIQUE)")
+            self.execute("CREATE TABLE IF NOT EXISTS fingerprints"
+                         f" (id {self.id_type},"
+                         " fingerprint VARCHAR UNIQUE,"
+                         " scanned INTEGER DEFAULT 0)")
+            self.execute("CREATE TABLE IF NOT EXISTS blocklist"
+                         f" (id {self.id_type},"
+                         " item VARCHAR UNIQUE)")
 
     def connect(self, retries=3):
         for i in range(retries):
@@ -77,9 +100,11 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
+    def execute(self, *sql, many=False, fetchone=False, fetchall=False, lastrowid=False, retries=3):
         if len(sql) == 2:
             statement, arguments = sql
+            if not arguments:
+                arguments = ""
         else:
             statement = sql[0]
             arguments = ""
@@ -96,6 +121,8 @@ class TargetDatabase:
                         result = c.fetchone()
                     elif fetchall:
                         result = c.fetchall()
+                    elif lastrowid:
+                        result = c.lastrowid
                     return result
             except self.module.Error as e:
                 retry_conditions = [
@@ -110,111 +137,209 @@ class TargetDatabase:
                     logging.error(f"Database execution failed (will not retry) - {str(e)}")
                     sys.exit(1)
 
-    def get_urls(self, unscanned_only=False, source=False, randomize=False):
-        fields = "url"
-        if source is True:
-            fields += ",source"
-
-        sql = f"SELECT {fields} FROM targets"
-        if unscanned_only:
-            sql += " WHERE scanned != 1"
-
+    def get_urls(self, unscanned_only=False, source=False, random=False):
         if source and source is not True:
-            if "WHERE" in sql:
-                sql += " AND "
+            sql = "SELECT t.url FROM sources s" \
+                  + " INNER JOIN targets t on t.source_id = s.id"
+            if unscanned_only:
+                sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
+                    + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')" \
+                    + " AND s.source = %s" % self.param
             else:
-                sql += " WHERE "
-            sql += "source = %s" % self.param
-            rows = self.execute(sql, (source,), fetchall=True)
+                sql += " WHERE s.source = %s" % self.param
+            if random:
+                sql += " ORDER BY RANDOM()"
+            parameters = (source,)
+
         else:
-            rows = self.execute(sql, fetchall=True)
-        urls = [" | ".join(row) for row in rows]
+            if source is True:
+                sql = "SELECT t.url, s.source FROM targets t" \
+                      + " LEFT JOIN sources s on s.id = t.source_id"
+            else:
+                sql = "SELECT t.url FROM targets t"
+            if unscanned_only:
+                sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
+                    + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
+            if random:
+                sql += " ORDER BY RANDOM()"
+            parameters = None
 
-        if randomize:
-            random.shuffle(urls)
-
+        rows = self.execute(sql, parameters, fetchall=True)
+        urls = [" | ".join([str(column or "") for column in row]) for row in rows]
         return urls
 
-    def get_next_target(self, random=False):
-        sql = "SELECT url FROM targets WHERE scanned != 1"
+    def get_next_target(self, source=False, random=False):
+        sql = "SELECT t.url, t.id, f.id FROM targets t" \
+            + " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
+            + " WHERE (t.fingerprint_id IS NULL AND t.scanned = '0') OR f.scanned = '0'"
+        if source and source is not True:
+            + " AND s.source = %s" % self.param
+            parameters = (source,)
+        else:
+            parameters = None
         if random:
             sql += " ORDER BY RANDOM()"
 
+        target = None
         while True:
-            row = self.execute(sql, fetchone=True)
+            row = self.execute(sql, parameters, fetchone=True)
             if not row:
-                target = None
-                break
-            url = row[0]
-            target = Target(url)
-            fingerprint = generate_fingerprint(target)
-            self.mark_scanned(url)
-            if self.get_scanned(fingerprint):
-                logging.debug("Skipping (matches fingerprint of previous scan): %s", target.url)
-                continue
-            else:
-                self.add_fingerprint(fingerprint)
                 break
 
+            url = row[0]
+            target_id = row[1]
+            fingerprint_id = row[2]
+
+            if not fingerprint_id:
+                fingerprint = generate_fingerprint(url)
+                fingerprint_id = self.get_fingerprint_id(fingerprint)
+                if fingerprint_id:
+                    self.update_target_fingerprint(target_id, fingerprint_id)
+                    logging.debug("Skipping (matches scanned fingerprint): %s", url)
+                    continue
+                else:
+                    self.mark_target_scanned(target_id)
+                    self.add_fingerprint(fingerprint, scanned=True)
+            else:
+                self.mark_fingerprint_scanned(fingerprint_id)
+
+            target = url
+            break
         return target
 
     def add_target(self, url, source=None):
-        self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s"
-                     % (self.insert, self.param, self.param, self.conflict), (url, source))
+        if source:
+            source_id = get_source_id(source)
+            if not source_id:
+                source_id = add_source(source, return_id=True)
+        else:
+            source_id = None
+
+        target_id = self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
+                                 % (self.insert, self.param, self.param, self.conflict),
+                                 (url, source_id), lastrowid=True)
+        return target_id
 
     def add_targets(self, urls, source=None, chunk_size=1000):
+        if source:
+            source_id = get_source_id(source)
+            if not source_id:
+                source_id = add_source(source, return_id=True)
+        else:
+            source_id = None
+
         for x in range(0, len(urls), chunk_size):
             urls_chunk = urls[x:x + chunk_size]
-            self.execute("%s INTO targets (url, source) VALUES (%s, %s) %s"
+            self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
                          % (self.insert, self.param, self.param, self.conflict),
                          [(url, source) for url in urls_chunk], many=True)
 
+    def mark_target_scanned(self, target_id):
+        self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
+
     def delete_target(self, url):
-        self.execute("DELETE FROM targets WHERE url=(%s)" % self.param, (url,))
-
-    def get_scanned(self, fingerprint):
-        row = self.execute("SELECT fingerprint FROM fingerprints WHERE fingerprint = (%s)"
-                           % self.param, (fingerprint,), fetchone=True)
-        if row:
-            return True
-        else:
-            return False
-
-    def add_fingerprint(self, fingerprint):
-        self.execute("%s INTO fingerprints VALUES (%s)" % (self.insert, self.param), (fingerprint,))
-
-    def mark_scanned(self, url):
-        self.execute("UPDATE targets SET scanned = 1 WHERE url = %s" % (self.param,), (url,))
-
-    def flush_fingerprints(self):
-        logging.info("Flushing fingerprints")
-        self.execute("DELETE FROM fingerprints")
-        self.execute("UPDATE targets SET scanned = 0")
+        self.execute("DELETE FROM targets WHERE url = %s" % self.param, (url,))
 
     def flush_targets(self):
         logging.info("Flushing targets")
         self.execute("DELETE FROM targets")
+        self.execute("DELETE FROM sources")
 
-    def prune(self, blocklists, randomize=False):
+    def add_source(self, source):
+        source_id = self.execute("%s INTO sources (source) VALUES (%s) %s"
+                                 % (self.insert, self.param, self.conflict),
+                                 (source,), lastrowid=True)
+        return source_id
+
+    def add_fingerprint(self, fingerprint, scanned=False):
+        fingerprint_id = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s"
+                                      % (self.insert, self.param, self.param, self.conflict),
+                                      (fingerprint, 1 if scanned else 0), lastrowid=True)
+        return fingerprint_id
+
+    def update_target_fingerprint(self, target_id, fingerprint_id):
+        self.execute("UPDATE targets SET fingerprint_id = %s WHERE id = %s"
+                     % (self.param, self.param), (fingerprint_id, target_id))
+
+    def flush_fingerprints(self):
+        logging.info("Flushing fingerprints")
+        self.execute("UPDATE targets SET fingerprint_id = NULL")
+        self.execute("DELETE FROM fingerprints")
+
+    def reset_scanned(self):
+        logging.info("Resetting scanned")
+        self.execute("UPDATE targets SET scanned = 0")
+        self.execute("UPDATE fingerprints SET scanned = 0")
+
+    def get_fingerprint_id(self, fingerprint):
+        row = self.execute("SELECT id FROM fingerprints WHERE fingerprint = %s"
+                           % self.param, (fingerprint,), fetchone=True)
+        if row:
+            return row[0]
+        else:
+            return False
+
+    def mark_fingerprint_scanned(self, fingerprint_id):
+        self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
+
+    def prune(self, blocklists, random):
+        self.generate_fingerprints()
+        sql = "SELECT t.url, t.id, f.id FROM targets t" \
+            + " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
+            + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
+        if random:
+            sql += " ORDER BY RANDOM()"
+
         fingerprints = set()
+        rows = self.execute(sql, fetchall=True)
+        for row in rows:
+            url = row[0]
+            target_id = row[1]
+            fingerprint_id = row[2]
 
-        urls = self.get_urls()
+            if not fingerprint_id:
+                fingerprint = generate_fingerprint(url)
+                fingerprint_id = self.get_fingerprint_id(fingerprint)
+                if fingerprint_id:
+                    fingerprints.add(fingerprint_id)
+                    self.mark_target_scanned(target_id)
+                    self.update_target_fingerprint(target_id, fingerprint_id)
+                    logging.debug("Skipping (matches scanned fingerprint): %s", url)
+                    continue
+                else:
+                    fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                    self.update_target_fingerprint(target_id, fingerprint_id)
+            else:
+                if fingerprint_id in fingerprints:
+                    self.mark_target_scanned(target_id)
+                else:
+                    fingerprints.add(fingerprint_id)
 
-        if randomize:
-            random.shuffle(urls)
-
-        for url in urls:
-            target = Target(url)
-
-            fingerprint = generate_fingerprint(target)
-            if fingerprint in fingerprints or self.get_scanned(fingerprint):
-                logging.debug("Marking scanned (matches fingerprint of another target): %s", target.url)
-                self.mark_scanned(target.url)
+            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+                logging.debug("Deleting (matches blocklist pattern): %s", url)
+                self.delete_target(url)
                 continue
 
-            if True in [blocklist.match(target) for blocklist in blocklists]:
-                logging.debug("Deleting (matches blocklist pattern): %s", target.url)
-                self.delete_target(target.url)
+    def generate_fingerprints(self):
+        sql = "SELECT t.url, t.id FROM targets t WHERE t.fingerprint_id IS NULL"
+
+        fingerprints = {}
+        rows = self.execute(sql, fetchall=True)
+        for row in rows:
+            url = row[0]
+            target_id = row[1]
+
+            fingerprint = generate_fingerprint(url)
+
+            if fingerprint in fingerprints:
+                self.update_target_fingerprint(target_id, fingerprints[fingerprint])
                 continue
 
-            fingerprints.add(fingerprint)
+            fingerprint_id = self.get_fingerprint_id(fingerprint)
+            if fingerprint_id:
+                fingerprints[fingerprint] = fingerprint_id
+                self.update_target_fingerprint(target_id, fingerprint_id)
+            else:
+                fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                fingerprints[fingerprint] = fingerprint_id
+                self.update_target_fingerprint(target_id, fingerprint_id)

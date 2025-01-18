@@ -184,7 +184,7 @@ class Blocklist:
             sys.exit(1)
 
         if self.database:
-            self.execute("%s INTO blocklist VALUES (%s)" % (self.insert, self.param), (item,))
+            self.execute("%s INTO blocklist (item) VALUES (%s)" % (self.insert, self.param), (item,))
         else:
             logging.warning("Add ignored (not implemented for file-based blocklist)")
 
