@@ -312,6 +312,11 @@ class TargetDatabase:
             target_id = row[1]
             fingerprint_id = row[2]
 
+            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+                logging.debug("Deleting (matches blocklist pattern): %s", url)
+                self.delete_target(url)
+                continue
+
             if not fingerprint_id:
                 fingerprint = generate_fingerprint(url)
 
@@ -334,11 +339,6 @@ class TargetDatabase:
             else:
                 if fingerprint_id in fingerprints:
                     self.mark_target_scanned(target_id)
-
-            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-                logging.debug("Deleting (matches blocklist pattern): %s", url)
-                self.delete_target(url)
-                continue
 
     def generate_fingerprints(self, source):
         logging.info("Generating fingerprints")
