@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 
 def populate_parser(args, parser):
-    module_group = parser.add_argument_group(__name__, "Example module that returns a few urls")
+    module_group = parser.add_argument_group(__name__, "Example module that returns a few urls")  # noqa:F841
 
 
 def run(args):

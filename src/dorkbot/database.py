@@ -209,9 +209,9 @@ class TargetDatabase:
 
     def add_target(self, url, source=None):
         if source:
-            source_id = get_source_id(source)
+            source_id = get_source_id(source)  # noqa:F821
             if not source_id:
-                source_id = add_source(source, return_id=True)
+                source_id = add_source(source, return_id=True)  # noqa:F821
         else:
             source_id = None
 
@@ -222,9 +222,9 @@ class TargetDatabase:
 
     def add_targets(self, urls, source=None, chunk_size=1000):
         if source:
-            source_id = get_source_id(source)
+            source_id = get_source_id(source)  # noqa:F821
             if not source_id:
-                source_id = add_source(source, return_id=True)
+                source_id = add_source(source, return_id=True)  # noqa:F821
         else:
             source_id = None
 
