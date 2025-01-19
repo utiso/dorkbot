@@ -58,6 +58,9 @@ class Target:
         if indent and indent.isdigit():
             indent = int(indent)
 
+        if not os.path.exists(scanner_args.report_dir):
+            os.makedirs(scanner_args.report_dir)
+
         with open(filename, report_mode) as outfile:
             json.dump(vulns, outfile, indent=indent, sort_keys=True)
             outfile.write('\n')
