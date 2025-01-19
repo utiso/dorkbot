@@ -21,13 +21,6 @@ class TargetDatabase:
             self.id_type = "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
-        elif database.startswith("phoenixdb://"):
-            module_name = "phoenixdb"
-            self.database = database[12:]
-            self.id_type = "INTEGER PRIMARY KEY"
-            self.insert = "UPSERT"
-            self.conflict = ""
-            self.connect_kwargs["autocommit"] = True
         else:
             module_name = "sqlite3"
             self.database = os.path.expanduser(database)
