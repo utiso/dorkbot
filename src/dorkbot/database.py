@@ -53,6 +53,7 @@ class TargetDatabase:
         self.connect()
 
         if drop_tables:
+            logging.debug("Dropping tables")
             self.execute("DROP TABLE IF EXISTS targets")
             self.execute("DROP TABLE IF EXISTS sources")
             self.execute("DROP TABLE IF EXISTS fingerprints")
