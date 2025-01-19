@@ -100,7 +100,7 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def execute(self, *sql, many=False, fetchone=False, fetchall=False, lastrowid=False, retries=3):
+    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
         if len(sql) == 2:
             statement, arguments = sql
             if not arguments:
@@ -121,8 +121,6 @@ class TargetDatabase:
                         result = c.fetchone()
                     elif fetchall:
                         result = c.fetchall()
-                    elif lastrowid:
-                        result = c.lastrowid
                     return result
             except self.module.Error as e:
                 retry_conditions = [
@@ -209,6 +207,7 @@ class TargetDatabase:
         return target
 
     def add_target(self, url, source=None):
+        logging.debug(f"Adding target {url}")
         if source:
             source_id = self.get_source_id(source)
             if not source_id:
@@ -216,12 +215,12 @@ class TargetDatabase:
         else:
             source_id = None
 
-        target_id = self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
-                                 % (self.insert, self.param, self.param, self.conflict),
-                                 (url, source_id), lastrowid=True)
-        return target_id
+        self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
+                     % (self.insert, self.param, self.param, self.conflict),
+                     (url, source_id))
 
     def add_targets(self, urls, source=None, chunk_size=1000):
+        logging.debug(f"Adding {len(urls)} targets")
         if source:
             source_id = self.get_source_id(source)
             if not source_id:
@@ -239,6 +238,7 @@ class TargetDatabase:
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
 
     def delete_target(self, url):
+        logging.debug(f"Deleting target {url}")
         self.execute("DELETE FROM targets WHERE url = %s" % self.param, (url,))
 
     def flush_targets(self):
@@ -247,24 +247,23 @@ class TargetDatabase:
         self.execute("DELETE FROM sources")
 
     def add_source(self, source):
-        source_id = self.execute("%s INTO sources (source) VALUES (%s) %s"
-                                 % (self.insert, self.param, self.conflict),
-                                 (source,), lastrowid=True)
-        return source_id
+        logging.debug(f"Adding source {source}")
+        row = self.execute("%s INTO sources (source) VALUES (%s) %s RETURNING id"
+                           % (self.insert, self.param, self.conflict),
+                           (source,), fetchone=True)
+        return row if not row else row[0]
 
     def get_source_id(self, source):
         row = self.execute("SELECT id FROM sources WHERE source = %s"
                            % self.param, (source,), fetchone=True)
-        if row:
-            return row[0]
-        else:
-            return False
+        return row if not row else row[0]
 
     def add_fingerprint(self, fingerprint, scanned=False):
-        fingerprint_id = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s"
-                                      % (self.insert, self.param, self.param, self.conflict),
-                                      (fingerprint, 1 if scanned else 0), lastrowid=True)
-        return fingerprint_id
+        logging.debug(f"Adding fingerprint {fingerprint}")
+        row = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s RETURNING id"
+                           % (self.insert, self.param, self.param, self.conflict),
+                           (fingerprint, 1 if scanned else 0), lastrowid=True)
+        return row if not row else row[0]
 
     def update_target_fingerprint(self, target_id, fingerprint_id):
         self.execute("UPDATE targets SET fingerprint_id = %s WHERE id = %s"
@@ -283,10 +282,7 @@ class TargetDatabase:
     def get_fingerprint_id(self, fingerprint):
         row = self.execute("SELECT id FROM fingerprints WHERE fingerprint = %s"
                            % self.param, (fingerprint,), fetchone=True)
-        if row:
-            return row[0]
-        else:
-            return False
+        return row if not row else row[0]
 
     def mark_fingerprint_scanned(self, fingerprint_id):
         self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
