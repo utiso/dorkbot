@@ -262,7 +262,7 @@ class TargetDatabase:
         logging.debug(f"Adding fingerprint {fingerprint}")
         row = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s RETURNING id"
                            % (self.insert, self.param, self.param, self.conflict),
-                           (fingerprint, 1 if scanned else 0), lastrowid=True)
+                           (fingerprint, 1 if scanned else 0))
         return row if not row else row[0]
 
     def update_target_fingerprint(self, target_id, fingerprint_id):
