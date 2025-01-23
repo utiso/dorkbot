@@ -52,7 +52,8 @@ def main():
             or args.list_blocklist or args.flush_blocklist \
             or args.add_blocklist_item or args.delete_blocklist_item \
             or args.flush_fingerprints or args.generate_fingerprints \
-            or args.list_unscanned or args.reset_scanned:
+            or args.list_unscanned or args.reset_scanned \
+            or args.list_sources:
 
         pattern = "^[^:]+://.*$"
         regex = re.compile(pattern)
@@ -123,6 +124,12 @@ def main():
                 devnull = os.open(os.devnull, os.O_WRONLY)
                 os.dup2(devnull, sys.stdout.fileno())
                 sys.exit(1)
+
+        if args.list_sources:
+            sources = db.get_sources()
+            for source in sources:
+                print(source)
+
         db.close()
     else:
         parser.print_usage()
@@ -244,20 +251,22 @@ def get_main_args_parser():
                           help="Database file/uri")
     database.add_argument("-u", "--prune", action="store_true",
                           help="Apply fingerprinting and blocklist without scanning")
+    database.add_argument("--drop-tables", action="store_true",
+                          help="Delete and recreate tables")
 
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true",
                          help="List targets in database")
     targets.add_argument("--list-unscanned", action="store_true",
                          help="List unscanned targets in database")
+    targets.add_argument("--list-sources", action="store_true",
+                         help="List sources in database")
     targets.add_argument("--add-target", metavar="TARGET",
                          help="Add a url to the target database")
     targets.add_argument("--delete-target", metavar="TARGET",
                          help="Delete a url from the target database")
     targets.add_argument("--flush-targets", action="store_true",
                          help="Delete all targets")
-    targets.add_argument("--drop-tables", action="store_true",
-                         help="Delete and recreate tables")
 
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer",

@@ -252,6 +252,10 @@ class TargetDatabase:
                            % self.param, (source,), fetchone=True)
         return row if not row else row[0]
 
+    def get_sources(self):
+        rows = self.execute("SELECT source FROM sources", fetchall=True)
+        return [row[0] for row in rows if rows]
+
     def add_fingerprint(self, fingerprint, scanned=False):
         logging.debug(f"Adding fingerprint {fingerprint}")
         row = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s RETURNING id"
