@@ -91,7 +91,7 @@ def main():
         if args.add_target:
             url_parts = urlparse(args.add_target)
             quoted_path = quote(url_parts.path)
-            encoded_query = urlencode(parse_qsl(url_parts.query))
+            encoded_query = urlencode(parse_qsl(url_parts.query, keep_blank_values=True))
             parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
             db.add_target(parsed_url.geturl(), args.source)
         if args.delete_target:
@@ -385,7 +385,7 @@ def index(db, blocklists, indexer, args, indexer_args):
 
         url_parts = urlparse(url)
         quoted_path = quote(url_parts.path)
-        encoded_query = urlencode(parse_qsl(url_parts.query))
+        encoded_query = urlencode(parse_qsl(url_parts.query, keep_blank_values=True))
         parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
         targets.append(parsed_url.geturl())
 
