@@ -19,6 +19,7 @@ import os
 import re
 import sys
 from logging.handlers import WatchedFileHandler
+from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
 def main():
@@ -88,7 +89,11 @@ def main():
         if args.flush_targets:
             db.flush_targets()
         if args.add_target:
-            db.add_target(args.add_target, args.source)
+            url_parts = urlparse(args.add_target)
+            quoted_path = quote(url_parts.path)
+            encoded_query = urlencode(parse_qsl(url_parts.query))
+            parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
+            db.add_target(parsed_url.geturl(), args.source)
         if args.delete_target:
             db.delete_target(args.delete_target)
 
@@ -377,7 +382,12 @@ def index(db, blocklists, indexer, args, indexer_args):
         if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
             logging.debug("Ignoring (matches blocklist pattern): %s", url)
             continue
-        targets.append(url)
+
+        url_parts = urlparse(url)
+        quoted_path = quote(url_parts.path)
+        encoded_query = urlencode(parse_qsl(url_parts.query))
+        parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
+        targets.append(parsed_url.geturl())
 
     db.add_targets(targets, source)
 
