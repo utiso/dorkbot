@@ -30,7 +30,6 @@ def run(args):
     source = __name__.split(".")[-1]
     data = {}
     data["url"] = "*.%s" % args.domain
-    data["fl"] = "url"
     data["output"] = "json"
     if args.filter:
         data["filter"] = args.filter
@@ -104,6 +103,7 @@ def get_num_pages(index, data, retries):
 
 
 def get_page(domain, index, data, retries, page):
+    data["fl"] = "url"
     data["page"] = page
     url = "https://index.commoncrawl.org/" + index + "-index?" + urlencode(data)
 

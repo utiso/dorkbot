@@ -32,7 +32,6 @@ def run(args):
     source = __name__.split(".")[-1]
     data = {}
     data["url"] = "*.%s" % args.domain
-    data["fl"] = "original"
     data["output"] = "json"
     if args.filter:
         data["filter"] = args.filter
@@ -56,14 +55,14 @@ def get_num_pages(data, retries):
     data["showNumPages"] = "true"
     url = "https://web.archive.org/cdx/search/cdx?" + urlencode(data)
 
+    logging.debug("Fetching number of pages")
     for i in range(retries):
         try:
-            response = urlopen(url)
-            response = response.read().decode("utf-8")
+            response_str = urlopen(url)
+            response_str = response_str.read().decode("utf-8")
+            response = json.loads(response_str)
         except (HTTPError, IncompleteRead) as e:
-            if e.code == 400:
-                response = "1"
-            elif i == retries - 1:
+            if i == retries - 1:
                 logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
                 sys.exit(1)
             else:
@@ -76,12 +75,16 @@ def get_num_pages(data, retries):
         break
 
     del data["showNumPages"]
-    num_pages = int(response)
+    if response and response[0] and response[0][0] == "numpages":
+        num_pages = int(response[1][0])
+    else:
+        num_pages = 0
     logging.debug("Got %d pages", num_pages)
     return num_pages
 
 
 def get_page(domain, data, retries, page):
+    data["fl"] = "original"
     data["page"] = page
     url = "https://web.archive.org/cdx/search/cdx?" + urlencode(data)
 

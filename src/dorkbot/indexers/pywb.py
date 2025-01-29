@@ -110,6 +110,7 @@ def get_num_pages(base_url, data, retries):
 
 
 def get_page(base_url, data, retries, page, domain):
+    data["fl"] = "url"
     data["page"] = page
     url = f"{base_url}?" + urlencode(data)
 
