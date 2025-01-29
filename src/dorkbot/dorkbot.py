@@ -82,8 +82,6 @@ def main():
         db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
         if args.flush_fingerprints:
             db.flush_fingerprints()
-        if args.generate_fingerprints:
-            db.generate_fingerprints(args.source)
         if args.reset_scanned:
             db.reset_scanned()
         if args.flush_targets:
@@ -105,6 +103,9 @@ def main():
                 index(db, blocklists, indexer_module, args, indexer_args)
             except KeyboardInterrupt:
                 sys.exit(1)
+
+        if args.generate_fingerprints:
+            db.generate_fingerprints(args.source)
 
         if args.prune:
             prune(db, blocklists, args)
