@@ -84,7 +84,7 @@ class TargetDatabase:
                 break
             except self.module.Error as e:
                 retry_conditions = ["Connection timed out"]
-                if i < retries - 1 and any(error in str(e) for error in retry_conditions):
+                if i < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database connection failed (retrying) - {str(e)}")
                     continue
                 else:
@@ -119,9 +119,10 @@ class TargetDatabase:
             except self.module.Error as e:
                 retry_conditions = [
                     "connection already closed",
-                    "server closed the connection unexpectedly"
+                    "server closed the connection unexpectedly",
+                    "connection has been closed unexpectedly",
                 ]
-                if i < retries - 1 and any(error in str(e) for error in retry_conditions):
+                if i < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retrying) - {str(e)}")
                     self.connect()
                     continue
