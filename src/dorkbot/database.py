@@ -229,6 +229,9 @@ class TargetDatabase:
                          % (self.insert, self.param, self.param, self.conflict),
                          [(url, source_id) for url in urls_chunk], many=True)
 
+    def mark_other_targets_scanned(self, fingerprint_id, target_id):
+        self.execute("UPDATE targets SET scanned = 1 WHERE fingerprint_id = %s AND id != %s" % (self.param, self.param), (fingerprint_id, target_id))
+
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
 
@@ -302,6 +305,8 @@ class TargetDatabase:
 
         fingerprints = {}
         rows = self.execute(sql, parameters, fetchall=True)
+        if not rows:
+            return
         for row in rows:
             url = row[0]
             target_id = row[1]
@@ -334,6 +339,7 @@ class TargetDatabase:
                 else:
                     fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
                     self.update_target_fingerprint(target_id, fingerprint_id)
+                    self.mark_other_targets_scanned(fingerprint_id, target_id)
 
             else:
                 if fingerprint in fingerprints:
@@ -342,6 +348,7 @@ class TargetDatabase:
                     continue
                 else:
                     fingerprints[fingerprint] = fingerprint_id
+                    self.mark_other_targets_scanned(fingerprint_id, target_id)
 
     def generate_fingerprints(self, source):
         logging.info("Generating fingerprints")
