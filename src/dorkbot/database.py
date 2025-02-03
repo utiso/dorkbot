@@ -304,14 +304,12 @@ class TargetDatabase:
             sql += " ORDER BY RANDOM()"
 
         fingerprints = {}
-        rows = self.execute(sql, parameters, fetchall=True)
-        if not rows:
+        targets = self.execute(sql, parameters, fetchall=True)
+        if not targets:
             return
-        for row in rows:
-            url = row[0]
-            target_id = row[1]
-            fingerprint_id = row[2]
-            fingerprint = row[3]
+        targets.reverse()
+        while targets:
+            url, target_id, fingerprint_id, fingerprint = targets.pop()
 
             if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
                 logging.debug("Deleting (matches blocklist pattern): %s", url)
@@ -338,7 +336,9 @@ class TargetDatabase:
                     continue
                 else:
                     fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                    fingerprints[fingerprint] = fingerprint_id
                     self.update_target_fingerprint(target_id, fingerprint_id)
+                    targets = [target for target in targets if not target[3] or not target[3] in fingerprints]
                     self.mark_other_targets_scanned(fingerprint_id, target_id)
 
             else:
@@ -348,6 +348,7 @@ class TargetDatabase:
                     continue
                 else:
                     fingerprints[fingerprint] = fingerprint_id
+                    targets = [target for target in targets if not target[3] or not target[3] in fingerprints]
                     self.mark_other_targets_scanned(fingerprint_id, target_id)
 
     def generate_fingerprints(self, source):
