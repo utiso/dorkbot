@@ -30,10 +30,6 @@ class TargetDatabase:
             self.id_type = "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
-            ##self.connect_kwargs["keepalives"] = 1
-            ##self.connect_kwargs["keepalives_idle"] = 30
-            ##self.connect_kwargs["keepalives_interval"] = 10
-            ##self.connect_kwargs["keepalives_count"] = 5
         else:
             module_name = "sqlite3"
             self.database = os.path.expanduser(database)
