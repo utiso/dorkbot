@@ -95,22 +95,22 @@ class TargetDatabase:
         self.db.close()
 
     def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
-        if len(sql) == 2:
-            statement, arguments = sql
-            if not arguments:
-                arguments = ""
-        else:
-            statement = sql[0]
-            arguments = ""
+        statement, parameters = (sql[0], sql[1] if len(sql) == 2 else ())
 
         for i in range(retries):
             try:
                 with self.db, closing(self.db.cursor()) as c:
                     result = None
                     if many:
-                        c.executemany(statement, arguments)
+                        if parameters:
+                            c.executemany(statement, parameters)
+                        else:
+                            c.executemany(statement)
                     else:
-                        c.execute(statement, arguments)
+                        if parameters:
+                            c.execute(statement, parameters)
+                        else:
+                            c.execute(statement)
                     if fetchone:
                         result = c.fetchone()
                     elif fetchall:
