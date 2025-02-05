@@ -17,12 +17,14 @@ import importlib
 import logging
 import os
 import re
+import signal
 import sys
 from logging.handlers import WatchedFileHandler
 from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
 def main():
+    signal.signal(signal.SIGINT, graceful_shutdown)
     args, parser = get_main_args_parser()
     initialize_logger(args.log, args.verbose)
 
@@ -139,6 +141,10 @@ def main():
         parser.print_usage()
 
     logging.shutdown()
+
+
+def graceful_shutdown(sig, frame):
+    sys.exit(0)
 
 
 def initialize_logger(log_file, verbose):
