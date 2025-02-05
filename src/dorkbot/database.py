@@ -240,7 +240,8 @@ class TargetDatabase:
                          [(url, source_id) for url in urls_chunk], many=True)
 
     def mark_other_targets_scanned(self, fingerprint_id, target_id):
-        self.execute("UPDATE targets SET scanned = 1 WHERE fingerprint_id = %s AND id != %s" % (self.param, self.param), (fingerprint_id, target_id))
+        self.execute("UPDATE targets SET scanned = 1 WHERE fingerprint_id = %s AND id != %s"
+                     % (self.param, self.param), (fingerprint_id, target_id))
 
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
