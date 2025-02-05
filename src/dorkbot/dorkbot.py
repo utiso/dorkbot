@@ -146,11 +146,6 @@ def main():
 def initialize_logger(log_file, verbose):
     log = logging.getLogger()
 
-    if verbose and verbose >= 2:
-        log.setLevel(logging.DEBUG)
-    else:
-        log.setLevel(logging.INFO)
-
     log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
     if log_file:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -164,7 +159,7 @@ def initialize_logger(log_file, verbose):
                 self.level = level
 
             def filter(self, record):
-                return record.levelno < self.level
+                return record.levelno <= self.level
 
         log_stdouthandler = logging.StreamHandler(sys.stdout)
         log_stdouthandler.setLevel(logging.DEBUG)
@@ -174,6 +169,11 @@ def initialize_logger(log_file, verbose):
         log_stderrhandler = logging.StreamHandler(sys.stderr)
         log_stderrhandler.setLevel(logging.ERROR)
         log.addHandler(log_stderrhandler)
+
+    if verbose and verbose >= 2:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
 
 def load_module(category, name):
