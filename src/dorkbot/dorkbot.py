@@ -121,9 +121,7 @@ def main():
 
         if args.list_targets or args.list_unscanned:
             try:
-                urls = db.get_urls(unscanned_only=args.list_unscanned, source=args.source, random=args.random)
-                if args.count > 0:
-                    urls = urls[:args.count]
+                urls = db.get_urls(unscanned_only=args.list_unscanned, source=args.source, random=args.random, count=args.count)
                 for url in urls:
                     print(url)
             except BrokenPipeError:

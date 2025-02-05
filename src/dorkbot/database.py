@@ -130,7 +130,7 @@ class TargetDatabase:
                     logging.error(f"Database execution failed (will not retry) - {str(e)}")
                     sys.exit(1)
 
-    def get_urls(self, unscanned_only=False, source=False, random=False):
+    def get_urls(self, unscanned_only=False, source=False, random=False, count=False):
         if source and source is not True:
             sql = "SELECT t.url FROM targets t" \
                   + " INNER JOIN sources s on s.id = t.source_id"
@@ -155,6 +155,9 @@ class TargetDatabase:
 
         if random:
             sql += " ORDER BY RANDOM()"
+
+        if count > 0:
+            sql += f" LIMIT {count}"
 
         rows = self.execute(sql, parameters, fetchall=True)
         urls = [" | ".join([str(column or "") for column in row]) for row in rows]
