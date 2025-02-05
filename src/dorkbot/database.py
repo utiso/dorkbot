@@ -119,9 +119,12 @@ class TargetDatabase:
                 return result
             except self.module.Error as e:
                 retry_conditions = [
+                    "the connection is closed",
                     "connection already closed",
                     "server closed the connection unexpectedly",
                     "connection has been closed unexpectedly",
+                    "no connection to the server",
+                    "SSL SYSCALL error: EOF detected",
                 ]
                 if i < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retry {i} of {retries}) - {str(e)}")
