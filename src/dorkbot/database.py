@@ -6,6 +6,7 @@ else:
     from target import Target
     from util import generate_fingerprint
 import importlib
+import importlib.util
 import logging
 import os
 import sys
@@ -16,11 +17,23 @@ class TargetDatabase:
     def __init__(self, database, drop_tables=False, create_tables=False):
         self.connect_kwargs = {}
         if database.startswith("postgresql://"):
-            module_name = "psycopg2"
+            module_name = None
+            for module in ["psycopg", "psycopg2"]:
+                module_spec = importlib.util.find_spec(module)
+                if module_spec:
+                    module_name = module
+                    break
+            if not module_name:
+                logging.error("Missing postgresql module - try pip install psycopg[binary] or psycopg2-binary")
+                sys.exit(1)
             self.database = database
             self.id_type = "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
+            ##self.connect_kwargs["keepalives"] = 1
+            ##self.connect_kwargs["keepalives_idle"] = 30
+            ##self.connect_kwargs["keepalives_interval"] = 10
+            ##self.connect_kwargs["keepalives_count"] = 5
         else:
             module_name = "sqlite3"
             self.database = os.path.expanduser(database)
@@ -102,15 +115,9 @@ class TargetDatabase:
                 with closing(self.db.cursor()) as c:
                     result = None
                     if many:
-                        if parameters:
-                            c.executemany(statement, parameters)
-                        else:
-                            c.executemany(statement)
+                        c.executemany(statement, parameters)
                     else:
-                        if parameters:
-                            c.execute(statement, parameters)
-                        else:
-                            c.execute(statement)
+                        c.execute(statement, parameters)
                     if fetchone:
                         result = c.fetchone()
                     elif fetchall:
@@ -155,7 +162,7 @@ class TargetDatabase:
                 sql += " WHERE s.source = %s" % self.param
             parameters = (source,)
         else:
-            parameters = None
+            parameters = ()
 
         if random:
             sql += " ORDER BY RANDOM()"
@@ -177,7 +184,7 @@ class TargetDatabase:
             sql += " AND s.source = %s" % self.param
             parameters = (source,)
         else:
-            parameters = None
+            parameters = ()
         if random:
             sql += " ORDER BY RANDOM()"
 
@@ -306,7 +313,7 @@ class TargetDatabase:
             sql += " AND s.source = %s" % self.param
             parameters = (source,)
         else:
-            parameters = None
+            parameters = ()
         if random:
             sql += " ORDER BY RANDOM()"
 
@@ -323,7 +330,15 @@ class TargetDatabase:
                 self.delete_target(url)
                 continue
 
-            if not fingerprint_id:
+            if fingerprint_id:
+                if fingerprint in fingerprints:
+                    self.mark_target_scanned(target_id)
+                    logging.debug("Skipping (matches existing fingerprint): %s", url)
+                else:
+                    fingerprints[fingerprint] = fingerprint_id
+                    self.mark_other_targets_scanned(fingerprint_id, target_id)
+
+            else:
                 fingerprint = generate_fingerprint(url)
 
                 if fingerprint in fingerprints:
@@ -331,32 +346,21 @@ class TargetDatabase:
                     self.update_target_fingerprint(target_id, fingerprint_id)
                     self.mark_target_scanned(target_id)
                     logging.debug("Skipping (matches existing fingerprint): %s", url)
-                    continue
                 else:
                     fingerprint_id = self.get_fingerprint_id(fingerprint)
 
-                if fingerprint_id:
-                    fingerprints[fingerprint] = fingerprint_id
-                    self.update_target_fingerprint(target_id, fingerprint_id)
-                    self.mark_target_scanned(target_id)
-                    logging.debug("Skipping (matches existing fingerprint): %s", url)
-                    continue
-                else:
-                    fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
-                    fingerprints[fingerprint] = fingerprint_id
-                    self.update_target_fingerprint(target_id, fingerprint_id)
-                    targets = [target for target in targets if not target[3] or not target[3] in fingerprints]
-                    self.mark_other_targets_scanned(fingerprint_id, target_id)
+                    if fingerprint_id:
+                        fingerprints[fingerprint] = fingerprint_id
+                        self.update_target_fingerprint(target_id, fingerprint_id)
+                        self.mark_target_scanned(target_id)
+                        logging.debug("Skipping (matches existing fingerprint): %s", url)
+                    else:
+                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                        fingerprints[fingerprint] = fingerprint_id
+                        self.update_target_fingerprint(target_id, fingerprint_id)
+                        self.mark_other_targets_scanned(fingerprint_id, target_id)
 
-            else:
-                if fingerprint in fingerprints:
-                    self.mark_target_scanned(target_id)
-                    logging.debug("Skipping (matches existing fingerprint): %s", url)
-                    continue
-                else:
-                    fingerprints[fingerprint] = fingerprint_id
-                    targets = [target for target in targets if not target[3] or not target[3] in fingerprints]
-                    self.mark_other_targets_scanned(fingerprint_id, target_id)
+            targets = [target for target in targets if not target[3] or target[3] not in fingerprints]
 
     def generate_fingerprints(self, source):
         logging.info("Generating fingerprints")
@@ -368,25 +372,23 @@ class TargetDatabase:
             sql += " AND s.source = %s" % self.param
             parameters = (source,)
         else:
-            parameters = None
+            parameters = ()
 
+        targets = self.execute(sql, parameters, fetchall=True)
+        targets.reverse()
         fingerprints = {}
-        rows = self.execute(sql, parameters, fetchall=True)
-        for row in rows:
-            url = row[0]
-            target_id = row[1]
-
+        while targets:
+            url, target_id = targets.pop()
             fingerprint = generate_fingerprint(url)
-
             if fingerprint in fingerprints:
-                self.update_target_fingerprint(target_id, fingerprints[fingerprint])
-                continue
-
-            fingerprint_id = self.get_fingerprint_id(fingerprint)
-            if fingerprint_id:
-                fingerprints[fingerprint] = fingerprint_id
+                fingerprint_id = fingerprints[fingerprint]
                 self.update_target_fingerprint(target_id, fingerprint_id)
             else:
-                fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
-                fingerprints[fingerprint] = fingerprint_id
-                self.update_target_fingerprint(target_id, fingerprint_id)
+                fingerprint_id = self.get_fingerprint_id(fingerprint)
+                if fingerprint_id:
+                    fingerprints[fingerprint] = fingerprint_id
+                    self.update_target_fingerprint(target_id, fingerprint_id)
+                else:
+                    fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                    fingerprints[fingerprint] = fingerprint_id
+                    self.update_target_fingerprint(target_id, fingerprint_id)

@@ -17,15 +17,17 @@ class Blocklist:
 
         if blocklist.startswith("postgresql://"):
             self.database = blocklist
-            module_name = "psycopg2"
+            module_name = None
+            for module in ["psycopg", "psycopg2"]:
+                module_spec = importlib.util.find_spec(module)
+                if module_spec:
+                    module_name = module
+                    break
+            if not module_name:
+                logging.error("Missing postgresql module - try pip install psycopg[binary] or psycopg2-binary")
+                sys.exit(1)
             self.insert = "INSERT"
             self.conflict = "ON CONFLICT DO NOTHING"
-        elif blocklist.startswith("phoenixdb://"):
-            self.database = blocklist[12:]
-            module_name = "phoenixdb"
-            self.insert = "UPSERT"
-            self.conflict = ""
-            self.connect_kwargs["autocommit"] = True
         elif blocklist.startswith("sqlite3://"):
             self.database = os.path.expanduser(blocklist[10:])
             module_name = "sqlite3"
@@ -68,8 +70,8 @@ class Blocklist:
                     break
                 except self.module.Error as e:
                     retry_conditions = ["Connection timed out"]
-                    if i < retries - 1 and any(error in str(e) for error in retry_conditions):
-                        logging.warning(f"Blocklist database connection failed (retrying) - {str(e)}")
+                    if i < retries and any(error in str(e) for error in retry_conditions):
+                        logging.warning(f"Blocklist database connection failed (retry {i} of {retries}) - {str(e)}")
                         continue
                     else:
                         logging.error(f"Blocklist database connection failed (will not retry) - {str(e)}")
@@ -89,32 +91,33 @@ class Blocklist:
             self.blocklist_file.close()
 
     def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
-        if len(sql) == 2:
-            statement, arguments = sql
-        else:
-            statement = sql[0]
-            arguments = ""
+        statement, parameters = (sql[0], sql[1] if len(sql) == 2 else ())
 
         for i in range(retries):
             try:
-                with self.db, closing(self.db.cursor()) as c:
+                with closing(self.db.cursor()) as c:
                     result = None
                     if many:
-                        c.executemany(statement, arguments)
+                        c.executemany(statement, parameters)
                     else:
-                        c.execute(statement, arguments)
+                        c.execute(statement, parameters)
                     if fetchone:
                         result = c.fetchone()
                     elif fetchall:
                         result = c.fetchall()
-                    return result
+                self.db.commit()
+                return result
             except self.module.Error as e:
                 retry_conditions = [
+                    "the connection is closed",
                     "connection already closed",
-                    "server closed the connection unexpectedly"
+                    "server closed the connection unexpectedly",
+                    "connection has been closed unexpectedly",
+                    "no connection to the server",
+                    "SSL SYSCALL error: EOF detected",
                 ]
-                if i < retries - 1 and any(error in str(e) for error in retry_conditions):
-                    logging.warning(f"Database execution failed (retrying) - {str(e)}")
+                if i < retries and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database execution failed (retry {i} of {retries}) - {str(e)}")
                     self.connect()
                     continue
                 else:
