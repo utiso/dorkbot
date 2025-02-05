@@ -99,7 +99,7 @@ class TargetDatabase:
 
         for i in range(retries):
             try:
-                with self.db, closing(self.db.cursor()) as c:
+                with closing(self.db.cursor()) as c:
                     result = None
                     if many:
                         if parameters:
@@ -115,7 +115,8 @@ class TargetDatabase:
                         result = c.fetchone()
                     elif fetchall:
                         result = c.fetchall()
-                    return result
+                self.db.commit()
+                return result
             except self.module.Error as e:
                 retry_conditions = [
                     "connection already closed",
