@@ -1,82 +1,52 @@
 #!/usr/bin/env python3
-import importlib
 import ipaddress
 import logging
 import os
 import re
 import sys
-from contextlib import closing
+if __package__:
+    from dorkbot.database import TargetDatabase
+    from dorkbot.util import get_database_attributes
+else:
+    from database import TargetDatabase
+    from util import get_database_attributes
 
 
 class Blocklist:
-    def __init__(self, blocklist):
-        self.connect_kwargs = {}
+    def __init__(self, address, drop_tables=False, create_tables=False):
+        for key, value in get_database_attributes(address).items():
+            setattr(self, key, value)
         self.ip_set = set()
         self.host_set = set()
         self.regex_set = set()
 
-        if blocklist.startswith("postgresql://"):
-            self.database = blocklist
-            module_name = None
-            for module in ["psycopg", "psycopg2"]:
-                module_spec = importlib.util.find_spec(module)
-                if module_spec:
-                    module_name = module
-                    break
-            if not module_name:
-                logging.error("Missing postgresql module - try pip install psycopg[binary] or psycopg2-binary")
-                sys.exit(1)
-            self.insert = "INSERT"
-            self.conflict = "ON CONFLICT DO NOTHING"
-        elif blocklist.startswith("sqlite3://"):
-            self.database = os.path.expanduser(blocklist[10:])
-            module_name = "sqlite3"
-            database_dir = os.path.dirname(self.database)
-            self.insert = "INSERT OR REPLACE"
-            self.conflict = ""
-            if database_dir and not os.path.isdir(database_dir):
-                try:
-                    os.makedirs(database_dir)
-                except OSError as e:
-                    logging.error("Failed to create directory - %s", str(e))
-                    sys.exit(1)
+        if self.database:
+            if address.startswith("sqlite3://") and not os.path.isfile(self.database):
+                os.path.makedirs(os.path.dirname(self.database))
+
+            self.connect()
+
+            if drop_tables:
+                logging.debug("Dropping tables")
+                self.execute("DROP TABLE IF EXISTS blocklist")
+
+            if create_tables:
+                self.execute("CREATE TABLE IF NOT EXISTS blocklist"
+                             f" (id {self.id_type},"
+                             " item VARCHAR PRIMARY KEY)")
+
         else:
-            self.database = False
-            self.filename = blocklist
             try:
                 self.blocklist_file = open(self.filename, "r")
             except Exception as e:
                 logging.error("Failed to read blocklist file - %s", str(e))
                 sys.exit(1)
 
-        if self.database:
-            self.module = importlib.import_module(module_name, package=None)
-
-            if self.module.paramstyle == "qmark":
-                self.param = "?"
-            else:
-                self.param = "%s"
-
-            self.connect()
-            self.execute("CREATE TABLE IF NOT EXISTS blocklist (item VARCHAR PRIMARY KEY)")
-
         self.parse_list(self.read_items())
 
-    def connect(self, retries=3):
+    def connect(self):
         if self.database:
-            for i in range(retries):
-                try:
-                    self.db = self.module.connect(self.database, **self.connect_kwargs)
-                    break
-                except self.module.Error as e:
-                    retry_conditions = ["Connection timed out"]
-                    if i < retries and any(error in str(e) for error in retry_conditions):
-                        logging.warning(f"Blocklist database connection failed (retry {i} of {retries}) - {str(e)}")
-                        continue
-                    else:
-                        logging.error(f"Blocklist database connection failed (will not retry) - {str(e)}")
-                        sys.exit(1)
-
+            TargetDatabase.connect(self)
         else:
             try:
                 self.blocklist_file = open(self.filename, "a")
@@ -90,39 +60,9 @@ class Blocklist:
         else:
             self.blocklist_file.close()
 
-    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
-        statement, parameters = (sql[0], sql[1] if len(sql) == 2 else ())
-
-        for i in range(retries):
-            try:
-                with closing(self.db.cursor()) as c:
-                    result = None
-                    if many:
-                        c.executemany(statement, parameters)
-                    else:
-                        c.execute(statement, parameters)
-                    if fetchone:
-                        result = c.fetchone()
-                    elif fetchall:
-                        result = c.fetchall()
-                self.db.commit()
-                return result
-            except self.module.Error as e:
-                retry_conditions = [
-                    "the connection is closed",
-                    "connection already closed",
-                    "server closed the connection unexpectedly",
-                    "connection has been closed unexpectedly",
-                    "no connection to the server",
-                    "SSL SYSCALL error: EOF detected",
-                ]
-                if i < retries and any(error in str(e) for error in retry_conditions):
-                    logging.warning(f"Database execution failed (retry {i} of {retries}) - {str(e)}")
-                    self.connect()
-                    continue
-                else:
-                    logging.error(f"Database execution failed (will not retry) - {str(e)}")
-                    sys.exit(1)
+    def execute(self, *sql, fetchall=False):
+        result = TargetDatabase.execute(self, *sql, fetchall=fetchall)
+        return result
 
     def parse_list(self, items):
         for item in items:

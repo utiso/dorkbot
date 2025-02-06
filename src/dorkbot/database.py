@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 if __package__:
     from dorkbot.target import Target
-    from dorkbot.util import generate_fingerprint
+    from dorkbot.util import generate_fingerprint, get_database_attributes
 else:
     from target import Target
-    from util import generate_fingerprint
-import importlib
-import importlib.util
+    from util import generate_fingerprint, get_database_attributes
 import logging
 import os
 import sys
@@ -14,50 +12,15 @@ from contextlib import closing
 
 
 class TargetDatabase:
-    def __init__(self, database, drop_tables=False, create_tables=False):
-        self.connect_kwargs = {}
-        if database.startswith("postgresql://"):
-            module_name = None
-            for module in ["psycopg", "psycopg2"]:
-                module_spec = importlib.util.find_spec(module)
-                if module_spec:
-                    module_name = module
-                    break
-            if not module_name:
-                logging.error("Missing postgresql module - try pip install psycopg[binary] or psycopg2-binary")
-                sys.exit(1)
-            self.database = database
-            self.id_type = "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
-            self.insert = "INSERT"
-            self.conflict = "ON CONFLICT DO NOTHING"
-        else:
-            module_name = "sqlite3"
-            self.database = os.path.expanduser(database)
-            database_dir = os.path.dirname(self.database)
-            self.id_type = "INTEGER PRIMARY KEY"
-            self.insert = "INSERT OR REPLACE"
-            self.conflict = ""
+    def __init__(self, address, drop_tables=False, create_tables=False):
+        protocols = ["postgresql://", "sqlite3://"]
+        if not any(address.startswith(protocol) for protocol in protocols):
+            address = f"sqlite3://{address}"
+        for key, value in get_database_attributes(address).items():
+            setattr(self, key, value)
 
-        try:
-            self.module = importlib.import_module(module_name, package=None)
-        except ModuleNotFoundError:
-            logging.error("Failed to load required module - %s", module_name)
-            sys.exit(1)
-
-        if self.module.paramstyle == "qmark":
-            self.param = "?"
-        else:
-            self.param = "%s"
-
-        if module_name == "sqlite3" and not os.path.isfile(self.database):
-            logging.debug("Creating database file - %s", self.database)
-
-            if database_dir and not os.path.isdir(database_dir):
-                try:
-                    os.makedirs(database_dir)
-                except OSError as e:
-                    logging.error("Failed to create directory - %s", str(e))
-                    sys.exit(1)
+        if address.startswith("sqlite3://") and not os.path.isfile(self.database):
+            os.path.makedirs(os.path.dirname(self.database))
 
         self.connect()
 
@@ -121,14 +84,7 @@ class TargetDatabase:
                 self.db.commit()
                 return result
             except self.module.Error as e:
-                retry_conditions = [
-                    "the connection is closed",
-                    "connection already closed",
-                    "server closed the connection unexpectedly",
-                    "connection has been closed unexpectedly",
-                    "no connection to the server",
-                    "SSL SYSCALL error: EOF detected",
-                ]
+                retry_conditions = ["connection", "SSL"]
                 if i < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retry {i} of {retries}) - {str(e)}")
                     self.connect()

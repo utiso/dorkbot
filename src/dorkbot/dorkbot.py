@@ -61,9 +61,10 @@ def main():
         pattern = "^[^:]+://.*$"
         regex = re.compile(pattern)
         if (regex.match(args.database)):
-            blocklist = Blocklist(args.database)
+            blocklist_address = args.database
         else:
-            blocklist = Blocklist("sqlite3://" + args.database)
+            blocklist_address = f"sqlite3://{args.database}"
+        blocklist = Blocklist(blocklist_address, drop_tables=args.drop_tables, create_tables=True)
 
         blocklists = [blocklist]
         if args.external_blocklist:
