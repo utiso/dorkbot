@@ -22,7 +22,7 @@ class Blocklist:
 
         if self.database:
             if address.startswith("sqlite3://") and not os.path.isfile(self.database):
-                os.path.makedirs(os.path.dirname(self.database))
+                os.makedirs(os.path.dirname(self.database))
 
             self.connect()
 
