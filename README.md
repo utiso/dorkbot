@@ -196,6 +196,25 @@ These options are applicable regardless of module chosen:
 
 Indexer Modules
 ===============
+### bing_api ###
+<pre>
+  Searches bing.com
+
+  key KEY             API key
+  query QUERY         search query
+</pre>
+
+### commoncrawl ###
+<pre>
+  Searches commoncrawl.org crawl data
+
+  domain DOMAIN       pull all results for given domain or subdomain
+  index INDEX         search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
+  filter FILTER       query filter to apply to the search
+  retries RETRIES     number of times to retry fetching results on error
+  threads THREADS     number of concurrent requests to commoncrawl.org
+</pre>
+
 ### google_api ###
 <pre>
   Searches google.com
@@ -220,15 +239,9 @@ Indexer Modules
   threads THREADS     number of concurrent requests to wayback.org
 </pre>
 
-### commoncrawl ###
+### stdin ###
 <pre>
-  Searches commoncrawl.org crawl data
-
-  domain DOMAIN       pull all results for given domain or subdomain
-  index INDEX         search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
-  filter FILTER       query filter to apply to the search
-  retries RETRIES     number of times to retry fetching results on error
-  threads THREADS     number of concurrent requests to commoncrawl.org
+  Accepts urls from stdin, one per line
 </pre>
 
 ### wayback ###
@@ -241,19 +254,6 @@ Indexer Modules
   to TO               end timestamp
   retries RETRIES     number of times to retry fetching results on error
   threads THREADS     number of concurrent requests to wayback.org
-</pre>
-
-### bing_api ###
-<pre>
-  Searches bing.com
-
-  key KEY             API key
-  query QUERY         search query
-</pre>
-
-### stdin ###
-<pre>
-  Accepts urls from stdin, one per line
 </pre>
 
 Scanner Modules
@@ -271,9 +271,9 @@ Scanner Modules
   label LABEL         friendly name field to include in vulnerability report
 </pre>
 
-### wapiti ###
+### arachni ###
 <pre>
-  Scans with the wapiti command-line scanner
+  Scans with the arachni command-line scanner
 
   path PATH           path to scanner binary
 </pre>
@@ -285,9 +285,9 @@ Scanner Modules
   path PATH           path to scanner binary
 </pre>
 
-### arachni ###
+### wapiti ###
 <pre>
-  Scans with the arachni command-line scanner
+  Scans with the wapiti command-line scanner
 
   path PATH           path to scanner binary
 </pre>
