@@ -21,8 +21,12 @@ class Blocklist:
         self.regex_set = set()
 
         if self.database:
-            if address.startswith("sqlite3://") and not os.path.isfile(self.database):
-                os.makedirs(os.path.dirname(self.database))
+            if address.startswith("sqlite3://"):
+                try:
+                    os.makedirs(os.path.dirname(os.path.abspath(self.database)), exist_ok=True)
+                except OSError as e:
+                    logging.error(f"Failed to create parent directory for database file - {str(e)}")
+                    sys.exit(1)
 
             self.connect()
 
@@ -37,9 +41,10 @@ class Blocklist:
 
         else:
             try:
+                os.makedirs(os.path.dirname(os.path.abspath(self.filename)), exist_ok=True)
                 self.blocklist_file = open(self.filename, "r")
-            except Exception as e:
-                logging.error("Failed to read blocklist file - %s", str(e))
+            except OSError as e:
+                logging.error(f"Failed to open database file - {str(e)}")
                 sys.exit(1)
 
         self.parse_list(self.read_items())
@@ -51,7 +56,7 @@ class Blocklist:
             try:
                 self.blocklist_file = open(self.filename, "a")
             except Exception as e:
-                logging.error("Failed to read blocklist file - %s", str(e))
+                logging.error(f"Failed to read blocklist file - {str(e)}")
                 sys.exit(1)
 
     def close(self):
@@ -71,14 +76,14 @@ class Blocklist:
                 try:
                     ip_net = ipaddress.ip_network(ip)
                 except ValueError as e:
-                    logging.error("Could not parse blocklist item as ip - %s", str(e))
+                    logging.error(f"Could not parse blocklist item as ip - {str(e)}")
                 self.ip_set.add(ip_net)
             elif item.startswith("host:"):
                 self.host_set.add(item.split(":")[1])
             elif item.startswith("regex:"):
                 self.regex_set.add(item.split(":")[1])
             else:
-                logging.warning("Could not parse blocklist item - %s", item)
+                logging.warning(f"Could not parse blocklist item - {item}")
 
         pattern = "|".join(self.regex_set)
         if pattern:
@@ -115,7 +120,7 @@ class Blocklist:
             try:
                 ip_net = ipaddress.ip_network(ip)
             except ValueError as e:
-                logging.error("Could not parse blocklist item as ip - %s", str(e))
+                logging.error(f"Could not parse blocklist item as ip - {str(e)}")
                 sys.exit(1)
             self.ip_set.add(ip_net)
         elif item.startswith("host:"):
@@ -164,7 +169,7 @@ class Blocklist:
             try:
                 os.unlink(self.filename)
             except OSError as e:
-                logging.error("Failed to delete blocklist file - %s", str(e))
+                logging.error(f"Failed to delete blocklist file - {str(e)}")
                 sys.exit(1)
 
         self.regex = None

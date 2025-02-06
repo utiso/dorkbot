@@ -40,7 +40,7 @@ def get_database_module(address):
                 module_name = module
                 break
         if not module_name:
-            logging.error("Missing postgresql module - try pip install psycopg[binary] or psycopg2-binary")
+            logging.error("Missing postgresql module - try: pip install psycopg[binary]")
             sys.exit(1)
 
     elif address.startswith("sqlite3://"):
@@ -49,7 +49,7 @@ def get_database_module(address):
         if module_spec:
             module_name = module
         else:
-            logging.error("Missing sqlite3 module - try pip install sqlite3")
+            logging.error("Missing sqlite3 module - try: pip install sqlite3")
             sys.exit(1)
 
     return importlib.import_module(module_name, package=None)
@@ -61,6 +61,7 @@ def get_database_attributes(address):
     if address.startswith("postgresql://"):
         attributes.update({
             "module": get_database_module(address),
+            "address": address,
             "database": address,
             "id_type": "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
             "insert": "INSERT",
@@ -72,6 +73,7 @@ def get_database_attributes(address):
     elif address.startswith("sqlite3://"):
         attributes.update({
             "module": get_database_module(address),
+            "address": address,
             "database": os.path.expanduser(address[10:]),
             "id_type": "INTEGER PRIMARY KEY",
             "insert": "INSERT OR REPLACE",

@@ -19,8 +19,12 @@ class TargetDatabase:
         for key, value in get_database_attributes(address).items():
             setattr(self, key, value)
 
-        if address.startswith("sqlite3://") and not os.path.isfile(self.database):
-            os.makedirs(os.path.dirname(self.database))
+        if address.startswith("sqlite3://"):
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(self.database)), exist_ok=True)
+            except OSError as e:
+                logging.error(f"Failed to create parent directory for database file - {str(e)}")
+                sys.exit(1)
 
         self.connect()
 
@@ -155,7 +159,7 @@ class TargetDatabase:
                 fingerprint_id = self.get_fingerprint_id(fingerprint)
                 if fingerprint_id:
                     self.update_target_fingerprint(target_id, fingerprint_id)
-                    logging.debug("Skipping (matches scanned fingerprint): %s", url)
+                    logging.debug(f"Skipping (matches scanned fingerprint): {url}")
                     continue
                 else:
                     self.mark_target_scanned(target_id)
@@ -279,14 +283,14 @@ class TargetDatabase:
             url, target_id, fingerprint_id, fingerprint = targets.pop()
 
             if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-                logging.debug("Deleting (matches blocklist pattern): %s", url)
+                logging.debug(f"Deleting (matches blocklist pattern): {url}")
                 self.delete_target(url)
                 continue
 
             if fingerprint_id:
                 if fingerprint in fingerprints:
                     self.mark_target_scanned(target_id)
-                    logging.debug("Skipping (matches existing fingerprint): %s", url)
+                    logging.debug(f"Skipping (matches existing fingerprint): {url}")
                 else:
                     fingerprints[fingerprint] = fingerprint_id
                     self.mark_other_targets_scanned(fingerprint_id, target_id)
@@ -298,7 +302,7 @@ class TargetDatabase:
                     fingerprint_id = fingerprints[fingerprint]
                     self.update_target_fingerprint(target_id, fingerprint_id)
                     self.mark_target_scanned(target_id)
-                    logging.debug("Skipping (matches existing fingerprint): %s", url)
+                    logging.debug(f"Skipping (matches existing fingerprint): {url}")
                 else:
                     fingerprint_id = self.get_fingerprint_id(fingerprint)
 
@@ -306,7 +310,7 @@ class TargetDatabase:
                         fingerprints[fingerprint] = fingerprint_id
                         self.update_target_fingerprint(target_id, fingerprint_id)
                         self.mark_target_scanned(target_id)
-                        logging.debug("Skipping (matches existing fingerprint): %s", url)
+                        logging.debug(f"Skipping (matches existing fingerprint): {url}")
                     else:
                         fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
                         fingerprints[fingerprint] = fingerprint_id

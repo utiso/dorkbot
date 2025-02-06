@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import socket
+import sys
 from urllib.parse import urlparse
 
 
@@ -58,10 +59,12 @@ class Target:
         if indent and indent.isdigit():
             indent = int(indent)
 
-        if not os.path.exists(scanner_args.report_dir):
-            os.makedirs(scanner_args.report_dir)
-
-        with open(filename, report_mode) as outfile:
-            json.dump(vulns, outfile, indent=indent, sort_keys=True)
-            outfile.write('\n')
-            logging.info("Report saved to: %s" % outfile.name)
+        try:
+            os.makedirs(os.path.abspath(scanner_args.report_dir), exist_ok=True)
+            with open(filename, report_mode) as outfile:
+                json.dump(vulns, outfile, indent=indent, sort_keys=True)
+                outfile.write('\n')
+                logging.info("Report saved to: %s" % outfile.name)
+        except OSError as e:
+            logging.error(f"Failed to write report - {str(e)}")
+            sys.exit(1)

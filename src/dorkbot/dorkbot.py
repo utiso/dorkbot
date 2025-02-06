@@ -28,12 +28,11 @@ def main():
     args, parser = get_main_args_parser()
     initialize_logger(args.log, args.verbose)
 
-    if args.directory and not os.path.isdir(args.directory):
-        logging.debug("Creating directory - %s", args.directory)
+    if args.directory:
         try:
-            os.makedirs(args.directory)
+            os.makedirs(os.path.abspath(args.directory), exist_ok=True)
         except OSError as e:
-            logging.error("Failed to create directory - %s", str(e))
+            logging.error(f"Failed to create dorkbot directory - {str(e)}")
             sys.exit(1)
 
     if args.help:
@@ -58,13 +57,8 @@ def main():
             or args.list_unscanned or args.reset_scanned \
             or args.list_sources:
 
-        pattern = "^[^:]+://.*$"
-        regex = re.compile(pattern)
-        if (regex.match(args.database)):
-            blocklist_address = args.database
-        else:
-            blocklist_address = f"sqlite3://{args.database}"
-        blocklist = Blocklist(blocklist_address, drop_tables=args.drop_tables, create_tables=True)
+        db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
+        blocklist = Blocklist(db.address, drop_tables=args.drop_tables, create_tables=True)
 
         blocklists = [blocklist]
         if args.external_blocklist:
@@ -82,7 +76,6 @@ def main():
                 for item in blocklist.get_parsed_items():
                     print(item)
 
-        db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
         if args.flush_fingerprints:
             db.flush_fingerprints()
         if args.reset_scanned:
@@ -158,11 +151,15 @@ def initialize_logger(log_file, verbose):
 
     log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
     if log_file:
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        log_filehandler = WatchedFileHandler(log_file, mode="a", encoding="utf-8")
-        log_filehandler.setLevel(logging.DEBUG)
-        log_filehandler.setFormatter(log_formatter)
-        log.addHandler(log_filehandler)
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(log_file)), exist_ok=True)
+            log_filehandler = WatchedFileHandler(log_file, mode="a", encoding="utf-8")
+            log_filehandler.setLevel(logging.DEBUG)
+            log_filehandler.setFormatter(log_formatter)
+            log.addHandler(log_filehandler)
+        except OSError as e:
+            logging.error(f"Failed to create log file - {str(e)}")
+            sys.exit(1)
     else:
         class LogFilter(logging.Filter):
             def __init__(self, level):
@@ -380,7 +377,7 @@ def format_module_args(args_list):
 
 def index(db, blocklists, indexer, args, indexer_args):
     indexer_name = indexer.__name__.split(".")[-1]
-    logging.info("Indexing: %s %s", indexer_name, vars(indexer_args) if args.verbose else "")
+    logging.info(f"Indexing: {indexer_name} {vars(indexer_args) if args.verbose else ''}")
     setattr(indexer_args, "directory", args.directory)
     urls, module_source = indexer.run(indexer_args)
     if args.source:
@@ -391,7 +388,7 @@ def index(db, blocklists, indexer, args, indexer_args):
     targets = []
     for url in urls:
         if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-            logging.debug("Ignoring (matches blocklist pattern): %s", url)
+            logging.debug(f"Ignoring (matches blocklist pattern): {url}")
             continue
 
         url_parts = urlparse(url)
@@ -410,13 +407,6 @@ def prune(db, blocklists, args):
 
 
 def scan(db, blocklists, scanner, args, scanner_args):
-    if not os.path.isdir(scanner_args.report_dir):
-        try:
-            os.makedirs(scanner_args.report_dir)
-        except OSError as e:
-            logging.error("Failed to create report directory - %s", str(e))
-            sys.exit(1)
-
     scanned = 0
     while scanned < args.count or args.count == -1:
         url = db.get_next_target(source=args.source, random=args.random)
@@ -426,16 +416,16 @@ def scan(db, blocklists, scanner, args, scanner_args):
         target = Target(url)
 
         if True in [blocklist.match(target) for blocklist in blocklists]:
-            logging.debug("Deleting (matches blocklist pattern): %s", url)
+            logging.debug(f"Deleting (matches blocklist pattern): {url}")
             db.delete_target(url)
             continue
 
-        logging.info("Scanning: %s %s", url, vars(scanner_args) if args.verbose else "")
+        logging.info(f"Scanning: {url} {vars(scanner_args) if args.verbose else ''}")
         results = scanner.run(scanner_args, target)
         scanned += 1
 
         if results is False:
-            logging.error("Scan failed: %s", target.url)
+            logging.error(f"Scan failed: {target.url}")
             continue
 
         target.endtime = generate_timestamp()
