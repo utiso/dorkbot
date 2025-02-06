@@ -108,12 +108,14 @@ blocklist:
 
 Tools / Dependencies
 =====
-* [psycopg2-binary](https://pypi.org/project/psycopg2-binary/) or [psycopg2](https://pypi.org/project/psycopg2/) (if using PostgreSQL)
-* [phoenixdb](https://pypi.org/project/phoenixdb/) (if using PhoenixDB)
-* [PhantomJS](http://phantomjs.org/) (if using non-api google indexer)
-* [Arachni](https://github.com/Arachni/arachni)
+Database drivers:
+* [psycopg](https://www.psycopg.org) (pip install "psycopg[binary]") (preferred)
+* [psycopg2](https://pypi.org/project/psycopg2-binary/) (pip install psycopg2-binary)
+
+Scanners:
+* [Wapiti](http://wapiti.sourceforge.net/) (pip install wapiti3)
 * [Codename SCNR](https://github.com/scnr/installer)
-* [Wapiti](http://wapiti.sourceforge.net/)
+* [Arachni](https://github.com/Arachni/arachni) (deprecated)
 
 As needed, dorkbot will search for tools in the following order:
 * Directory specified via relevant module option
@@ -147,13 +149,24 @@ path=/opt/arachni/bin
 report_dir=/tmp/reports
 </pre>
 
+Database
+========
+The target database stores urls to be scanned and the sources where they came from. It tracks each url's scanned status by building a list of fingerprints for each unique page + parameter set and comparing new targets to existing fingerprints. Fingerprints only need to be generated once and will be generated on demand as needed. Fingerprints and scanned status may be reset independently.
+
+Supported database addresses:
+* postgresql://[connection_string]
+* sqlite3:///path/to/sqlite_file.db
+* /path/to/sqlite_file.db
+* :memory:
+
+Note that for SQLite target databases the protocol is optional (it is still required for external blocklists). Additionally, SQLite's in-memory feature can be used to avoid writing to disk entirely by specifying a database address of ":memory:".
+
 Blocklist
 =========
-The blocklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. The internal blocklist is maintained in the dorkbot database, but a separate file or databasecan be specified by passing the appropriate file path or connection uri to --external-blocklist. Targets are matched first against the internal blocklist and then optionally against any provided external blocklists.
+The blocklist is a list of ip addresses, hostnames, or regular expressions of url patterns that should *not* be scanned. If a target url matches any item in this list it will be skipped and removed from the database. The internal blocklist is maintained in the dorkbot database, but a separate file or database can be specified by passing the appropriate file path or connection uri to --external-blocklist. Targets are matched first against the internal blocklist and then optionally against any provided external blocklists.
 
 Supported external blocklists:
-* postgresql://[server info]
-* phoenixdb://[server info]
+* postgresql://[connection_string]
 * sqlite3:///path/to/blocklist.db
 * /path/to/blocklist.txt
 
@@ -170,7 +183,7 @@ The first item will remove any target that doesn't contain a question mark, in o
 
 Prune
 =====
-The prune flag iterates through all targets, computes the fingerprints in memory, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-unscanned returns only scannable urls. It honors the **random** flag to compute fingerprints in random order.
+The prune flag iterates through all targets, computes the fingerprints, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-unscanned returns only scannable urls. It honors the **random** flag to process fingerprints in random order.
 
 General Options
 ===============
