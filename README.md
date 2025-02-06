@@ -124,9 +124,9 @@ As needed, dorkbot will search for tools in the following order:
 
 Files
 =====
-All SQLite3 databases, tools, and reports are saved in the dorkbot directory, which by default is the current directory. You can force a specific directory with the --directory flag. Default file paths within this directory are as follows:
+All SQLite databases, tools, and reports are saved in the dorkbot directory, which by default is the current directory. You can force a specific directory with the --directory flag. Default file paths within this directory are as follows:
 
-* SQLite3 database file: *dorkbot.db*
+* SQLite database file: *dorkbot.db*
 * External tools directory: *tools/*
 * Scan report output directory: *reports/*
 
