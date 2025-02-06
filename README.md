@@ -271,9 +271,9 @@ Scanner Modules
   label LABEL         friendly name field to include in vulnerability report
 </pre>
 
-### arachni ###
+### wapiti ###
 <pre>
-  Scans with the arachni command-line scanner
+  Scans with the wapiti command-line scanner
 
   path PATH           path to scanner binary
 </pre>
@@ -285,10 +285,9 @@ Scanner Modules
   path PATH           path to scanner binary
 </pre>
 
-### wapiti ###
+### arachni ###
 <pre>
-  Scans with the wapiti command-line scanner
+  Scans with the arachni command-line scanner
 
   path PATH           path to scanner binary
 </pre>
-
