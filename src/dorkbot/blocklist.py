@@ -33,7 +33,7 @@ class Blocklist:
             if create_tables:
                 self.execute("CREATE TABLE IF NOT EXISTS blocklist"
                              f" (id {self.id_type},"
-                             " item VARCHAR PRIMARY KEY)")
+                             " item VARCHAR)")
 
         else:
             try:
