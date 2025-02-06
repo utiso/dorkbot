@@ -196,17 +196,6 @@ These options are applicable regardless of module chosen:
 
 Indexer Modules
 ===============
-### google ###
-<pre>
-  Searches google.com via scraping
-
-  engine ENGINE       CSE id
-  query QUERY         search query
-  phantomjs-dir PHANTOMJS_DIR
-                      phantomjs base dir containing bin/phantomjs
-  domain DOMAIN       limit searches to specified domain
-</pre>
-
 ### google_api ###
 <pre>
   Searches google.com
