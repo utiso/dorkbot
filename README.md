@@ -190,7 +190,7 @@ General Options
 These options are applicable regardless of module chosen:
 <pre>
   --source [SOURCE]     Label associated with targets
-  --count COUNT         number of urls to scan, or -1 to scan all urls
+  --count COUNT         number of urls to retrieve/scan, or -1 for all
   --random              retrieve urls in random order
 </pre>
 
