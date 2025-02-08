@@ -284,37 +284,26 @@ class TargetDatabase:
 
             elif fingerprint_id:
                 if fingerprint in fingerprints:
-                    self.mark_target_scanned(target_id)
                     logging.debug(f"Skipping (matches existing fingerprint): {url}")
+                    self.mark_target_scanned(target_id)
                 else:
+                    logging.debug(f"Found unique fingerprint: {url}")
                     fingerprints[fingerprint] = fingerprint_id
-                    targets = self.get_new_targets(targets, fingerprints)
 
             else:
+                logging.debug(f"Computing fingerprint: {url}")
                 fingerprint = generate_fingerprint(url)
 
                 if fingerprint in fingerprints:
-                    fingerprint_id = fingerprints[fingerprint]
-                    self.update_target_fingerprint(target_id, fingerprint_id)
-                    self.mark_target_scanned(target_id)
                     logging.debug(f"Skipping (matches existing fingerprint): {url}")
+                    fingerprint_id = fingerprints[fingerprint]
+                    self.mark_target_scanned(target_id)
                 else:
-                    fingerprint_id = self.get_fingerprint_id(fingerprint)
+                    logging.debug(f"Found unique fingerprint: {url}")
+                    fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                    fingerprints[fingerprint] = fingerprint_id
 
-                    if fingerprint_id:
-                        fingerprints[fingerprint] = fingerprint_id
-                        self.update_target_fingerprint(target_id, fingerprint_id)
-                        self.mark_target_scanned(target_id)
-                        targets = self.get_new_targets(targets, fingerprints)
-                        logging.debug(f"Skipping (matches existing fingerprint): {url}")
-                    else:
-                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
-                        fingerprints[fingerprint] = fingerprint_id
-                        self.update_target_fingerprint(target_id, fingerprint_id)
-                        targets = self.get_new_targets(targets, fingerprints)
-
-    def get_new_targets(self, targets, fingerprints):
-        return [target for target in targets if target[3] not in fingerprints]
+                self.update_target_fingerprint(target_id, fingerprint_id)
 
     def generate_fingerprints(self, source):
         logging.info("Generating fingerprints")
