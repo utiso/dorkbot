@@ -199,10 +199,6 @@ class TargetDatabase:
                          % (self.insert, self.param, self.param, self.conflict),
                          [(url, source_id) for url in urls_chunk], many=True)
 
-    def mark_other_targets_scanned(self, fingerprint_id, target_id):
-        self.execute("UPDATE targets SET scanned = 1 WHERE fingerprint_id = %s AND id != %s"
-                     % (self.param, self.param), (fingerprint_id, target_id))
-
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
 
@@ -285,15 +281,14 @@ class TargetDatabase:
             if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
                 logging.debug(f"Deleting (matches blocklist pattern): {url}")
                 self.delete_target(url)
-                continue
 
-            if fingerprint_id:
+            elif fingerprint_id:
                 if fingerprint in fingerprints:
                     self.mark_target_scanned(target_id)
                     logging.debug(f"Skipping (matches existing fingerprint): {url}")
                 else:
                     fingerprints[fingerprint] = fingerprint_id
-                    self.mark_other_targets_scanned(fingerprint_id, target_id)
+                    targets = self.get_new_targets(targets, fingerprints)
 
             else:
                 fingerprint = generate_fingerprint(url)
@@ -310,14 +305,16 @@ class TargetDatabase:
                         fingerprints[fingerprint] = fingerprint_id
                         self.update_target_fingerprint(target_id, fingerprint_id)
                         self.mark_target_scanned(target_id)
+                        targets = self.get_new_targets(targets, fingerprints)
                         logging.debug(f"Skipping (matches existing fingerprint): {url}")
                     else:
                         fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
                         fingerprints[fingerprint] = fingerprint_id
                         self.update_target_fingerprint(target_id, fingerprint_id)
-                        self.mark_other_targets_scanned(fingerprint_id, target_id)
+                        targets = self.get_new_targets(targets, fingerprints)
 
-            targets = [target for target in targets if not target[3] or target[3] not in fingerprints]
+    def get_new_targets(self, targets, fingerprints):
+        return [target for target in targets if target[3] not in fingerprints]
 
     def generate_fingerprints(self, source):
         logging.info("Generating fingerprints")
