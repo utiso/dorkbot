@@ -8,6 +8,7 @@ else:
 import logging
 import os
 import sys
+import time
 from contextlib import closing
 
 
@@ -53,7 +54,7 @@ class TargetDatabase:
                          f" (id {self.id_type},"
                          " item VARCHAR UNIQUE)")
 
-    def connect(self, retries=3):
+    def connect(self, retries=6):
         for i in range(retries):
             try:
                 self.db = self.module.connect(self.database, **self.connect_kwargs)
@@ -62,6 +63,7 @@ class TargetDatabase:
                 retry_conditions = ["Connection timed out"]
                 if i < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database connection failed (retry {i} of {retries}) - {str(e)}")
+                    time.sleep(2**i)
                     continue
                 else:
                     logging.error(f"Database connection failed (will not retry) - {str(e)}")
@@ -70,7 +72,7 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=3):
+    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=6):
         statement, parameters = (sql[0], sql[1] if len(sql) == 2 else ())
 
         for i in range(retries):
@@ -92,6 +94,7 @@ class TargetDatabase:
                 if i < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retry {i} of {retries}) - {str(e)}")
                     self.connect()
+                    time.sleep(2**i)
                     continue
                 else:
                     logging.error(f"Database execution failed (will not retry) - {str(e)}")
