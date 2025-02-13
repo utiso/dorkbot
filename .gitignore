@@ -4,6 +4,10 @@ build/
 dist/
 *.egg-info/
 
+# direnv
+.direnv/
+.envrc
+
 # dorkbot-specific
 reports/
 tools/
