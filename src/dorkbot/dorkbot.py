@@ -104,7 +104,7 @@ def main():
             db.generate_fingerprints(args.source)
 
         if args.prune:
-            prune(db, blocklists, args)
+            db.prune(blocklists, args.source, args.random)
 
         if args.scanner:
             scanner_module = load_module("scanners", args.scanner)
@@ -400,26 +400,14 @@ def index(db, blocklists, indexer, args, indexer_args):
     db.add_targets(targets, source)
 
 
-def prune(db, blocklists, args):
-    logging.info("Pruning database")
-
-    db.prune(blocklists, args.source, args.random)
-
-
 def scan(db, blocklists, scanner, args, scanner_args):
     scanned = 0
     while scanned < args.count or args.count == -1:
-        url = db.get_next_target(source=args.source, random=args.random)
+        url = db.get_next_target(blocklists=blocklists, source=args.source, random=args.random)
         if not url:
             break
 
         target = Target(url)
-
-        if True in [blocklist.match(target) for blocklist in blocklists]:
-            logging.debug(f"Deleting (matches blocklist pattern): {url}")
-            db.delete_target(url)
-            continue
-
         logging.info(f"Scanning: {url} {vars(scanner_args) if args.verbose else ''}")
         results = scanner.run(scanner_args, target)
         scanned += 1

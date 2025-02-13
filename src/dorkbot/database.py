@@ -133,12 +133,12 @@ class TargetDatabase:
         urls = [" | ".join([str(column or "") for column in row]) for row in rows]
         return urls
 
-    def get_next_target(self, source=False, random=False):
-        sql = "SELECT t.url, t.id, f.id FROM targets t"
+    def get_unscanned_query(self, source=False, random=False):
+        sql = "SELECT t.url, t.id, f.id, f.fingerprint FROM targets t"
         if source and source is not True:
             sql += " INNER JOIN sources s on s.id = t.source_id"
         sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
-            + " WHERE (t.fingerprint_id IS NULL AND t.scanned = '0') OR f.scanned = '0'"
+            + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
         if source and source is not True:
             sql += " AND s.source = %s" % self.param
             parameters = (source,)
@@ -146,32 +146,47 @@ class TargetDatabase:
             parameters = ()
         if random:
             sql += " ORDER BY RANDOM()"
+        return sql, parameters
 
+    def get_next_target(self, blocklists=[], source=False, random=False):
+        sql, parameters = self.get_unscanned_query(source=source, random=random)
         target = None
+        fingerprints = {}
         while True:
             row = self.execute(sql, parameters, fetchone=True)
             if not row:
                 break
+            url, target_id, fingerprint_id, fingerprint = row
 
-            url = row[0]
-            target_id = row[1]
-            fingerprint_id = row[2]
+            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+                logging.debug(f"Deleting (matches blocklist pattern): {url}")
+                self.delete_target(url)
 
-            if not fingerprint_id:
-                fingerprint = generate_fingerprint(url)
-                fingerprint_id = self.get_fingerprint_id(fingerprint)
-                if fingerprint_id:
-                    self.update_target_fingerprint(target_id, fingerprint_id)
-                    logging.debug(f"Skipping (matches scanned fingerprint): {url}")
-                    continue
-                else:
-                    self.mark_target_scanned(target_id)
-                    self.add_fingerprint(fingerprint, scanned=True)
-            else:
+            elif fingerprint_id:
+                logging.debug(f"Found unique fingerprint: {url}")
                 self.mark_fingerprint_scanned(fingerprint_id)
+                target = url
+                break
 
-            target = url
-            break
+            else:
+                logging.debug(f"Computing fingerprint: {url}")
+                fingerprint = generate_fingerprint(url)
+
+                if fingerprint in fingerprints:
+                    logging.debug(f"Skipping (matches existing fingerprint): {url}")
+                    fingerprint_id = fingerprints[fingerprint]
+                else:
+                    fingerprint_id = self.get_fingerprint_id(fingerprint)
+                    if fingerprint_id:
+                        logging.debug(f"Skipping (matches scanned fingerprint): {url}")
+                        fingerprints[fingerprint] = fingerprint_id
+                    else:
+                        logging.debug(f"Found unique fingerprint: {url}")
+                        self.add_fingerprint(fingerprint, scanned=True)
+                        target = url
+                        break
+
+                self.update_target_fingerprint(target_id, fingerprint_id)
         return target
 
     def add_target(self, url, source=None):
@@ -260,24 +275,13 @@ class TargetDatabase:
         self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
 
     def prune(self, blocklists, source, random):
-        sql = "SELECT t.url, t.id, f.id, f.fingerprint FROM targets t"
-        if source and source is not True:
-            sql += " INNER JOIN sources s on s.id = t.source_id"
-        sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
-            + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
-        if source and source is not True:
-            sql += " AND s.source = %s" % self.param
-            parameters = (source,)
-        else:
-            parameters = ()
-        if random:
-            sql += " ORDER BY RANDOM()"
-
-        fingerprints = {}
+        logging.info("Pruning database")
+        sql, parameters = self.get_unscanned_query(source=source, random=random)
         targets = self.execute(sql, parameters, fetchall=True)
         if not targets:
             return
         targets.reverse()
+        fingerprints = {}
         while targets:
             url, target_id, fingerprint_id, fingerprint = targets.pop()
 
@@ -308,8 +312,7 @@ class TargetDatabase:
 
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
-    def generate_fingerprints(self, source):
-        logging.info("Generating fingerprints")
+    def get_fingerprintless_query(self, source=False):
         sql = "SELECT t.url, t.id FROM targets t"
         if source and source is not True:
             sql += " INNER JOIN sources s on s.id = t.source_id"
@@ -319,7 +322,11 @@ class TargetDatabase:
             parameters = (source,)
         else:
             parameters = ()
+        return sql, parameters
 
+    def generate_fingerprints(self, source):
+        logging.info("Generating fingerprints")
+        sql, parameters = self.get_fingerprintless_query(source=source)
         targets = self.execute(sql, parameters, fetchall=True)
         targets.reverse()
         fingerprints = {}
