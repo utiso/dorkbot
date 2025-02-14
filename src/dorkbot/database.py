@@ -172,7 +172,6 @@ class TargetDatabase:
                 logging.debug(f"Found unique fingerprint: {url}")
                 self.mark_fingerprint_scanned(fingerprint_id)
                 target = url
-                break
 
             else:
                 logging.debug(f"Computing fingerprint: {url}")
@@ -188,11 +187,12 @@ class TargetDatabase:
                         fingerprints[fingerprint] = fingerprint_id
                     else:
                         logging.debug(f"Found unique fingerprint: {url}")
-                        self.add_fingerprint(fingerprint, scanned=True)
+                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=True)
                         target = url
-                        break
-
                 self.update_target_fingerprint(target_id, fingerprint_id)
+
+            if target:
+                break
         return target
 
     def add_target(self, url, source=None, blocklists=[]):
@@ -270,6 +270,7 @@ class TargetDatabase:
         return row if not row else row[0]
 
     def update_target_fingerprint(self, target_id, fingerprint_id):
+        logging.debug(f"Updating target fingerprint id {target_id}->{fingerprint_id}")
         self.execute("UPDATE targets SET fingerprint_id = %s WHERE id = %s"
                      % (self.param, self.param), (fingerprint_id, target_id))
 
