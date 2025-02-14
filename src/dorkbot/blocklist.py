@@ -65,8 +65,8 @@ class Blocklist:
         else:
             self.blocklist_file.close()
 
-    def execute(self, *sql, fetchall=False):
-        result = TargetDatabase.execute(self, *sql, fetchall=fetchall)
+    def execute(self, *sql, fetch=False):
+        result = TargetDatabase.execute(self, *sql, fetch=fetch)
         return result
 
     def parse_list(self, items):
@@ -105,7 +105,7 @@ class Blocklist:
 
     def read_items(self):
         if self.database:
-            rows = self.execute("SELECT item FROM blocklist", fetchall=True)
+            rows = self.execute("SELECT item FROM blocklist", fetch=True)
             items = [row[0] for row in rows]
         else:
             items = self.blocklist_file.read().splitlines()

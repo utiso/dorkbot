@@ -20,7 +20,6 @@ import re
 import signal
 import sys
 from logging.handlers import WatchedFileHandler
-from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
 def main():
@@ -83,11 +82,7 @@ def main():
         if args.flush_targets:
             db.flush_targets()
         if args.add_target:
-            url_parts = urlparse(args.add_target)
-            quoted_path = quote(url_parts.path)
-            encoded_query = urlencode(parse_qsl(url_parts.query, keep_blank_values=True))
-            parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
-            db.add_target(parsed_url.geturl(), args.source)
+            db.add_target(args.add_target, source=args.source, blocklists=blocklists)
         if args.delete_target:
             db.delete_target(args.delete_target)
 
@@ -384,20 +379,7 @@ def index(db, blocklists, indexer, args, indexer_args):
         source = args.source
     else:
         source = module_source
-
-    targets = []
-    for url in urls:
-        if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-            logging.debug(f"Ignoring (matches blocklist pattern): {url}")
-            continue
-
-        url_parts = urlparse(url)
-        quoted_path = quote(url_parts.path)
-        encoded_query = urlencode(parse_qsl(url_parts.query, keep_blank_values=True))
-        parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
-        targets.append(parsed_url.geturl())
-
-    db.add_targets(targets, source)
+    db.add_targets(urls, source=source, blocklists=blocklists)
 
 
 def scan(db, blocklists, scanner, args, scanner_args):

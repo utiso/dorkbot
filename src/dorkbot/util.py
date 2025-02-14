@@ -5,7 +5,7 @@ import importlib.util
 import logging
 import os
 import sys
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
 def generate_fingerprint(url):
@@ -28,6 +28,14 @@ def generate_timestamp():
 
 def generate_hash(url):
     return hashlib.md5(url.encode("utf-8")).hexdigest()
+
+
+def get_parsed_url(url):
+    url_parts = urlparse(url)
+    quoted_path = quote(url_parts.path)
+    encoded_query = urlencode(parse_qsl(url_parts.query, keep_blank_values=True))
+    parsed_url = url_parts._replace(path=quoted_path, query=encoded_query)
+    return parsed_url.geturl()
 
 
 def get_database_module(address):

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 if __package__:
     from dorkbot.target import Target
-    from dorkbot.util import generate_fingerprint, get_database_attributes
+    from dorkbot.util import generate_fingerprint, get_database_attributes, get_parsed_url
 else:
     from target import Target
-    from util import generate_fingerprint, get_database_attributes
+    from util import generate_fingerprint, get_database_attributes, get_parsed_url
 import logging
 import os
 import sys
@@ -72,21 +72,23 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def execute(self, *sql, many=False, fetchone=False, fetchall=False, retries=6):
+    def execute(self, *sql, fetch=False, retries=6):
         statement, parameters = (sql[0], sql[1] if len(sql) == 2 else ())
 
         for i in range(retries):
             try:
                 with closing(self.db.cursor()) as c:
                     result = None
-                    if many:
+                    if isinstance(parameters, list):
                         c.executemany(statement, parameters)
                     else:
                         c.execute(statement, parameters)
-                    if fetchone:
-                        result = c.fetchone()
-                    elif fetchall:
+                    if fetch is True:
                         result = c.fetchall()
+                    elif fetch == 1:
+                        result = c.fetchone()
+                    elif fetch > 1:
+                        result = c.fetchmany(fetch)
                 self.db.commit()
                 return result
             except self.module.Error as e:
@@ -129,7 +131,7 @@ class TargetDatabase:
         if count > 0:
             sql += f" LIMIT {count}"
 
-        rows = self.execute(sql, parameters, fetchall=True)
+        rows = self.execute(sql, parameters, fetch=True)
         urls = [" | ".join([str(column or "") for column in row]) for row in rows]
         return urls
 
@@ -153,7 +155,7 @@ class TargetDatabase:
         target = None
         fingerprints = {}
         while True:
-            row = self.execute(sql, parameters, fetchone=True)
+            row = self.execute(sql, parameters, fetch=1)
             if not row:
                 break
             url, target_id, fingerprint_id, fingerprint = row
@@ -189,7 +191,11 @@ class TargetDatabase:
                 self.update_target_fingerprint(target_id, fingerprint_id)
         return target
 
-    def add_target(self, url, source=None):
+    def add_target(self, url, source=None, blocklists=[]):
+        if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+            logging.debug(f"Ignoring (matches blocklist pattern): {url}")
+            return
+
         logging.debug(f"Adding target {url}")
         if source:
             source_id = self.get_source_id(source)
@@ -200,9 +206,9 @@ class TargetDatabase:
 
         self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
                      % (self.insert, self.param, self.param, self.conflict),
-                     (url, source_id))
+                     (get_parsed_url(url), source_id))
 
-    def add_targets(self, urls, source=None, chunk_size=1000):
+    def add_targets(self, urls, source=None, blocklists=[], chunk_size=1000):
         logging.debug(f"Adding {len(urls)} targets")
         if source:
             source_id = self.get_source_id(source)
@@ -213,9 +219,16 @@ class TargetDatabase:
 
         for x in range(0, len(urls), chunk_size):
             urls_chunk = urls[x:x + chunk_size]
+            urls_chunk_add = []
+            for url in urls_chunk:
+                if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
+                    logging.debug(f"Ignoring (matches blocklist pattern): {url}")
+                else:
+                    urls_chunk_add.append(get_parsed_url(url))
+
             self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
                          % (self.insert, self.param, self.param, self.conflict),
-                         [(url, source_id) for url in urls_chunk], many=True)
+                         [(url, source_id) for url in urls_chunk_add])
 
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
@@ -233,23 +246,23 @@ class TargetDatabase:
         logging.debug(f"Adding source {source}")
         row = self.execute("%s INTO sources (source) VALUES (%s) %s RETURNING id"
                            % (self.insert, self.param, self.conflict),
-                           (source,), fetchone=True)
+                           (source,), fetch=1)
         return row if not row else row[0]
 
     def get_source_id(self, source):
         row = self.execute("SELECT id FROM sources WHERE source = %s"
-                           % self.param, (source,), fetchone=True)
+                           % self.param, (source,), fetch=1)
         return row if not row else row[0]
 
     def get_sources(self):
-        rows = self.execute("SELECT source FROM sources", fetchall=True)
-        return [row[0] for row in rows if rows]
+        rows = self.execute("SELECT source FROM sources", fetch=True)
+        return [row[0] for row in rows]
 
     def add_fingerprint(self, fingerprint, scanned=False):
         logging.debug(f"Adding fingerprint {fingerprint}")
         row = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s RETURNING id"
                            % (self.insert, self.param, self.param, self.conflict),
-                           (fingerprint, 1 if scanned else 0), fetchone=True)
+                           (fingerprint, 1 if scanned else 0), fetch=1)
         return row if not row else row[0]
 
     def update_target_fingerprint(self, target_id, fingerprint_id):
@@ -268,7 +281,7 @@ class TargetDatabase:
 
     def get_fingerprint_id(self, fingerprint):
         row = self.execute("SELECT id FROM fingerprints WHERE fingerprint = %s"
-                           % self.param, (fingerprint,), fetchone=True)
+                           % self.param, (fingerprint,), fetch=1)
         return row if not row else row[0]
 
     def mark_fingerprint_scanned(self, fingerprint_id):
@@ -277,7 +290,7 @@ class TargetDatabase:
     def prune(self, blocklists, source, random):
         logging.info("Pruning database")
         sql, parameters = self.get_unscanned_query(source=source, random=random)
-        targets = self.execute(sql, parameters, fetchall=True)
+        targets = self.execute(sql, parameters, fetch=True)
         if not targets:
             return
         targets.reverse()
@@ -327,7 +340,7 @@ class TargetDatabase:
     def generate_fingerprints(self, source):
         logging.info("Generating fingerprints")
         sql, parameters = self.get_fingerprintless_query(source=source)
-        targets = self.execute(sql, parameters, fetchall=True)
+        targets = self.execute(sql, parameters, fetch=True)
         targets.reverse()
         fingerprints = {}
         while targets:
