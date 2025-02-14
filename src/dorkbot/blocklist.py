@@ -105,7 +105,7 @@ class Blocklist:
 
     def read_items(self):
         if self.database:
-            rows = self.execute("SELECT item FROM blocklist", fetch=True)
+            rows = self.execute("SELECT item FROM blocklist ORDER BY id ASC", fetch=True)
             items = [row[0] for row in rows]
         else:
             items = self.blocklist_file.read().splitlines()

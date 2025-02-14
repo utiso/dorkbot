@@ -127,6 +127,8 @@ class TargetDatabase:
 
         if random:
             sql += " ORDER BY RANDOM()"
+        else:
+            sql += " ORDER BY t.id ASC"
 
         if count > 0:
             sql += f" LIMIT {count}"
@@ -148,6 +150,8 @@ class TargetDatabase:
             parameters = ()
         if random:
             sql += " ORDER BY RANDOM()"
+        else:
+            sql += " ORDER BY t.id ASC"
         return sql, parameters
 
     def get_next_target(self, blocklists=[], source=False, random=False):
@@ -255,7 +259,7 @@ class TargetDatabase:
         return row if not row else row[0]
 
     def get_sources(self):
-        rows = self.execute("SELECT source FROM sources", fetch=True)
+        rows = self.execute("SELECT source FROM sources ORDER BY id ASC", fetch=True)
         return [row[0] for row in rows]
 
     def add_fingerprint(self, fingerprint, scanned=False):
