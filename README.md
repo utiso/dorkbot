@@ -34,11 +34,11 @@ Usage
 <pre>
 usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                [--show-defaults] [--count COUNT] [--random] [-h]
-               [--log LOG] [-v] [-V] [-d DATABASE] [-u] [-l]
-               [--list-unscanned] [--add-target TARGET]
-               [--delete-target TARGET] [--flush-targets] [--drop-tables]
-               [-i INDEXER] [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG]
-               [-x] [-g] [-f] [--list-blocklist]
+               [--log LOG] [-v] [-V] [-d DATABASE] [-u] [--drop-tables]
+               [-l] [--list-unscanned] [--list-sources]
+               [--add-target TARGET] [--delete-target TARGET]
+               [--flush-targets] [-i INDEXER] [-o INDEXER_ARG] [-s SCANNER]
+               [-p SCANNER_ARG] [-t] [-x] [-g] [-f] [--list-blocklist]
                [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
                [--flush-blocklist] [-b EXTERNAL_BLOCKLIST]
 
@@ -63,15 +63,16 @@ database:
   -d, --database DATABASE
                         Database file/uri
   -u, --prune           Apply fingerprinting and blocklist without scanning
+  --drop-tables         Delete and recreate tables
 
 targets:
   -l, --list-targets    List targets in database
   --list-unscanned      List unscanned targets in database
+  --list-sources        List sources in database
   --add-target TARGET   Add a url to the target database
   --delete-target TARGET
                         Delete a url from the target database
   --flush-targets       Delete all targets
-  --drop-tables         Delete and recreate tables
 
 indexing:
   -i, --indexer INDEXER
@@ -86,6 +87,7 @@ scanning:
   -p, --scanner-arg SCANNER_ARG
                         Pass an argument to the scanner module (can be used
                         multiple times)
+  -t, --test            Fetch next scannable target but do not mark it scanned
   -x, --reset-scanned   Reset scanned status of all targets
 
 fingerprints:
