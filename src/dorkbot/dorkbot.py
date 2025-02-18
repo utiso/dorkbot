@@ -287,6 +287,8 @@ def get_main_args_parser():
                           help="Scanner module to use")
     scanning.add_argument("-p", "--scanner-arg", action="append",
                           help="Pass an argument to the scanner module (can be used multiple times)")
+    scanning.add_argument("-t", "--test", action="store_true",
+                          help="Fetch next scannable target but do not mark it scanned")
     scanning.add_argument("-x", "--reset-scanned", action="store_true",
                           help="Reset scanned status of all targets")
 
@@ -385,7 +387,7 @@ def index(db, blocklists, indexer, args, indexer_args):
 def scan(db, blocklists, scanner, args, scanner_args):
     scanned = 0
     while scanned < args.count or args.count == -1:
-        url = db.get_next_target(blocklists=blocklists, source=args.source, random=args.random)
+        url = db.get_next_target(blocklists=blocklists, source=args.source, random=args.random, test=args.test)
         if not url:
             break
 

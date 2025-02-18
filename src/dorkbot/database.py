@@ -154,7 +154,7 @@ class TargetDatabase:
             sql += " ORDER BY t.id ASC"
         return sql, parameters
 
-    def get_next_target(self, blocklists=[], source=False, random=False):
+    def get_next_target(self, blocklists=[], source=False, random=False, test=False):
         sql, parameters = self.get_unscanned_query(source=source, random=random)
         target = None
         fingerprints = {}
@@ -170,7 +170,8 @@ class TargetDatabase:
 
             elif fingerprint_id:
                 logging.debug(f"Found unique fingerprint: {url}")
-                self.mark_fingerprint_scanned(fingerprint_id)
+                if not test:
+                    self.mark_fingerprint_scanned(fingerprint_id)
                 target = url
 
             else:
@@ -187,7 +188,7 @@ class TargetDatabase:
                         fingerprints[fingerprint] = fingerprint_id
                     else:
                         logging.debug(f"Found unique fingerprint: {url}")
-                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=True)
+                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=(not test))
                         target = url
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
