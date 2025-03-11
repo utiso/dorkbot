@@ -41,8 +41,8 @@ class Blocklist:
 
         else:
             try:
-                os.makedirs(os.path.dirname(os.path.abspath(self.filename)), exist_ok=True)
-                self.blocklist_file = open(self.filename, "r")
+                os.makedirs(os.path.dirname(os.path.abspath(self.address)), exist_ok=True)
+                self.blocklist_file = open(self.address, "r")
             except OSError as e:
                 logging.error(f"Failed to open database file - {str(e)}")
                 sys.exit(1)
@@ -54,7 +54,7 @@ class Blocklist:
             TargetDatabase.connect(self)
         else:
             try:
-                self.blocklist_file = open(self.filename, "a")
+                self.blocklist_file = open(self.address, "a")
             except Exception as e:
                 logging.error(f"Failed to read blocklist file - {str(e)}")
                 sys.exit(1)
@@ -131,21 +131,12 @@ class Blocklist:
             logging.error("Could not parse blocklist item - %s", item)
             sys.exit(1)
 
-        if self.database:
-            self.execute("%s INTO blocklist (item) VALUES (%s)" % (self.insert, self.param), (item,))
-        else:
-            logging.warning("Add ignored (not implemented for file-based blocklist)")
-
+        self.execute("%s INTO blocklist (item) VALUES (%s)" % (self.insert, self.param), (item,))
         self.close()
 
     def delete(self, item):
         self.connect()
-
-        if self.database:
-            self.execute("DELETE FROM blocklist WHERE item=(%s)" % self.param, (item,))
-        else:
-            logging.warning("Delete ignored (not implemented for file-based blocklist)")
-
+        self.execute("DELETE FROM blocklist WHERE item=(%s)" % self.param, (item,))
         self.close()
 
     def match(self, target):
@@ -167,7 +158,7 @@ class Blocklist:
             self.execute("DELETE FROM blocklist")
         else:
             try:
-                os.unlink(self.filename)
+                os.unlink(self.address)
             except OSError as e:
                 logging.error(f"Failed to delete blocklist file - {str(e)}")
                 sys.exit(1)

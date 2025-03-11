@@ -64,12 +64,11 @@ def get_database_module(address):
 
 
 def get_database_attributes(address):
-    attributes = {}
+    attributes = {"address": address}
 
     if address.startswith("postgresql://"):
         attributes.update({
             "module": get_database_module(address),
-            "address": address,
             "database": address,
             "id_type": "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
             "insert": "INSERT",
@@ -81,7 +80,6 @@ def get_database_attributes(address):
     elif address.startswith("sqlite3://"):
         attributes.update({
             "module": get_database_module(address),
-            "address": address,
             "database": os.path.expanduser(address[10:]),
             "id_type": "INTEGER PRIMARY KEY",
             "insert": "INSERT OR REPLACE",
@@ -92,8 +90,7 @@ def get_database_attributes(address):
 
     else:
         attributes.update({
-            "database": False,
-            "filename": address,
+            "database": None,
         })
 
     return attributes
