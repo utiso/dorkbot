@@ -37,11 +37,11 @@ def main():
     if args.help:
         indexer_parser = None
         if args.indexer:
-            indexer_parser, other_args = get_module_parser(load_module("indexers", args.indexer))
+            indexer_parser, _ = get_module_parser(load_module("indexers", args.indexer))
             if not args.scanner:
                 indexer_parser.print_help()
         if args.scanner:
-            scanner_parser, other_args = get_module_parser(load_module("scanners", args.scanner), parent_parser=indexer_parser)
+            scanner_parser, _ = get_module_parser(load_module("scanners", args.scanner), parent_parser=indexer_parser)
             scanner_parser.print_help()
         if not args.indexer and not args.scanner:
             parser.print_help()
@@ -88,7 +88,7 @@ def main():
 
         if args.indexer:
             indexer_module = load_module("indexers", args.indexer)
-            indexer_parser, other_args = get_module_parser(indexer_module)
+            indexer_parser, _ = get_module_parser(indexer_module)
             indexer_args = indexer_parser.parse_args(format_module_args(args.indexer_arg))
             try:
                 index(db, blocklists, indexer_module, args, indexer_args)
@@ -103,7 +103,7 @@ def main():
 
         if args.scanner:
             scanner_module = load_module("scanners", args.scanner)
-            scanner_parser, other_args = get_module_parser(scanner_module)
+            scanner_parser, _ = get_module_parser(scanner_module)
             scanner_args = scanner_parser.parse_args(format_module_args(args.scanner_arg))
             try:
                 scan(db, blocklists, scanner_module, args, scanner_args)
@@ -137,7 +137,7 @@ def main():
     logging.shutdown()
 
 
-def graceful_shutdown(sig, frame):
+def graceful_shutdown(*_):
     sys.exit(0)
 
 
