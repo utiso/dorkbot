@@ -16,7 +16,6 @@ import configparser
 import importlib
 import logging
 import os
-import re
 import signal
 import sys
 from logging.handlers import WatchedFileHandler

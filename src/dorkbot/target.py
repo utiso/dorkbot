@@ -17,6 +17,7 @@ class Target:
         self.url = url
         self.hash = None
         self.starttime = generate_timestamp()
+        self.endtime = ""
 
         url_parts = urlparse(url)
         self.host = url_parts.hostname
