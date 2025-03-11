@@ -365,7 +365,7 @@ def format_module_args(args_list):
     if args_list:
         for arg in args_list:
             if arg.startswith("--"):
-                args.add(arg)
+                args.append(arg)
             else:
                 args.append("--" + arg)
 
