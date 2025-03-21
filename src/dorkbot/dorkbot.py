@@ -55,13 +55,19 @@ def main():
             or args.list_unscanned or args.reset_scanned \
             or args.list_sources:
 
-        db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
-        blocklist = Blocklist(db.address, drop_tables=args.drop_tables, create_tables=True)
+        try:
+            db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
+            blocklist = Blocklist(db.address, drop_tables=args.drop_tables, create_tables=True)
+        except Exception as e:
+            sys.exit(1)
 
         blocklists = [blocklist]
         if args.external_blocklist:
             for external_blocklist in args.external_blocklist:
-                blocklists.append(Blocklist(external_blocklist))
+                try:
+                    blocklists.append(Blocklist(external_blocklist))
+                except Exception as e:
+                    sys.exit(1)
 
         if args.flush_blocklist:
             blocklist.flush()
