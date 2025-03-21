@@ -89,10 +89,7 @@ def main():
             indexer_module = load_module("indexers", args.indexer)
             indexer_parser, _ = get_module_parser(indexer_module)
             indexer_args = indexer_parser.parse_args(format_module_args(args.indexer_arg))
-            try:
-                index(db, blocklists, indexer_module, args, indexer_args)
-            except KeyboardInterrupt:
-                sys.exit(1)
+            index(db, blocklists, indexer_module, args, indexer_args)
 
         if args.generate_fingerprints:
             db.generate_fingerprints(args.source)
@@ -104,10 +101,7 @@ def main():
             scanner_module = load_module("scanners", args.scanner)
             scanner_parser, _ = get_module_parser(scanner_module)
             scanner_args = scanner_parser.parse_args(format_module_args(args.scanner_arg))
-            try:
-                scan(db, blocklists, scanner_module, args, scanner_args)
-            except KeyboardInterrupt:
-                sys.exit(1)
+            scan(db, blocklists, scanner_module, args, scanner_args)
 
         if args.list_targets or args.list_unscanned:
             try:
