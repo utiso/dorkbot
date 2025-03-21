@@ -7,7 +7,6 @@ else:
     from util import generate_fingerprint, get_database_attributes, get_parsed_url
 import logging
 import os
-import sys
 import time
 from contextlib import closing
 
@@ -25,7 +24,7 @@ class TargetDatabase:
                 os.makedirs(os.path.dirname(os.path.abspath(self.database)), exist_ok=True)
             except OSError as e:
                 logging.error(f"Failed to create parent directory for database file - {str(e)}")
-                sys.exit(1)
+                raise
 
         self.connect()
 

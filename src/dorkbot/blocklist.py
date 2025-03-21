@@ -3,7 +3,6 @@ import ipaddress
 import logging
 import os
 import re
-import sys
 if __package__:
     from dorkbot.database import TargetDatabase
     from dorkbot.util import get_database_attributes
@@ -26,7 +25,7 @@ class Blocklist:
                     os.makedirs(os.path.dirname(os.path.abspath(self.database)), exist_ok=True)
                 except OSError as e:
                     logging.error(f"Failed to create parent directory for database file - {str(e)}")
-                    sys.exit(1)
+                    raise
 
             self.connect()
 
@@ -45,7 +44,7 @@ class Blocklist:
                 self.blocklist_file = open(self.address, "r")
             except OSError as e:
                 logging.error(f"Failed to open database file - {str(e)}")
-                sys.exit(1)
+                raise
 
         self.parse_list(self.read_items())
 
@@ -57,7 +56,7 @@ class Blocklist:
                 self.blocklist_file = open(self.address, "a")
             except Exception as e:
                 logging.error(f"Failed to read blocklist file - {str(e)}")
-                sys.exit(1)
+                raise
 
     def close(self):
         if self.database:
@@ -121,7 +120,7 @@ class Blocklist:
                 ip_net = ipaddress.ip_network(ip)
             except ValueError as e:
                 logging.error(f"Could not parse blocklist item as ip - {str(e)}")
-                sys.exit(1)
+                raise
             self.ip_set.add(ip_net)
         elif item.startswith("host:"):
             self.host_set.add(item.split(":")[1])
@@ -129,7 +128,7 @@ class Blocklist:
             self.regex_set.add(item.split(":")[1])
         else:
             logging.error("Could not parse blocklist item - %s", item)
-            sys.exit(1)
+            raise
 
         self.execute("%s INTO blocklist (item) VALUES (%s)" % (self.insert, self.param), (item,))
         self.close()
@@ -161,7 +160,7 @@ class Blocklist:
                 os.unlink(self.address)
             except OSError as e:
                 logging.error(f"Failed to delete blocklist file - {str(e)}")
-                sys.exit(1)
+                raise
 
         self.regex = None
         self.regex_set = set()

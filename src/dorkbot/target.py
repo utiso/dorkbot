@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import socket
-import sys
 from urllib.parse import urlparse
 
 
@@ -68,4 +67,4 @@ class Target:
                 logging.info("Report saved to: %s" % outfile.name)
         except OSError as e:
             logging.error(f"Failed to write report - {str(e)}")
-            sys.exit(1)
+            raise

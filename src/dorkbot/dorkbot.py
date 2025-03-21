@@ -147,7 +147,7 @@ def initialize_logger(log_file, verbose):
             log.addHandler(log_filehandler)
         except OSError as e:
             logging.error(f"Failed to create log file - {str(e)}")
-            sys.exit(1)
+            raise
     else:
         class LogFilter(logging.Filter):
             def __init__(self, level):
@@ -179,7 +179,7 @@ def load_module(category, name):
         module = importlib.import_module(module_name, package=__package__)
     except ImportError:
         logging.error("Module not found")
-        sys.exit(1)
+        raise
 
     return module
 

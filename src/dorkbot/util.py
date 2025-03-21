@@ -4,7 +4,6 @@ import importlib
 import importlib.util
 import logging
 import os
-import sys
 from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
@@ -49,7 +48,7 @@ def get_database_module(address):
                 break
         if not module_name:
             logging.error("Missing postgresql module - try: pip install psycopg[binary]")
-            sys.exit(1)
+            raise
 
     elif address.startswith("sqlite3://"):
         module = "sqlite3"
@@ -58,7 +57,7 @@ def get_database_module(address):
             module_name = module
         else:
             logging.error("Missing sqlite3 module - try: pip install sqlite3")
-            sys.exit(1)
+            raise
 
     return importlib.import_module(module_name, package=None)
 
