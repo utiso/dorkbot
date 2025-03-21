@@ -61,13 +61,13 @@ class TargetDatabase:
                 break
             except self.module.Error as e:
                 retry_conditions = ["Connection timed out"]
-                if i < retries and any(error in str(e) for error in retry_conditions):
-                    logging.warning(f"Database connection failed (retry {i} of {retries}) - {str(e)}")
+                if i + 1 < retries and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database connection failed (retry {i + 1} of {retries}) - {str(e)}")
                     time.sleep(2**i)
                     continue
                 else:
-                    logging.error(f"Database connection failed (will not retry) - {str(e)}")
-                    sys.exit(1)
+                    logging.error(f"Database connection failed - {str(e)}")
+                    raise
 
     def close(self):
         self.db.close()
@@ -93,14 +93,14 @@ class TargetDatabase:
                 return result
             except self.module.Error as e:
                 retry_conditions = ["connection", "SSL"]
-                if i < retries and any(error in str(e) for error in retry_conditions):
-                    logging.warning(f"Database execution failed (retry {i} of {retries}) - {str(e)}")
+                if i + 1 < retries and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database execution failed (retry {i + 1} of {retries}) - {str(e)}")
                     self.connect()
                     time.sleep(2**i)
                     continue
                 else:
-                    logging.error(f"Database execution failed (will not retry) - {str(e)}")
-                    sys.exit(1)
+                    logging.error(f"Database execution failed - {str(e)}")
+                    raise
 
     def get_urls(self, unscanned_only=False, source=False, random=False, count=False):
         if source and source is not True:
