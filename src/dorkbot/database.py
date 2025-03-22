@@ -59,7 +59,7 @@ class TargetDatabase:
                 self.db = self.module.connect(self.database, **self.connect_kwargs)
                 break
             except self.module.Error as e:
-                retry_conditions = ["Connection timed out"]
+                retry_conditions = ["Connection timed out", "unexpectedly"]
                 if i + 1 < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database connection failed (retry {i + 1} of {retries}) - {str(e)}")
                     time.sleep(2**i)
@@ -94,8 +94,9 @@ class TargetDatabase:
                 retry_conditions = ["connection", "SSL"]
                 if i + 1 < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (retry {i + 1} of {retries}) - {str(e)}")
-                    self.connect()
+                    self.close()
                     time.sleep(2**i)
+                    self.connect()
                     continue
                 else:
                     logging.error(f"Database execution failed - {str(e)}")
