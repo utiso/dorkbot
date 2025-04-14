@@ -59,7 +59,7 @@ class TargetDatabase:
                 self.db = self.module.connect(self.database, **self.connect_kwargs)
                 break
             except self.module.Error as e:
-                retry_conditions = ["Connection timed out", "unexpectedly"]
+                retry_conditions = ["Connection timed out", "unexpectedly", "Temporary"]
                 if i + 1 < retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database connection failed (retry {i + 1} of {retries}) - {str(e)}")
                     time.sleep(2**i)
