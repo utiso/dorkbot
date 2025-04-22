@@ -11,9 +11,13 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
 
+if __package__:
+    from .general import populate_general_options
+else:
+    from indexers.general import populate_general_options
 
-def populate_parser(args, parser):
-    module_group = parser.add_argument_group(__name__, "Searches a given pywb server's crawl data")
+
+def populate_pywb_options(args, module_group):
     module_group.add_argument("--server", required=True,
                               help="pywb server url")
     module_group.add_argument("--domain", required=True,
@@ -22,143 +26,129 @@ def populate_parser(args, parser):
                               help="suffix after index for index api")
     module_group.add_argument("--index",
                               help="search a specific index")
+    module_group.add_argument("--field", default="url",
+                              help="field (fl) to query")
     module_group.add_argument("--filter",
                               help="query filter to apply to the search")
-    module_group.add_argument("--retries", type=int, default=10,
-                              help="number of times to retry fetching results on error")
-    module_group.add_argument("--threads", type=int, default=10,
-                              help="number of concurrent requests to wayback.org")
+    module_group.add_argument("--page-size", type=int, default=1000,
+                              help="number of results to request per page")
+
+
+def populate_parser(args, parser):
+    module_group = parser.add_argument_group(__name__, "Searches a given pywb server's crawl data")
+    populate_general_options(args, module_group)
+    populate_pywb_options(args, module_group)
 
 
 def run(args):
-    source = __name__.split(".")[-1]
-    data = {}
+    results, source = run_pywb(args)
+    return results, source
+
+
+def run_pywb(args, data={}, source=__name__.split(".")[-1]):
     data["url"] = "*.%s" % args.domain
     data["output"] = "json"
     if args.filter:
         data["filter"] = args.filter
 
     if not args.index:
-        args.index = get_latest_index(args.server, int(args.retries))
-    base_url = f"{args.server}/{args.index}{args.cdx_api_suffix}"
-    num_pages = get_num_pages(base_url, data, int(args.retries))
+        args.index = get_latest_index(args)
+    num_pages = get_num_pages(args, data)
 
     source += f",index:{args.index}"
 
-    results = get_results(base_url, data, args.retries, num_pages, args.threads, args.domain)
+    results = get_results(args, data, num_pages)
     for result in results:
         logging.debug(result)
     logging.info("Fetched %d results", len(results))
     return results, source
 
 
-def get_latest_index(server, retries):
-    url = f"{server}/collinfo.json"
-
-    logging.debug("Fetching latest index list")
-    for i in range(retries):
+def issue_request(args, url):
+    for i in range(args.retries + 1):
         try:
+            logging.debug(url)
             response_str = urlopen(url)
-            response_str = response_str.read().decode("utf-8")
-            response = json.loads(response_str)
+            response = response_str.read().decode("utf-8")
         except (HTTPError, IncompleteRead) as e:
-            if i == retries - 1:
-                logging.error("Failed to fetch index list (retries exceeded) - %s", str(e))
+            if i == args.retries:
+                logging.error("Request failed - %s", str(e))
                 sys.exit(1)
             else:
-                logging.warn("Failed to fetch index list (will retry) - %s", str(e))
-                time.sleep(random.randrange(i, 2 ** i))
+                logging.warn(f"Request failed (retry {i} of {args.retries}) - {str(e)}")
+                time.sleep(2**i)
                 continue
-        except Exception:
-            logging.exception("Failed to fetch index list")
-            sys.exit(1)
         break
 
-    fixed = response["fixed"]
-    dynamic = response["dynamic"]
-    index = fixed[0] if fixed else dynamic[0]
+    return response
+
+
+def get_latest_index(args):
+    logging.debug("Fetching latest index list")
+    url = f"{args.server}/collinfo.json"
+    response_str = issue_request(args, url)
+    response = json.loads(response_str)
+
+    if "fixed" in response:
+        fixed = response["fixed"]
+        dynamic = response["dynamic"]
+        index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
+    else:
+        index = sorted(response)[-1]
     return index
 
 
-def get_num_pages(base_url, data, retries):
-    data["showNumPages"] = "true"
-    url = f"{base_url}?" + urlencode(data)
-
+def get_num_pages(args, data):
     logging.debug("Fetching number of pages")
-    for i in range(retries):
-        try:
-            response_str = urlopen(url)
-            response_str = response_str.read().decode("utf-8")
-            response = json.loads(response_str)
-        except (HTTPError, IncompleteRead) as e:
-            if i == retries - 1:
-                logging.error("Failed to fetch number of pages (retries exceeded) - %s", str(e))
-                sys.exit(1)
-            else:
-                logging.warn("Failed to fetch number of pages (will retry) - %s", str(e))
-                time.sleep(random.randrange(i, 2 ** i))
-                continue
-        except Exception:
-            logging.exception("Failed to fetch number of pages")
-            sys.exit(1)
-        break
-
+    data["showNumPages"] = "true"
+    data["pageSize"] = args.page_size
+    url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
+    response_str = issue_request(args, url)
+    response = json.loads(response_str)
     del data["showNumPages"]
-    num_pages = response["pages"]
+
+    if response:
+        if "pages" in response:
+            num_pages = int(response["pages"])
+        elif response[0] and response[0][0] == "numpages":
+            num_pages = int(response[1][0])
+        else:
+            num_pages = 0
+
     logging.debug("Got %d pages", num_pages)
     return num_pages
 
 
-def get_page(base_url, data, retries, page, domain):
-    data["fl"] = "url"
-    data["page"] = page
-    url = f"{base_url}?" + urlencode(data)
-
+def get_page(args, data, page):
     logging.debug("Fetching page %d", page)
-    for i in range(retries):
-        try:
-            response_str = urlopen(url)
-            response_str = response_str.read().decode("utf-8")
-            response = response_str.splitlines()
-        except (HTTPError, IncompleteRead) as e:
-            if type(e).__name__ == "HTTPError" and e.code == 404:
-                response_str = e.read().decode("utf-8")
-                if "message" in response_str:
-                    response = json.loads(response_str)
-                    message = response["message"]
-                else:
-                    message = str(e)
-                logging.warn("Failed to fetch results (page %d) - %s", page, message)
-                return set()
-            elif i == retries - 1:
-                logging.error("Failed to fetch results (page %d, retries exceeded) - %s", page, str(e))
-                sys.exit(1)
-            else:
-                logging.warn("Failed to fetch results (page %d, will retry) - %s", page, str(e))
-                time.sleep(random.randrange(i, 2 ** i))
-                continue
-        except Exception:
-            logging.exception("Failed to fetch results (page %d)", page)
-            sys.exit(1)
-        break
+    data["fl"] = args.field
+    data["page"] = page
+    url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
+    response_str = issue_request(args, url)
+    response = json.loads(response_str.splitlines())
 
-    pattern = r"http[s]?://([^/.]*\.)*" + domain + "(/|$)"
+    pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
     domain_url = re.compile(pattern)
 
     results = set()
     for item in response:
-        item_json = json.loads(item)
-        url = urlparse(item_json["url"].strip()).geturl()
+        if isinstance(item, list):
+            url_parsed = urlparse(item[0].strip())
+            url_parsed = url_parsed._replace(netloc=url_parsed.hostname)
+            url = url_parsed.geturl()
+        else:
+            item_json = json.loads(item)
+            url = urlparse(item_json["url"].strip()).geturl()
         if domain_url.match(url):
             results.add(url)
 
     return results
 
 
-def get_results(base_url, data, retries, num_pages, num_threads, domain):
+def get_results(args, data, num_pages):
     try:
-        executor = ThreadPoolExecutor(max_workers=num_threads)
-        threads = executor.map(get_page, repeat(base_url), repeat(data), repeat(retries), range(num_pages), repeat(domain))
+        executor = ThreadPoolExecutor(max_workers=args.threads)
+        threads = executor.map(get_page, repeat(args), repeat(data), range(num_pages))
     except Exception:
         logging.error("Failed to execute threads")
         sys.exit(1)
