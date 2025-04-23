@@ -1,6 +1,5 @@
 import json
 import logging
-import random
 import re
 import sys
 import time
@@ -17,7 +16,7 @@ else:
     from indexers.general import populate_general_options
 
 
-def populate_pywb_options(args, module_group):
+def populate_pywb_options(module_group):
     module_group.add_argument("--server", required=True,
                               help="pywb server url")
     module_group.add_argument("--domain", required=True,
@@ -34,10 +33,10 @@ def populate_pywb_options(args, module_group):
                               help="number of results to request per page")
 
 
-def populate_parser(args, parser):
+def populate_parser(_, parser):
     module_group = parser.add_argument_group(__name__, "Searches a given pywb server's crawl data")
-    populate_general_options(args, module_group)
-    populate_pywb_options(args, module_group)
+    populate_general_options(module_group)
+    populate_pywb_options(module_group)
 
 
 def run(args):
@@ -65,6 +64,7 @@ def run_pywb(args, data={}, source=__name__.split(".")[-1]):
 
 
 def issue_request(args, url):
+    response = ""
     for i in range(args.retries + 1):
         try:
             logging.debug(url)
@@ -75,7 +75,7 @@ def issue_request(args, url):
                 logging.error("Request failed - %s", str(e))
                 sys.exit(1)
             else:
-                logging.warn(f"Request failed (retry {i} of {args.retries}) - {str(e)}")
+                logging.warning(f"Request failed (retry {i} of {args.retries}) - {str(e)}")
                 time.sleep(2**i)
                 continue
         break
@@ -94,15 +94,17 @@ def get_latest_index(args):
         dynamic = response["dynamic"]
         index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
     else:
-        index = sorted(response)[-1]
+        index = response[0]
     return index
 
 
 def get_num_pages(args, data):
+    num_pages = 0
     logging.debug("Fetching number of pages")
     data["showNumPages"] = "true"
     data["pageSize"] = args.page_size
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
+    print(url)
     response_str = issue_request(args, url)
     response = json.loads(response_str)
     del data["showNumPages"]
@@ -112,8 +114,6 @@ def get_num_pages(args, data):
             num_pages = int(response["pages"])
         elif response[0] and response[0][0] == "numpages":
             num_pages = int(response[1][0])
-        else:
-            num_pages = 0
 
     logging.debug("Got %d pages", num_pages)
     return num_pages
@@ -125,7 +125,8 @@ def get_page(args, data, page):
     data["page"] = page
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
     response_str = issue_request(args, url)
-    response = json.loads(response_str.splitlines())
+    #response = json.loads(response_str.splitlines())
+    response = []
 
     pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
     domain_url = re.compile(pattern)
