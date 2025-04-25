@@ -87,7 +87,7 @@ def issue_request(args, url):
                 logging.error(f"Request failed - {str(e)}")
                 raise
             else:
-                logging.warning(f"Request failed (attempt {i + 1} of {args.retries}) - {str(e)}")
+                logging.debug(f"Request failed (attempt {i + 1} of {args.retries}) - {str(e)}")
                 time.sleep(2**i)
                 continue
         break
