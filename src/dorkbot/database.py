@@ -53,15 +53,15 @@ class TargetDatabase:
                          f" (id {self.id_type},"
                          " item VARCHAR UNIQUE)")
 
-    def connect(self, retries=6):
-        for i in range(retries):
+    def connect(self):
+        for i in range(self.retries + 1):
             try:
                 self.db = self.module.connect(self.database, **self.connect_kwargs)
                 break
             except self.module.Error as e:
                 retry_conditions = ["Connection timed out", "unexpectedly", "Temporary"]
-                if i + 1 < retries and any(error in str(e) for error in retry_conditions):
-                    logging.warning(f"Database connection failed (retry {i + 1} of {retries}) - {str(e)}")
+                if i < self.retries and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database connection failed (attempt {i + 1} of {self.retries}) - {str(e)}")
                     time.sleep(2**i)
                     continue
                 else:
@@ -71,10 +71,10 @@ class TargetDatabase:
     def close(self):
         self.db.close()
 
-    def execute(self, *sql, fetch=False, retries=6):
+    def execute(self, *sql, fetch=False):
         statement, parameters = (sql[0], sql[1] if len(sql) == 2 else ())
 
-        for i in range(retries):
+        for i in range(self.retries + 1):
             try:
                 with closing(self.db.cursor()) as c:
                     result = None
@@ -92,8 +92,8 @@ class TargetDatabase:
                 return result
             except self.module.Error as e:
                 retry_conditions = ["connection", "SSL"]
-                if i + 1 < retries and any(error in str(e) for error in retry_conditions):
-                    logging.warning(f"Database execution failed (retry {i + 1} of {retries}) - {str(e)}")
+                if i < self.retries and any(error in str(e) for error in retry_conditions):
+                    logging.warning(f"Database execution failed (attempt {i + 1} of {self.retries}) - {str(e)}")
                     self.close()
                     time.sleep(2**i)
                     self.connect()
