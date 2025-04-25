@@ -29,7 +29,7 @@ def populate_pywb_options(module_group):
                               help="field (fl) to query")
     module_group.add_argument("--filter",
                               help="query filter to apply to the search")
-    module_group.add_argument("--page-size", type=int, default=1000,
+    module_group.add_argument("--page-size", type=int, default=100,
                               help="number of results to request per page")
 
 
