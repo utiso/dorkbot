@@ -19,7 +19,6 @@ def populate_parser(_, parser):
 
     defaults = {"server": "https://web.archive.org", "cdx_api_suffix": "cdx/search/cdx", "field": "original", "index": False}
     module_group.set_defaults(**defaults)
-    module_group.set_defaults(threads=1)
     for action in module_group._actions:
         if action.dest in defaults.keys():
             action.help = argparse.SUPPRESS
