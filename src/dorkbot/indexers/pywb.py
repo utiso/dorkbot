@@ -73,11 +73,18 @@ def issue_request(args, url):
     for i in range(args.retries + 1):
         try:
             logging.debug(url)
-            response_str = urlopen(url)
-            response = response_str.read().decode("utf-8")
+            response = urlopen(url).read().decode("utf-8")
         except (HTTPError, IncompleteRead, URLError) as e:
-            if i == args.retries:
-                logging.error("Request failed - %s", str(e))
+            if type(e).__name__ == "HTTPError" and e.code == 404:
+                response_str = e.read().decode("utf-8")
+                if "message" in response_str:
+                    message = json.loads(response_str)["message"]
+                else:
+                    message = str(e)
+                logging.error(f"Request failed - {message}")
+                raise
+            elif i == args.retries:
+                logging.error(f"Request failed - {str(e)}")
                 raise
             else:
                 logging.warning(f"Request failed (retry {i + 1} of {args.retries}) - {str(e)}")
@@ -91,34 +98,51 @@ def issue_request(args, url):
 def get_latest_index(args):
     logging.debug("Fetching latest index list")
     url = f"{args.server}/collinfo.json"
-    response_str = issue_request(args, url)
-    response = json.loads(response_str)
 
-    if "fixed" in response:
-        fixed = response["fixed"]
-        dynamic = response["dynamic"]
-        index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
-    else:
-        index = response[0]["id"]
+    try:
+        response_str = issue_request(args, url)
+    except Exception:
+        sys.exit(1)
+
+    try:
+        response = json.loads(response_str)
+
+        if "fixed" in response:
+            fixed = response["fixed"]
+            dynamic = response["dynamic"]
+            index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
+        else:
+            index = response[0]["id"]
+    except Exception:
+        logging.error(f"Unexpected response:\n{response_str}")
+        sys.exit(1)
+
     return index
 
 
 def get_num_pages(args, data):
-    num_pages = 0
     logging.debug("Fetching number of pages")
     data["showNumPages"] = "true"
     data["pageSize"] = args.page_size
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
-    response_str = issue_request(args, url)
-    response = json.loads(response_str)
-    del data["showNumPages"]
 
-    if response:
+    try:
+        response_str = issue_request(args, url)
+    except Exception:
+        sys.exit(1)
+
+    try:
+        response = json.loads(response_str)
+
         if "pages" in response:
             num_pages = int(response["pages"])
         elif response[0] and response[0][0] == "numpages":
             num_pages = int(response[1][0])
+    except Exception:
+        logging.error(f"Unexpected response:\n{response_str}")
+        sys.exit(1)
 
+    del data["showNumPages"]
     logging.debug("Got %d pages", num_pages)
     return num_pages
 
@@ -128,49 +152,46 @@ def get_page(args, data, page):
     data["fl"] = args.field
     data["page"] = page
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
+
     response_str = issue_request(args, url)
-    if response_str.startswith("["):
-        try:
+
+    try:
+        if response_str.startswith("["):
             response = json.loads(response_str.replace("\n", ""))[1:]
-        except json.decoder.JSONDecodeError:
-            logging.error(f"unexpected response for page {page}:\n{response_str}")
-            sys.exit(1)
-    else:
-        response = response_str.splitlines()
-
-    pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
-    domain_url = re.compile(pattern)
-
-    results = set()
-    for item in response:
-        if isinstance(item, list):
-            item_url = item[0]
         else:
-            item_url = json.loads(item)["url"]
+            response = response_str.splitlines()
 
-        parsed_url = urlparse(item_url.strip())
-        url = parsed_url._replace(netloc=parsed_url.hostname).geturl()
+        pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
+        domain_url = re.compile(pattern)
 
-        if domain_url.match(url):
-            results.add(url)
+        results = set()
+        for item in response:
+            if isinstance(item, list):
+                item_url = item[0]
+            else:
+                item_url = json.loads(item)["url"]
+
+            parsed_url = urlparse(item_url.strip())
+            url = parsed_url._replace(netloc=parsed_url.hostname).geturl()
+
+            if domain_url.match(url):
+                results.add(url)
+    except json.decoder.JSONDecodeError:
+        logging.error(f"Unexpected response:\n{response_str}")
+        sys.exit(1)
 
     return results
 
 
 def get_results(args, data, num_pages):
-    try:
-        executor = ThreadPoolExecutor(max_workers=args.threads)
-        threads = executor.map(get_page, repeat(args), repeat(data), range(num_pages))
-    except Exception:
-        logging.error("Failed to execute threads")
-        sys.exit(1)
-
     results = set()
     try:
-        for result in list(threads):
-            results.update(result)
+        with ThreadPoolExecutor(max_workers=args.threads) as executor:
+            threads = executor.map(get_page, repeat(args), repeat(data), range(num_pages))
+            for result in threads:
+                results.update(result)
     except Exception:
-        logging.exception("Failed to fetch all results")
-        sys.exit(1)
+        logging.error("Failed to fetch all results")
+        pass
 
     return list(results)
