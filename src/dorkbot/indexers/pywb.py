@@ -99,7 +99,7 @@ def get_latest_index(args):
         dynamic = response["dynamic"]
         index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
     else:
-        index = response[0]
+        index = response[0]["id"]
     return index
 
 
