@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from http.client import IncompleteRead
 from itertools import repeat
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
 
@@ -40,21 +40,26 @@ def populate_parser(_, parser):
 
 
 def run(args):
-    results, source = run_pywb(args)
+    source = __name__.split(".")[-1]
+    results, source = run_pywb(args, source)
     return results, source
 
 
-def run_pywb(args, data={}, source=__name__.split(".")[-1]):
-    data["url"] = "*.%s" % args.domain
+def run_pywb(args, source, data={}):
+    data["url"] = f"*.{args.domain}"
     data["output"] = "json"
     if args.filter:
         data["filter"] = args.filter
 
-    if not args.index:
+    if args.index is None:
         args.index = get_latest_index(args)
-    num_pages = get_num_pages(args, data)
 
-    source += f",index:{args.index}"
+    if args.index:
+        source += f",index:{args.index}"
+    else:
+        args.index = ""
+
+    num_pages = get_num_pages(args, data)
 
     results = get_results(args, data, num_pages)
     for result in results:
@@ -70,12 +75,12 @@ def issue_request(args, url):
             logging.debug(url)
             response_str = urlopen(url)
             response = response_str.read().decode("utf-8")
-        except (HTTPError, IncompleteRead) as e:
+        except (HTTPError, IncompleteRead, URLError) as e:
             if i == args.retries:
                 logging.error("Request failed - %s", str(e))
-                sys.exit(1)
+                raise
             else:
-                logging.warning(f"Request failed (retry {i} of {args.retries}) - {str(e)}")
+                logging.warning(f"Request failed (retry {i + 1} of {args.retries}) - {str(e)}")
                 time.sleep(2**i)
                 continue
         break
@@ -104,7 +109,6 @@ def get_num_pages(args, data):
     data["showNumPages"] = "true"
     data["pageSize"] = args.page_size
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
-    print(url)
     response_str = issue_request(args, url)
     response = json.loads(response_str)
     del data["showNumPages"]
@@ -125,8 +129,14 @@ def get_page(args, data, page):
     data["page"] = page
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
     response_str = issue_request(args, url)
-    #response = json.loads(response_str.splitlines())
-    response = []
+    if response_str.startswith("["):
+        try:
+            response = json.loads(response_str.replace("\n", ""))[1:]
+        except json.decoder.JSONDecodeError:
+            logging.error(f"unexpected response for page {page}:\n{response_str}")
+            sys.exit(1)
+    else:
+        response = response_str.splitlines()
 
     pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
     domain_url = re.compile(pattern)
@@ -134,12 +144,13 @@ def get_page(args, data, page):
     results = set()
     for item in response:
         if isinstance(item, list):
-            url_parsed = urlparse(item[0].strip())
-            url_parsed = url_parsed._replace(netloc=url_parsed.hostname)
-            url = url_parsed.geturl()
+            item_url = item[0]
         else:
-            item_json = json.loads(item)
-            url = urlparse(item_json["url"].strip()).geturl()
+            item_url = json.loads(item)["url"]
+
+        parsed_url = urlparse(item_url.strip())
+        url = parsed_url._replace(netloc=parsed_url.hostname).geturl()
+
         if domain_url.match(url):
             results.add(url)
 
