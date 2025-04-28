@@ -110,12 +110,16 @@ def get_latest_index(args):
         logging.error(f"Unexpected response:\n{response_str}")
         sys.exit(1)
 
-    if "fixed" in response:
-        fixed = response["fixed"]
-        dynamic = response["dynamic"]
-        index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
-    else:
-        index = response[0]["id"]
+    try:
+        if "fixed" in response:
+            fixed = response["fixed"]
+            dynamic = response["dynamic"]
+            index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
+        else:
+            index = response[0]["id"]
+    except Exception:
+        logging.error(f"Unexpected response:\n{response}")
+        sys.exit(1)
     return index
 
 
@@ -141,6 +145,9 @@ def get_num_pages(args, data):
         num_pages = int(response["pages"])
     elif response[0] and response[0][0] == "numpages":
         num_pages = int(response[1][0])
+    else:
+        logging.error(f"Unexpected response:\n{response}")
+        sys.exit(1)
 
     del data["showNumPages"]
     logging.debug("Got %d pages", num_pages)
@@ -161,7 +168,6 @@ def get_page(args, data, page):
         except json.decoder.JSONDecodeError:
             logging.error(f"Unexpected response:\n{response_str}")
             sys.exit(1)
-
     else:
         response = response_str.splitlines()
 
