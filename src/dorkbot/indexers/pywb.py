@@ -29,7 +29,7 @@ def populate_pywb_options(module_group):
                               help="field (fl) to query")
     module_group.add_argument("--filter",
                               help="query filter to apply to the search")
-    module_group.add_argument("--page-size", type=int, default=100,
+    module_group.add_argument("--page-size", type=int,
                               help="number of results to request per page")
 
 
@@ -123,7 +123,8 @@ def get_latest_index(args):
 def get_num_pages(args, data):
     logging.debug("Fetching number of pages")
     data["showNumPages"] = "true"
-    data["pageSize"] = args.page_size
+    if args.page_size:
+        data["pageSize"] = args.page_size
     url = f"{args.server}/{args.index}{args.cdx_api_suffix}?{urlencode(data)}"
 
     try:
