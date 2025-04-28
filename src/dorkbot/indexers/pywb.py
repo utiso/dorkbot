@@ -106,17 +106,16 @@ def get_latest_index(args):
 
     try:
         response = json.loads(response_str)
-
-        if "fixed" in response:
-            fixed = response["fixed"]
-            dynamic = response["dynamic"]
-            index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
-        else:
-            index = response[0]["id"]
     except json.decoder.JSONDecodeError:
         logging.error(f"Unexpected response:\n{response_str}")
         sys.exit(1)
 
+    if "fixed" in response:
+        fixed = response["fixed"]
+        dynamic = response["dynamic"]
+        index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
+    else:
+        index = response[0]["id"]
     return index
 
 
@@ -134,14 +133,14 @@ def get_num_pages(args, data):
 
     try:
         response = json.loads(response_str)
-
-        if "pages" in response:
-            num_pages = int(response["pages"])
-        elif response[0] and response[0][0] == "numpages":
-            num_pages = int(response[1][0])
     except json.decoder.JSONDecodeError:
         logging.error(f"Unexpected response:\n{response_str}")
         sys.exit(1)
+
+    if "pages" in response:
+        num_pages = int(response["pages"])
+    elif response[0] and response[0][0] == "numpages":
+        num_pages = int(response[1][0])
 
     del data["showNumPages"]
     logging.debug("Got %d pages", num_pages)
@@ -156,31 +155,36 @@ def get_page(args, data, page):
 
     response_str = issue_request(args, url)
 
-    try:
-        if response_str.startswith("["):
+    if response_str.startswith("["):
+        try:
             response = json.loads(response_str.replace("\n", ""))[1:]
+        except json.decoder.JSONDecodeError:
+            logging.error(f"Unexpected response:\n{response_str}")
+            sys.exit(1)
+
+    else:
+        response = response_str.splitlines()
+
+    pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
+    domain_url = re.compile(pattern)
+
+    results = set()
+    for item in response:
+        if isinstance(item, list):
+            item_url = item[0]
         else:
-            response = response_str.splitlines()
-
-        pattern = r"http[s]?://([^/.]*\.)*" + args.domain + "(/|$)"
-        domain_url = re.compile(pattern)
-
-        results = set()
-        for item in response:
-            if isinstance(item, list):
-                item_url = item[0]
-            else:
+            try:
                 item_url = json.loads(item)["url"]
+            except json.decoder.JSONDecodeError:
+                logging.error(f"Unexpected item:\n{item}")
+                break
 
-            parsed_url = urlparse(item_url.strip())
-            url = parsed_url._replace(netloc=parsed_url.hostname).geturl()
 
-            if domain_url.match(url):
-                results.add(url)
-    except json.decoder.JSONDecodeError:
-        logging.error(f"Unexpected response:\n{response_str}")
-        sys.exit(1)
+        parsed_url = urlparse(item_url.strip())
+        url = parsed_url._replace(netloc=parsed_url.hostname).geturl()
 
+        if domain_url.match(url):
+            results.add(url)
     return results
 
 
