@@ -113,7 +113,7 @@ def get_latest_index(args):
             index = sorted(fixed)[-1] if fixed else sorted(dynamic)[-1]
         else:
             index = response[0]["id"]
-    except Exception:
+    except json.decoder.JSONDecodeError:
         logging.error(f"Unexpected response:\n{response_str}")
         sys.exit(1)
 
@@ -139,7 +139,7 @@ def get_num_pages(args, data):
             num_pages = int(response["pages"])
         elif response[0] and response[0][0] == "numpages":
             num_pages = int(response[1][0])
-    except Exception:
+    except json.decoder.JSONDecodeError:
         logging.error(f"Unexpected response:\n{response_str}")
         sys.exit(1)
 
