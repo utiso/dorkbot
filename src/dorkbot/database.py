@@ -91,7 +91,7 @@ class TargetDatabase:
                 self.db.commit()
                 return result
             except self.module.Error as e:
-                retry_conditions = ["connection", "SSL"]
+                retry_conditions = ["connection", "SSL", "query_wait_timeout"]
                 if i < self.retries and any(error in str(e) for error in retry_conditions):
                     logging.warning(f"Database execution failed (attempt {i + 1} of {self.retries}) - {str(e)}")
                     self.close()
