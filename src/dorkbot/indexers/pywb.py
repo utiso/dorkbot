@@ -187,10 +187,14 @@ def get_page(args, data, page):
 def get_results(args, data, num_pages):
     results = set()
     try:
-        with ThreadPoolExecutor(max_workers=args.threads) as executor:
-            threads = executor.map(get_page, repeat(args), repeat(data), range(num_pages))
-            for result in threads:
-                results.update(result)
+        if args.threads == 1:
+            for page in range(num_pages):
+                results.update(get_page(args, data, page))
+        else:
+            with ThreadPoolExecutor(max_workers=args.threads) as executor:
+                threads = executor.map(get_page, repeat(args), repeat(data), range(num_pages))
+                for result in threads:
+                    results.update(result)
     except Exception:
         logging.error("Failed to fetch all results")
         pass
