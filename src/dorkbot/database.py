@@ -102,60 +102,63 @@ class TargetDatabase:
                     logging.error(f"Database execution failed - {str(e)}")
                     raise
 
-    def get_urls(self, unscanned_only=False, source=False, random=False, count=False):
-        if source and source is not True:
+    def get_urls(self, args):
+        if args.source and args.source is not True:
             sql = "SELECT t.url FROM targets t" \
                   + " INNER JOIN sources s on s.id = t.source_id"
-        elif source is True:
+        elif args.source is True:
             sql = "SELECT t.url, s.source FROM targets t" \
                   + " LEFT JOIN sources s on s.id = t.source_id"
         else:
             sql = "SELECT t.url FROM targets t"
 
-        if unscanned_only:
+        if args.list_unscanned:
             sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
                 + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
 
-        if source and source is not True:
-            if unscanned_only:
+        if args.source and args.source is not True:
+            if args.list_unscanned:
                 sql += " AND s.source = %s" % self.param
             else:
                 sql += " WHERE s.source = %s" % self.param
-            parameters = (source,)
+            parameters = (args.source,)
         else:
             parameters = ()
 
-        if random:
+        if args.random:
             sql += " ORDER BY RANDOM()"
         else:
             sql += " ORDER BY t.id ASC"
 
-        if count > 0:
-            sql += f" LIMIT {count}"
+        if args.count > 0:
+            sql += f" LIMIT {args.count}"
 
         rows = self.execute(sql, parameters, fetch=True)
         urls = [" | ".join([str(column or "") for column in row]) for row in rows]
         return urls
 
-    def get_unscanned_query(self, source=False, random=False):
+    def get_unscanned_query(self, args):
         sql = "SELECT t.url, t.id, f.id, f.fingerprint FROM targets t"
-        if source and source is not True:
+        if args.source and args.source is not True:
             sql += " INNER JOIN sources s on s.id = t.source_id"
         sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
             + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
-        if source and source is not True:
+        if args.source and args.source is not True:
             sql += " AND s.source = %s" % self.param
-            parameters = (source,)
+            parameters = (args.source,)
         else:
             parameters = ()
-        if random:
+        if args.random:
             sql += " ORDER BY RANDOM()"
         else:
             sql += " ORDER BY t.id ASC"
+
+        if args.count > 0:
+            sql += f" LIMIT {args.count}"
         return sql, parameters
 
-    def get_next_target(self, blocklists=[], source=False, random=False, test=False):
-        sql, parameters = self.get_unscanned_query(source=source, random=random)
+    def get_next_target(self, args, blocklists=[]):
+        sql, parameters = self.get_unscanned_query(args)
         target = None
         fingerprints = {}
         while True:
@@ -170,7 +173,7 @@ class TargetDatabase:
 
             elif fingerprint_id:
                 logging.debug(f"Found unique fingerprint: {url}")
-                if not test:
+                if not args.test:
                     self.mark_fingerprint_scanned(fingerprint_id)
                 target = url
 
@@ -188,7 +191,7 @@ class TargetDatabase:
                         fingerprints[fingerprint] = fingerprint_id
                     else:
                         logging.debug(f"Found unique fingerprint: {url}")
-                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=(not test))
+                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=(not args.test))
                         target = url
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
@@ -293,9 +296,9 @@ class TargetDatabase:
     def mark_fingerprint_scanned(self, fingerprint_id):
         self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
 
-    def prune(self, blocklists, source, random):
+    def prune(self, blocklists, args):
         logging.info("Pruning database")
-        sql, parameters = self.get_unscanned_query(source=source, random=random)
+        sql, parameters = self.get_unscanned_query(args)
         targets = self.execute(sql, parameters, fetch=True)
         if not targets:
             return
@@ -335,21 +338,23 @@ class TargetDatabase:
 
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
-    def get_fingerprintless_query(self, source=False):
+    def get_fingerprintless_query(self, args):
         sql = "SELECT t.url, t.id FROM targets t"
-        if source and source is not True:
+        if args.source and args.source is not True:
             sql += " INNER JOIN sources s on s.id = t.source_id"
         sql += " WHERE t.fingerprint_id IS NULL"
-        if source and source is not True:
+        if args.source and args.source is not True:
             sql += " AND s.source = %s" % self.param
-            parameters = (source,)
+            parameters = (args.source,)
         else:
             parameters = ()
+        if args.count > 0:
+            sql += f" LIMIT {args.count}"
         return sql, parameters
 
-    def generate_fingerprints(self, source):
+    def generate_fingerprints(self, args):
         logging.info("Generating fingerprints")
-        sql, parameters = self.get_fingerprintless_query(source=source)
+        sql, parameters = self.get_fingerprintless_query(args)
         targets = self.execute(sql, parameters, fetch=True)
         targets.reverse()
         fingerprints = {}

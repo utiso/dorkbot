@@ -98,10 +98,10 @@ def main():
             index(db, blocklists, indexer_module, args, indexer_args)
 
         if args.generate_fingerprints:
-            db.generate_fingerprints(args.source)
+            db.generate_fingerprints(args)
 
         if args.prune:
-            db.prune(blocklists, args.source, args.random)
+            db.prune(blocklists, args)
 
         if args.scanner:
             scanner_module = load_module("scanners", args.scanner)
@@ -111,12 +111,7 @@ def main():
 
         if args.list_targets or args.list_unscanned:
             try:
-                urls = db.get_urls(
-                    unscanned_only=args.list_unscanned,
-                    source=args.source,
-                    random=args.random,
-                    count=args.count
-                )
+                urls = db.get_urls(args)
                 for url in urls:
                     print(url)
             except BrokenPipeError:
@@ -386,7 +381,7 @@ def index(db, blocklists, indexer, args, indexer_args):
 def scan(db, blocklists, scanner, args, scanner_args):
     scanned = 0
     while scanned < args.count or args.count == -1:
-        url = db.get_next_target(blocklists=blocklists, source=args.source, random=args.random, test=args.test)
+        url = db.get_next_target(args, blocklists=blocklists)
         if not url:
             break
 
