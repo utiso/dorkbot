@@ -325,8 +325,12 @@ class TargetDatabase:
                     fingerprint_id = fingerprints[fingerprint]
                     self.mark_target_scanned(target_id)
                 else:
-                    logging.debug(f"Found unique fingerprint: {url}")
-                    fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                    fingerprint_id = self.get_fingerprint_id(fingerprint)
+                    if fingerprint_id:
+                        logging.debug(f"Skipping (matches existing fingerprint): {url}")
+                    else:
+                        logging.debug(f"Found unique fingerprint: {url}")
+                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
                     fingerprints[fingerprint] = fingerprint_id
 
                 self.update_target_fingerprint(target_id, fingerprint_id)
