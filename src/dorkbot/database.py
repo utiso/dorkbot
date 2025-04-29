@@ -137,7 +137,7 @@ class TargetDatabase:
         urls = [" | ".join([str(column or "") for column in row]) for row in rows]
         return urls
 
-    def get_unscanned_query(self, args):
+    def get_unscanned_query(self, args, count=-1):
         sql = "SELECT t.url, t.id, f.id, f.fingerprint FROM targets t"
         if args.source and args.source is not True:
             sql += " INNER JOIN sources s on s.id = t.source_id"
@@ -153,7 +153,7 @@ class TargetDatabase:
         else:
             sql += " ORDER BY t.id ASC"
 
-        if args.count > 0:
+        if count > 0:
             sql += f" LIMIT {args.count}"
         return sql, parameters
 
@@ -298,7 +298,7 @@ class TargetDatabase:
 
     def prune(self, blocklists, args):
         logging.info("Pruning database")
-        sql, parameters = self.get_unscanned_query(args)
+        sql, parameters = self.get_unscanned_query(args, count=args.count)
         targets = self.execute(sql, parameters, fetch=True)
         if not targets:
             return
