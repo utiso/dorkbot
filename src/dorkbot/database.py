@@ -354,13 +354,11 @@ class TargetDatabase:
             fingerprint = generate_fingerprint(url)
             if fingerprint in fingerprints:
                 fingerprint_id = fingerprints[fingerprint]
-                self.update_target_fingerprint(target_id, fingerprint_id)
             else:
                 fingerprint_id = self.get_fingerprint_id(fingerprint)
                 if fingerprint_id:
                     fingerprints[fingerprint] = fingerprint_id
-                    self.update_target_fingerprint(target_id, fingerprint_id)
                 else:
                     fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
                     fingerprints[fingerprint] = fingerprint_id
-                    self.update_target_fingerprint(target_id, fingerprint_id)
+            self.update_target_fingerprint(target_id, fingerprint_id)
