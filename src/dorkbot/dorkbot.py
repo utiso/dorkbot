@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 if __package__:
     from ._version import __version__
-    from dorkbot.database import TargetDatabase
     from dorkbot.target import Target
+    from dorkbot.targetdatabase import TargetDatabase
     from dorkbot.blocklist import Blocklist
     from dorkbot.util import generate_timestamp
 else:
     from _version import __version__
-    from database import TargetDatabase
     from target import Target
+    from targetdatabase import TargetDatabase
     from blocklist import Blocklist
     from util import generate_timestamp
 import argparse
@@ -55,9 +55,12 @@ def main():
             or args.list_unscanned or args.reset_scanned \
             or args.list_sources:
 
+        tables = {"drop_tables": args.drop_tables, "create_tables": True}
+        retry = {"retries": args.retries, "retry_on": args.retry_on}
+
         try:
-            db = TargetDatabase(args.database, drop_tables=args.drop_tables, create_tables=True)
-            blocklist = Blocklist(db.address, drop_tables=args.drop_tables, create_tables=True)
+            db = TargetDatabase(args.database, **tables, **retry)
+            blocklist = Blocklist(db.address, **tables, **retry)
         except Exception as e:
             sys.exit(1)
 
@@ -65,7 +68,7 @@ def main():
         if args.external_blocklist:
             for external_blocklist in args.external_blocklist:
                 try:
-                    blocklists.append(Blocklist(external_blocklist))
+                    blocklists.append(Blocklist(external_blocklist, **retry))
                 except Exception as e:
                     sys.exit(1)
 
@@ -255,6 +258,10 @@ def get_main_args_parser():
                           help="Apply fingerprinting and blocklist without scanning")
     database.add_argument("--drop-tables", action="store_true",
                           help="Delete and recreate tables")
+    database.add_argument("--retries", type=int, default=3,
+                          help="Number of retries when an operation fails")
+    database.add_argument("--retry-on", action="append",
+                          help="Error strings that should result in a retry (can be used multiple times)")
 
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true",

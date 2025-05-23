@@ -3,7 +3,6 @@ import hashlib
 import importlib
 import importlib.util
 import logging
-import os
 from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
@@ -55,44 +54,7 @@ def get_database_module(address):
         module_spec = importlib.util.find_spec(module)
         if module_spec:
             module_name = module
+            return importlib.import_module(module_name, package=None)
         else:
             logging.error("Missing sqlite3 module - try: pip install sqlite3")
             raise
-
-    return importlib.import_module(module_name, package=None)
-
-
-def get_database_attributes(address):
-    attributes = {"address": address}
-
-    if address.startswith("postgresql://"):
-        attributes.update({
-            "module": get_database_module(address),
-            "database": address,
-            "retries": 6,
-            "id_type": "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
-            "insert": "INSERT",
-            "conflict": "ON CONFLICT DO NOTHING",
-            "param": "%s",
-            "connect_kwargs": {},
-        })
-
-    elif address.startswith("sqlite3://"):
-        attributes.update({
-            "module": get_database_module(address),
-            "database": os.path.expanduser(address[10:]),
-            "retries": 0,
-            "id_type": "INTEGER PRIMARY KEY",
-            "insert": "INSERT OR REPLACE",
-            "conflict": "",
-            "param": "?",
-            "connect_kwargs": {},
-        })
-
-    else:
-        attributes.update({
-            "database": None,
-            "retries": 0,
-        })
-
-    return attributes
