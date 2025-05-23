@@ -33,14 +33,15 @@ Usage
 =====
 <pre>
 usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
-               [--show-defaults] [--count COUNT] [--random] [-h]
-               [--log LOG] [-v] [-V] [-d DATABASE] [-u] [--drop-tables]
-               [-l] [--list-unscanned] [--list-sources]
-               [--add-target TARGET] [--delete-target TARGET]
-               [--flush-targets] [-i INDEXER] [-o INDEXER_ARG] [-s SCANNER]
-               [-p SCANNER_ARG] [-t] [-x] [-g] [-f] [--list-blocklist]
-               [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
-               [--flush-blocklist] [-b EXTERNAL_BLOCKLIST]
+               [--show-defaults] [--count COUNT] [--random] [-h] [--log LOG]
+               [-v] [-V] [-d DATABASE] [-u] [--drop-tables]
+               [--retries RETRIES] [--retry-on RETRY_ON] [-l]
+               [--list-unscanned] [--list-sources] [--add-target TARGET]
+               [--delete-target TARGET] [--flush-targets] [-i INDEXER]
+               [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-t] [-x] [-g]
+               [-f] [--list-blocklist] [--add-blocklist-item ITEM]
+               [--delete-blocklist-item ITEM] [--flush-blocklist]
+               [-b EXTERNAL_BLOCKLIST]
 
 options:
   -c, --config CONFIG   Configuration file
@@ -64,6 +65,9 @@ database:
                         Database file/uri
   -u, --prune           Apply fingerprinting and blocklist without scanning
   --drop-tables         Delete and recreate tables
+  --retries RETRIES     Number of retries when an operation fails
+  --retry-on RETRY_ON   Error strings that should result in a retry (can be
+                        used multiple times)
 
 targets:
   -l, --list-targets    List targets in database
