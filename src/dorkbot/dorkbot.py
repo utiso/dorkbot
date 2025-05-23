@@ -55,10 +55,10 @@ def main():
             or args.list_unscanned or args.reset_scanned \
             or args.list_sources:
 
-        tables = {"drop_tables": args.drop_tables, "create_tables": True}
         retry = {"retries": args.retries, "retry_on": args.retry_on}
 
         try:
+            tables = {"drop_tables": args.drop_tables, "create_tables": True}
             db = TargetDatabase(args.database, **tables, **retry)
             blocklist = Blocklist(db.address, **tables, **retry)
         except Exception:
