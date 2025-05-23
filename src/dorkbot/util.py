@@ -54,7 +54,12 @@ def get_database_module(address):
         module_spec = importlib.util.find_spec(module)
         if module_spec:
             module_name = module
-            return importlib.import_module(module_name, package=None)
         else:
             logging.error("Missing sqlite3 module - try: pip install sqlite3")
             raise
+
+    else:
+        logging.error(f"Unknown database protocol for url: {url}")
+        raise ImportError
+
+    return importlib.import_module(module_name, package=None)
