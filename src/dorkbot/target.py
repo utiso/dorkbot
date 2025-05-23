@@ -23,7 +23,7 @@ class Target:
         try:
             self.host = urlparse(self.url).hostname
         except Exception:
-            logging.warning(f"Failed to parse host from url: {self.url}") 
+            logging.warning(f"Failed to parse host from url: {self.url}")
 
         if not self.host:
             return

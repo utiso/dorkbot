@@ -52,7 +52,6 @@ class TargetDatabase(Database):
                          f" (id {self.id_type},"
                          " item VARCHAR UNIQUE)")
 
-
     def get_urls(self, args):
         if args.source and args.source is not True:
             sql = "SELECT t.url FROM targets t" \
