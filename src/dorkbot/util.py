@@ -59,7 +59,7 @@ def get_database_module(address):
             raise
 
     else:
-        logging.error(f"Unknown database protocol for url: {url}")
+        logging.error(f"Unknown database protocol for address: {address}")
         raise ImportError
 
     return importlib.import_module(module_name, package=None)
