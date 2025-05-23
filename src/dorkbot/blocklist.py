@@ -4,17 +4,14 @@ import logging
 import os
 import re
 if __package__:
-    from dorkbot.database import TargetDatabase
-    from dorkbot.util import get_database_attributes
+    from dorkbot.database import Database
 else:
-    from database import TargetDatabase
-    from util import get_database_attributes
+    from database import Database
 
 
-class Blocklist:
-    def __init__(self, address, drop_tables=False, create_tables=False):
-        for key, value in get_database_attributes(address).items():
-            setattr(self, key, value)
+class Blocklist(Database):
+    def __init__(self, address, drop_tables=False, create_tables=False, retries=0, retry_on=[]):
+        Database.__init__(self, address, retries, retry_on)
         self.ip_set = set()
         self.host_set = set()
         self.regex_set = set()
@@ -50,7 +47,7 @@ class Blocklist:
 
     def connect(self):
         if self.database:
-            TargetDatabase.connect(self)
+            Database.connect(self)
         else:
             try:
                 self.blocklist_file = open(self.address, "a")
@@ -62,11 +59,7 @@ class Blocklist:
         if self.database:
             self.db.close()
         else:
-            self.blocklist_file.close()
-
-    def execute(self, *sql, fetch=False):
-        result = TargetDatabase.execute(self, *sql, fetch=fetch)
-        return result
+            self.address.close()
 
     def parse_list(self, items):
         for item in items:
@@ -76,6 +69,7 @@ class Blocklist:
                     ip_net = ipaddress.ip_network(ip)
                 except ValueError as e:
                     logging.error(f"Could not parse blocklist item as ip - {str(e)}")
+                    continue
                 self.ip_set.add(ip_net)
             elif item.startswith("host:"):
                 self.host_set.add(item.split(":")[1])
@@ -105,7 +99,7 @@ class Blocklist:
     def read_items(self):
         if self.database:
             rows = self.execute("SELECT item FROM blocklist ORDER BY id ASC", fetch=True)
-            items = [row[0] for row in rows]
+            items = [row[0] for row in rows] if rows else []
         else:
             items = self.blocklist_file.read().splitlines()
 

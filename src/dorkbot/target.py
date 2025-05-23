@@ -14,21 +14,24 @@ from urllib.parse import urlparse
 class Target:
     def __init__(self, url):
         self.url = url
+        self.host = None
+        self.ip = None
         self.hash = None
         self.starttime = generate_timestamp()
         self.endtime = ""
 
-        url_parts = urlparse(url)
-        self.host = url_parts.hostname
+        try:
+            self.host = urlparse(self.url).hostname
+        except Exception:
+            logging.warning(f"Failed to parse host from url: {self.url}")
+
+        if not self.host:
+            return
 
         try:
-            resolved_ip = socket.gethostbyname(self.host)
-            self.ip = ipaddress.ip_address(resolved_ip)
-        except socket.gaierror:
-            self.ip = None
-            pass
+            self.ip = ipaddress.ip_address(socket.gethostbyname(self.host))
         except Exception:
-            logging.exception("Failed to resolve hostname: %s", self.host)
+            logging.warning(f"Failed to resolve ip address for host: {self.host}")
 
     def get_hash(self):
         if not self.hash:
