@@ -42,7 +42,7 @@ class Database:
                 self.db = self.module.connect(self.database, **self.connect_kwargs)
                 break
             except self.module.Error as e:
-                if i < self.retries and any(error in str(e) for error in self.retry_on):
+                if i < self.retries and any(string in str(e) for string in self.retry_on):
                     logging.warning(f"Database connection failed (attempt {i + 1} of {self.retries}) - {str(e)}")
                     time.sleep(2 ** (5 + i))
                     continue

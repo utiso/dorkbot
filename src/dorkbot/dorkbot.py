@@ -260,7 +260,7 @@ def get_main_args_parser():
                           help="Delete and recreate tables")
     database.add_argument("--retries", type=int, default=3,
                           help="Number of retries when an operation fails")
-    database.add_argument("--retry-on", action="append",
+    database.add_argument("--retry-on", action="append", default=[],
                           help="Error strings that should result in a retry (can be used multiple times)")
 
     targets = parser.add_argument_group('targets')
