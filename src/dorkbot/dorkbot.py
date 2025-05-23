@@ -61,7 +61,7 @@ def main():
         try:
             db = TargetDatabase(args.database, **tables, **retry)
             blocklist = Blocklist(db.address, **tables, **retry)
-        except Exception as e:
+        except Exception:
             sys.exit(1)
 
         blocklists = [blocklist]
@@ -69,7 +69,7 @@ def main():
             for external_blocklist in args.external_blocklist:
                 try:
                     blocklists.append(Blocklist(external_blocklist, **retry))
-                except Exception as e:
+                except Exception:
                     sys.exit(1)
 
         if args.flush_blocklist:
