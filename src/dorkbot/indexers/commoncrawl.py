@@ -9,7 +9,7 @@ else:
 
 
 def populate_parser(_, parser):
-    module_group = parser.add_argument_group(__name__, f"Searches commoncrawl.org crawl data")
+    module_group = parser.add_argument_group(__name__, "Searches commoncrawl.org crawl data")
     populate_general_options(module_group)
     populate_pywb_options(module_group)
 

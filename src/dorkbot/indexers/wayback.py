@@ -24,6 +24,7 @@ def populate_parser(_, parser):
             action.help = argparse.SUPPRESS
             action.required = False
 
+
 def run(args):
     source = __name__.split(".")[-1]
     data = {"collapse": "urlkey"}

@@ -185,7 +185,6 @@ def get_page(args, data, page):
                 logging.error(f"Unexpected item:\n{item}")
                 break
 
-
         parsed_url = urlparse(item_url.strip())
         url = parsed_url._replace(netloc=parsed_url.hostname).geturl()
 
