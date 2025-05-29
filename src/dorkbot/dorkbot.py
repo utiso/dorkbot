@@ -300,6 +300,8 @@ def get_main_args_parser():
                               help="Generate fingerprints for all targets")
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true",
                               help="Delete all generated fingerprints")
+    fingerprints.add_argument("--fingerprint-max", type=int, default=-1,
+                              help="Maximum matches per fingerprint before deleting new matches")
 
     blocklist = parser.add_argument_group('blocklist')
     blocklist.add_argument("--list-blocklist", action="store_true",

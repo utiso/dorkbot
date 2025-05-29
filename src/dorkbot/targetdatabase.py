@@ -281,20 +281,31 @@ class TargetDatabase(Database):
 
             if fingerprint_id:
                 if fingerprint in fingerprints:
-                    logging.debug(f"Skipping (matches existing fingerprint): {url}")
-                    self.mark_target_scanned(target_id)
+                    fingerprint_id, fingerprint_count = fingerprints[fingerprint]
+                    if fingerprint_count >= args.fingerprint_max:
+                        logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
+                        self.delete_target(url)
+                    else:
+                        logging.debug(f"Skipping (matches existing fingerprint): {url}")
+                        fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
+                        self.mark_target_scanned(target_id)
                 else:
                     logging.debug(f"Found unique fingerprint: {url}")
-                    fingerprints[fingerprint] = fingerprint_id
+                    fingerprints[fingerprint] = (fingerprint_id, 1)
 
             else:
                 logging.debug(f"Computing fingerprint: {url}")
                 fingerprint = generate_fingerprint(url)
 
                 if fingerprint in fingerprints:
-                    logging.debug(f"Skipping (matches existing fingerprint): {url}")
-                    fingerprint_id = fingerprints[fingerprint]
-                    self.mark_target_scanned(target_id)
+                    fingerprint_id, fingerprint_count = fingerprints[fingerprint]
+                    if fingerprint_count >= args.fingerprint_max:
+                        logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
+                        self.delete_target(url)
+                    else:
+                        logging.debug(f"Skipping (matches existing fingerprint): {url}")
+                        fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
+                        self.mark_target_scanned(target_id)
                 else:
                     fingerprint_id = self.get_fingerprint_id(fingerprint)
                     if fingerprint_id:
@@ -302,7 +313,7 @@ class TargetDatabase(Database):
                     else:
                         logging.debug(f"Found unique fingerprint: {url}")
                         fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
-                    fingerprints[fingerprint] = fingerprint_id
+                    fingerprints[fingerprint] = (fingerprint_id, 1)
 
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
@@ -337,12 +348,18 @@ class TargetDatabase(Database):
             url, target_id = targets.pop()
             fingerprint = generate_fingerprint(url)
             if fingerprint in fingerprints:
-                fingerprint_id = fingerprints[fingerprint]
+                fingerprint_id, fingerprint_count = fingerprints[fingerprint]
+                if fingerprint_count >= args.fingerprint_max:
+                    logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
+                    self.delete_target(url)
+                    continue
+                else:
+                    fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
             else:
                 fingerprint_id = self.get_fingerprint_id(fingerprint)
                 if fingerprint_id:
-                    fingerprints[fingerprint] = fingerprint_id
+                    fingerprints[fingerprint] = (fingerprint_id, 1)
                 else:
                     fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
-                    fingerprints[fingerprint] = fingerprint_id
+                    fingerprints[fingerprint] = (fingerprint_id, 1)
             self.update_target_fingerprint(target_id, fingerprint_id)

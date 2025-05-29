@@ -39,9 +39,9 @@ usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                [--list-sources] [--add-target TARGET] [--delete-target TARGET]
                [--flush-targets] [-e] [-i INDEXER] [-o INDEXER_ARG]
                [-s SCANNER] [-p SCANNER_ARG] [-t] [-x] [-g] [-f]
-               [--list-blocklist] [--add-blocklist-item ITEM]
-               [--delete-blocklist-item ITEM] [--flush-blocklist]
-               [-b EXTERNAL_BLOCKLIST]
+               [--fingerprint-max FINGERPRINT_MAX] [--list-blocklist]
+               [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
+               [--flush-blocklist] [-b EXTERNAL_BLOCKLIST]
 
 options:
   -c, --config CONFIG   Configuration file
@@ -101,6 +101,8 @@ fingerprints:
                         Generate fingerprints for all targets
   -f, --flush-fingerprints
                         Delete all generated fingerprints
+  --fingerprint-max FINGERPRINT_MAX
+                        Maximum matches per fingerprint before deleting new matches
 
 blocklist:
   --list-blocklist      List internal blocklist entries
