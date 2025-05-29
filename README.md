@@ -35,11 +35,11 @@ Usage
 usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                [--show-defaults] [--count COUNT] [--random] [-h] [--log LOG]
                [-v] [-V] [-d DATABASE] [-u] [--drop-tables]
-               [--retries RETRIES] [--retry-on RETRY_ON] [-l]
-               [--list-unscanned] [--list-sources] [--add-target TARGET]
-               [--delete-target TARGET] [--flush-targets] [-i INDEXER]
-               [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-t] [-x] [-g]
-               [-f] [--list-blocklist] [--add-blocklist-item ITEM]
+               [--retries RETRIES] [--retry-on RETRY_ON] [-l] [-n]
+               [--list-sources] [--add-target TARGET] [--delete-target TARGET]
+               [--flush-targets] [-e] [-i INDEXER] [-o INDEXER_ARG]
+               [-s SCANNER] [-p SCANNER_ARG] [-t] [-x] [-g] [-f]
+               [--list-blocklist] [--add-blocklist-item ITEM]
                [--delete-blocklist-item ITEM] [--flush-blocklist]
                [-b EXTERNAL_BLOCKLIST]
 
@@ -71,12 +71,14 @@ database:
 
 targets:
   -l, --list-targets    List targets in database
-  --list-unscanned      List unscanned targets in database
+  -n, --unscanned-only  Only include unscanned targets
   --list-sources        List sources in database
   --add-target TARGET   Add a url to the target database
   --delete-target TARGET
                         Delete a url from the target database
   --flush-targets       Delete all targets
+  -e, --delete-on-error
+                        Delete target if error encountered while processing it
 
 indexing:
   -i, --indexer INDEXER
@@ -189,7 +191,7 @@ The first item will remove any target that doesn't contain a question mark, in o
 
 Prune
 =====
-The prune flag iterates through all targets, computes the fingerprints, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-unscanned returns only scannable urls. It honors the **random** flag to process fingerprints in random order.
+The prune flag iterates through all targets, computes the fingerprints, and marks subsequent matching targets as scanned. Additionally it deletes any target matching a blocklist item. The result is a database where --list-targets --unscanned-only returns only scannable urls. It honors the **random** flag to process fingerprints in random order and the **unscanned-only** flag to skip scanned targets which necessarily already have fingerprints.
 
 General Options
 ===============

@@ -53,75 +53,81 @@ class TargetDatabase(Database):
                          " item VARCHAR UNIQUE)")
 
     def get_urls(self, args):
-        if args.source and args.source is not True:
-            sql = "SELECT t.url FROM targets t" \
-                  + " INNER JOIN sources s on s.id = t.source_id"
-        elif args.source is True:
-            sql = "SELECT t.url, s.source FROM targets t" \
-                  + " LEFT JOIN sources s on s.id = t.source_id"
-        else:
-            sql = "SELECT t.url FROM targets t"
-
-        if args.list_unscanned:
-            sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
-                + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
-
-        if args.source and args.source is not True:
-            if args.list_unscanned:
-                sql += " AND s.source = %s" % self.param
-            else:
-                sql += " WHERE s.source = %s" % self.param
-            parameters = (args.source,)
-        else:
-            parameters = ()
-
-        if args.random:
-            sql += " ORDER BY RANDOM()"
-        else:
-            sql += " ORDER BY t.id ASC"
-
-        if args.count > 0:
-            sql += f" LIMIT {args.count}"
-
-        rows = self.execute(sql, parameters, fetch=True)
-        urls = [" | ".join([str(column or "") for column in row]) for row in rows] if rows else []
+        options = {"unscanned_only": args.unscanned_only, "count": args.count}
+        sql, parameters = self.get_targets_query(args, **options)
+        rows = self.execute(sql, parameters, fetch=True) or []
+        urls = []
+        for row in rows:
+            url = row[0]
+            if args.source is True:
+                url += f" | {row[-1]}"
+            urls.append(url)
         return urls
 
-    def get_unscanned_query(self, args, count=-1):
-        sql = "SELECT t.url, t.id, f.id, f.fingerprint FROM targets t"
-        if args.source and args.source is not True:
-            sql += " INNER JOIN sources s on s.id = t.source_id"
-        sql += " LEFT JOIN fingerprints f on f.id = t.fingerprint_id" \
-            + " WHERE t.scanned = '0' AND (t.fingerprint_id IS NULL OR f.scanned = '0')"
-        if args.source and args.source is not True:
-            sql += " AND s.source = %s" % self.param
-            parameters = (args.source,)
-        else:
-            parameters = ()
-        if args.random:
-            sql += " ORDER BY RANDOM()"
-        else:
-            sql += " ORDER BY t.id ASC"
+    def get_targets_query(self, args, unscanned_only=False, count=-1):
+        fields = ["t.url", "t.id", "t.fingerprint_id", "f.fingerprint"]
+        join = [("LEFT", "fingerprints f ON f.id = t.fingerprint_id")]
+        where = []
+        parameters = ()
 
-        if count > 0:
-            sql += f" LIMIT {args.count}"
+        if unscanned_only:
+            where.extend(["t.scanned = '0'", "(t.fingerprint_id IS NULL OR f.scanned = '0')"])
+
+        if args.source:
+            fields.append("s.source")
+            if args.source is True:
+                join_type = "LEFT"
+            else:
+                join_type = "INNER"
+                where.append("s.source = %s" % self.param)
+                parameters = (args.source,)
+            join.append((join_type, "sources s ON s.id = t.source_id"))
+
+        sql = "SELECT "
+        for i, field in enumerate(fields):
+            sql += "" if i == 0 else ", "
+            sql += field
+        sql += " FROM targets t"
+        for join_type, join_criteria in join:
+            sql += f" {join_type} JOIN {join_criteria}"
+        for i, clause in enumerate(where):
+            sql += " WHERE " if i == 0 else " AND "
+            sql += clause
+        sql += " ORDER BY "
+        sql += "RANDOM()" if args.random else "t.id ASC"
+        sql += f" LIMIT {count}" if count > 0 else ""
+
         return sql, parameters
 
+    def matches_blocklists(self, url, blocklists):
+        target = Target(url)
+        for blocklist in blocklists:
+            if blocklist.match(target):
+                return True
+        return False
+
     def get_next_target(self, args, blocklists=[]):
-        sql, parameters = self.get_unscanned_query(args)
+        options = {"unscanned_only": True}
+        sql, parameters = self.get_targets_query(args, **options)
         target = None
         fingerprints = {}
         while True:
             row = self.execute(sql, parameters, fetch=1)
             if not row:
                 break
-            url, target_id, fingerprint_id, fingerprint = row
+            url, target_id, fingerprint_id, fingerprint, *_ = row
 
-            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-                logging.debug(f"Deleting (matches blocklist pattern): {url}")
-                self.delete_target(url)
+            try:
+                if self.matches_blocklists(url, blocklists):
+                    logging.debug(f"Deleting (matches blocklist pattern): {url}")
+                    self.delete_target(url)
+                    continue
+            except:
+                if args.delete_on_error:
+                    self.delete_target(url)
+                continue
 
-            elif fingerprint_id:
+            if fingerprint_id:
                 logging.debug(f"Found unique fingerprint: {url}")
                 if not args.test:
                     self.mark_fingerprint_scanned(fingerprint_id)
@@ -150,9 +156,12 @@ class TargetDatabase(Database):
         return target
 
     def add_target(self, url, source=None, blocklists=[]):
-        if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-            logging.debug(f"Ignoring (matches blocklist pattern): {url}")
-            return
+        try:
+            if self.matches_blocklists(url, blocklists):
+                logging.debug(f"Ignoring (matches blocklist pattern): {url}")
+                return
+        except:
+            pass
 
         logging.debug(f"Adding target {url}")
         if source:
@@ -179,10 +188,13 @@ class TargetDatabase(Database):
             urls_chunk = urls[x:x + chunk_size]
             urls_chunk_add = []
             for url in urls_chunk:
-                if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-                    logging.debug(f"Ignoring (matches blocklist pattern): {url}")
-                else:
-                    urls_chunk_add.append(get_parsed_url(url))
+                try:
+                    if self.matches_blocklists(url, blocklists):
+                        logging.debug(f"Ignoring (matches blocklist pattern): {url}")
+                        continue
+                except:
+                    pass
+                urls_chunk_add.append(get_parsed_url(url))
 
             self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
                          % (self.insert, self.param, self.param, self.conflict),
@@ -248,20 +260,26 @@ class TargetDatabase(Database):
 
     def prune(self, blocklists, args):
         logging.info("Pruning database")
-        sql, parameters = self.get_unscanned_query(args, count=args.count)
+        options = {"unscanned_only": args.unscanned_only, "count": args.count}
+        sql, parameters = self.get_targets_query(args, **options)
         targets = self.execute(sql, parameters, fetch=True)
         if not targets:
             return
         targets.reverse()
         fingerprints = {}
         while targets:
-            url, target_id, fingerprint_id, fingerprint = targets.pop()
+            url, target_id, fingerprint_id, fingerprint, *_ = targets.pop()
 
-            if True in [blocklist.match(Target(url)) for blocklist in blocklists]:
-                logging.debug(f"Deleting (matches blocklist pattern): {url}")
-                self.delete_target(url)
+            try:
+                if self.matches_blocklists(url, blocklists):
+                    logging.debug(f"Deleting (matches blocklist pattern): {url}")
+                    self.delete_target(url)
+            except:
+                if args.delete_on_error:
+                    self.delete_target(url)
+                continue
 
-            elif fingerprint_id:
+            if fingerprint_id:
                 if fingerprint in fingerprints:
                     logging.debug(f"Skipping (matches existing fingerprint): {url}")
                     self.mark_target_scanned(target_id)
@@ -289,17 +307,23 @@ class TargetDatabase(Database):
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
     def get_fingerprintless_query(self, args):
-        sql = "SELECT t.url, t.id FROM targets t"
+        join, where = [], []
+
         if args.source and args.source is not True:
-            sql += " INNER JOIN sources s on s.id = t.source_id"
-        sql += " WHERE t.fingerprint_id IS NULL"
-        if args.source and args.source is not True:
-            sql += " AND s.source = %s" % self.param
+            join.append(("INNER", "sources s ON s.id = t.source_id"))
+            where.append("s.source = %s" % self.param)
             parameters = (args.source,)
         else:
             parameters = ()
-        if args.count > 0:
-            sql += f" LIMIT {args.count}"
+
+        sql = "SELECT t.url, t.id FROM targets t"
+        for join_type, join_criteria in join:
+            sql += f" {join_type} JOIN {join_criteria}"
+        sql += " WHERE t.fingerprint_id IS NULL"
+        for clause in where:
+            sql += f" AND {clause}"
+        sql += f" LIMIT {args.count}" if args.count > 0 else ""
+
         return sql, parameters
 
     def generate_fingerprints(self, args):

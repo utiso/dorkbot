@@ -52,8 +52,7 @@ def main():
             or args.list_blocklist or args.flush_blocklist \
             or args.add_blocklist_item or args.delete_blocklist_item \
             or args.flush_fingerprints or args.generate_fingerprints \
-            or args.list_unscanned or args.reset_scanned \
-            or args.list_sources:
+            or args.reset_scanned or args.list_sources:
 
         retry = {"retries": args.retries, "retry_on": args.retry_on}
 
@@ -112,7 +111,7 @@ def main():
             scanner_args = scanner_parser.parse_args(format_module_args(args.scanner_arg))
             scan(db, blocklists, scanner_module, args, scanner_args)
 
-        if args.list_targets or args.list_unscanned:
+        if args.list_targets:
             try:
                 urls = db.get_urls(args)
                 for url in urls:
@@ -266,8 +265,8 @@ def get_main_args_parser():
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true",
                          help="List targets in database")
-    targets.add_argument("--list-unscanned", action="store_true",
-                         help="List unscanned targets in database")
+    targets.add_argument("-n", "--unscanned-only", action="store_true",
+                         help="Only include unscanned targets")
     targets.add_argument("--list-sources", action="store_true",
                          help="List sources in database")
     targets.add_argument("--add-target", metavar="TARGET",
@@ -276,6 +275,9 @@ def get_main_args_parser():
                          help="Delete a url from the target database")
     targets.add_argument("--flush-targets", action="store_true",
                          help="Delete all targets")
+    targets.add_argument("-e", "--delete-on-error", action="store_true",
+                         help="Delete target if error encountered while processing it")
+
 
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer",
@@ -392,7 +394,10 @@ def scan(db, blocklists, scanner, args, scanner_args):
         if not url:
             break
 
-        target = Target(url)
+        try:
+            target = Target(url)
+        except:
+            continue
         logging.info(f"Scanning: {url} {vars(scanner_args) if args.verbose else ''}")
         results = scanner.run(scanner_args, target)
         scanned += 1

@@ -23,7 +23,8 @@ class Target:
         try:
             self.host = urlparse(self.url).hostname
         except Exception:
-            logging.warning(f"Failed to parse host from url: {self.url}")
+            logging.debug(f"Failed to parse host from url: {self.url}")
+            raise
 
         if not self.host:
             return
@@ -31,7 +32,8 @@ class Target:
         try:
             self.ip = ipaddress.ip_address(socket.gethostbyname(self.host))
         except Exception:
-            logging.warning(f"Failed to resolve ip address for host: {self.host}")
+            logging.debug(f"Failed to resolve ip address for host: {self.host}")
+            raise
 
     def get_hash(self):
         if not self.hash:
