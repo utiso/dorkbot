@@ -207,8 +207,8 @@ def get_initial_args_parser():
     initial_parser.add_argument("--show-defaults", action="store_true",
                                 help="Show default values in help output")
     retrieval_options = initial_parser.add_argument_group("retrieval")
-    retrieval_options.add_argument("--count", type=int, default=-1,
-                                   help="number of targets to retrieve, or -1 for all")
+    retrieval_options.add_argument("--count", type=int, default=0,
+                                   help="number of targets to retrieve (0/unset = all)")
     retrieval_options.add_argument("--random", action="store_true",
                                    help="retrieve targets in random order")
     initial_args, other_args = initial_parser.parse_known_args()
@@ -299,7 +299,7 @@ def get_main_args_parser():
                               help="Generate fingerprints for all targets")
     fingerprints.add_argument("-f", "--flush-fingerprints", action="store_true",
                               help="Delete all generated fingerprints")
-    fingerprints.add_argument("--fingerprint-max", type=int, default=-1,
+    fingerprints.add_argument("--fingerprint-max", type=int, default=0,
                               help="Maximum matches per fingerprint before deleting new matches")
 
     blocklist = parser.add_argument_group('blocklist')
@@ -390,7 +390,7 @@ def index(db, blocklists, indexer, args, indexer_args):
 
 def scan(db, blocklists, scanner, args, scanner_args):
     scanned = 0
-    while scanned < args.count or args.count == -1:
+    while not args.count or scanned < args.count:
         if args.test and scanned > 0:
             break
         url = db.get_next_target(args, blocklists=blocklists)

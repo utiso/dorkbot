@@ -57,7 +57,7 @@ options:
   -V, --version         Print version
 
 retrieval:
-  --count COUNT         number of targets to retrieve, or -1 for all
+  --count COUNT         number of targets to retrieve (0/unset = all)
   --random              retrieve targets in random order
 
 database:

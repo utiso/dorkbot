@@ -64,7 +64,7 @@ class TargetDatabase(Database):
             urls.append(url)
         return urls
 
-    def get_targets_query(self, args, unscanned_only=False, count=-1):
+    def get_targets_query(self, args, unscanned_only=False, count=0):
         fields = ["t.url", "t.id", "t.fingerprint_id", "f.fingerprint"]
         join = [("LEFT", "fingerprints f ON f.id = t.fingerprint_id")]
         where = []
@@ -95,7 +95,7 @@ class TargetDatabase(Database):
             sql += clause
         sql += " ORDER BY "
         sql += "RANDOM()" if args.random else "t.id ASC"
-        sql += f" LIMIT {count}" if count > 0 else ""
+        sql += f" LIMIT {count}" if count else ""
 
         return sql, parameters
 
@@ -282,7 +282,7 @@ class TargetDatabase(Database):
             if fingerprint_id:
                 if fingerprint in fingerprints:
                     fingerprint_id, fingerprint_count = fingerprints[fingerprint]
-                    if fingerprint_count >= args.fingerprint_max:
+                    if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
                         logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
                         self.delete_target(url)
                     else:
@@ -299,7 +299,7 @@ class TargetDatabase(Database):
 
                 if fingerprint in fingerprints:
                     fingerprint_id, fingerprint_count = fingerprints[fingerprint]
-                    if fingerprint_count >= args.fingerprint_max:
+                    if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
                         logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
                         self.delete_target(url)
                     else:
@@ -333,7 +333,7 @@ class TargetDatabase(Database):
         sql += " WHERE t.fingerprint_id IS NULL"
         for clause in where:
             sql += f" AND {clause}"
-        sql += f" LIMIT {args.count}" if args.count > 0 else ""
+        sql += f" LIMIT {args.count}" if args.count else ""
 
         return sql, parameters
 
@@ -349,7 +349,7 @@ class TargetDatabase(Database):
             fingerprint = generate_fingerprint(url)
             if fingerprint in fingerprints:
                 fingerprint_id, fingerprint_count = fingerprints[fingerprint]
-                if fingerprint_count >= args.fingerprint_max:
+                if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
                     logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
                     self.delete_target(url)
                     continue
