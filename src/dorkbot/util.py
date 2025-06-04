@@ -2,7 +2,11 @@ import datetime
 import hashlib
 import importlib
 import importlib.util
+import ipaddress
+import json
 import logging
+import os
+import socket
 from urllib.parse import parse_qsl, quote, urlencode, urlparse
 
 
@@ -26,6 +30,26 @@ def generate_timestamp():
 
 def generate_hash(url):
     return hashlib.md5(url.encode("utf-8")).hexdigest()
+
+
+def parse_host(url):
+    host = None
+    try:
+        host = urlparse(url).hostname
+    except Exception:
+        logging.debug(f"Failed to parse host from url: {url}")
+        raise
+    return host
+
+
+def resolve_ip(host):
+    ip = None
+    try:
+        ip = ipaddress.ip_address(socket.gethostbyname(host))
+    except Exception:
+        logging.debug(f"Failed to resolve ip address for host: {host}")
+        raise
+    return ip
 
 
 def get_parsed_url(url):
@@ -63,3 +87,43 @@ def get_database_module(address):
         raise ImportError
 
     return importlib.import_module(module_name, package=None)
+
+
+def generate_report(url, start_time, end_time, label, vulnerabilities):
+    vulns = {}
+    vulns["vulnerabilities"] = vulnerabilities
+    vulns["starttime"] = start_time
+    vulns["endtime"] = end_time
+    vulns["url"] = url
+    vulns["label"] = label
+    return vulns
+
+
+def write_report(report, scanner_args, hash=None):
+    if scanner_args.report_filename:
+        report_filename = scanner_args.report_filename
+    else:
+        if not hash:
+            hash = generate_hash(report["url"])
+        report_filename = hash + ".json"
+
+    filename = os.path.join(scanner_args.report_dir, report_filename)
+
+    if scanner_args.report_append:
+        report_mode = "a"
+    else:
+        report_mode = "w"
+
+    indent = scanner_args.report_indent
+    if indent and indent.isdigit():
+        indent = int(indent)
+
+    try:
+        os.makedirs(os.path.abspath(scanner_args.report_dir), exist_ok=True)
+        with open(filename, report_mode) as outfile:
+            json.dump(report, outfile, indent=indent, sort_keys=True)
+            outfile.write('\n')
+            logging.info("Report saved to: %s" % outfile.name)
+    except OSError as e:
+        logging.error(f"Failed to write report - {str(e)}")
+        raise

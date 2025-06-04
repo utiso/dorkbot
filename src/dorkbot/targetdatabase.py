@@ -122,10 +122,10 @@ class TargetDatabase(Database):
                     logging.debug(f"Deleting (matches blocklist pattern): {url}")
                     self.delete_target(url)
                     continue
-            except:
+            except Exception:
                 if args.delete_on_error:
                     self.delete_target(url)
-                continue
+                    continue
 
             if fingerprint_id:
                 logging.debug(f"Found unique fingerprint: {url}")
@@ -160,7 +160,7 @@ class TargetDatabase(Database):
             if self.matches_blocklists(url, blocklists):
                 logging.debug(f"Ignoring (matches blocklist pattern): {url}")
                 return
-        except:
+        except Exception:
             pass
 
         logging.debug(f"Adding target {url}")
@@ -192,7 +192,7 @@ class TargetDatabase(Database):
                     if self.matches_blocklists(url, blocklists):
                         logging.debug(f"Ignoring (matches blocklist pattern): {url}")
                         continue
-                except:
+                except Exception:
                     pass
                 urls_chunk_add.append(get_parsed_url(url))
 
@@ -274,10 +274,10 @@ class TargetDatabase(Database):
                 if self.matches_blocklists(url, blocklists):
                     logging.debug(f"Deleting (matches blocklist pattern): {url}")
                     self.delete_target(url)
-            except:
+            except Exception:
                 if args.delete_on_error:
                     self.delete_target(url)
-                continue
+                    continue
 
             if fingerprint_id:
                 if fingerprint in fingerprints:

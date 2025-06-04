@@ -136,11 +136,11 @@ class Blocklist(Database):
         if self.regex and self.regex.match(target.url):
             return True
 
-        if target.host in self.host_set:
+        if target.get_host() in self.host_set:
             return True
 
         for ip_net in self.ip_set:
-            if target.ip and target.ip in ip_net:
+            if target.get_ip() in ip_net:
                 return True
 
         return False

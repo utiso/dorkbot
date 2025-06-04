@@ -4,13 +4,13 @@ if __package__:
     from dorkbot.target import Target
     from dorkbot.targetdatabase import TargetDatabase
     from dorkbot.blocklist import Blocklist
-    from dorkbot.util import generate_timestamp
+    from dorkbot.util import generate_timestamp, generate_report, write_report
 else:
     from _version import __version__
     from target import Target
     from targetdatabase import TargetDatabase
     from blocklist import Blocklist
-    from util import generate_timestamp
+    from util import generate_timestamp, generate_report, write_report
 import argparse
 import configparser
 import importlib
@@ -278,7 +278,6 @@ def get_main_args_parser():
     targets.add_argument("-e", "--delete-on-error", action="store_true",
                          help="Delete target if error encountered while processing it")
 
-
     indexing = parser.add_argument_group('indexing')
     indexing.add_argument("-i", "--indexer",
                           help="Indexer module to use")
@@ -392,24 +391,25 @@ def index(db, blocklists, indexer, args, indexer_args):
 def scan(db, blocklists, scanner, args, scanner_args):
     scanned = 0
     while scanned < args.count or args.count == -1:
+        if args.test and scanned > 0:
+            break
         url = db.get_next_target(args, blocklists=blocklists)
         if not url:
             break
 
-        try:
-            target = Target(url)
-        except:
-            continue
-        logging.info(f"Scanning: {url} {vars(scanner_args) if args.verbose else ''}")
+        target = Target(url)
+        logging.info(f"Scanning: {target.url} {vars(scanner_args) if args.verbose else ''}")
+        start_time = generate_timestamp()
         results = scanner.run(scanner_args, target)
+        end_time = generate_timestamp()
         scanned += 1
 
         if results is False:
             logging.error(f"Scan failed: {target.url}")
             continue
 
-        target.endtime = generate_timestamp()
-        target.write_report(scanner_args, results)
+        report = generate_report(target.url, start_time, end_time, scanner_args.label, results)
+        write_report(report, scanner_args, hash=target.get_hash())
 
 
 if __name__ == "__main__":
