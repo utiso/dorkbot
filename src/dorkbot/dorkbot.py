@@ -240,7 +240,6 @@ def get_main_args_parser():
     else:
         parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False)
 
-    parser.set_defaults(**defaults)
     parser.add_argument("-h", "--help", action="store_true",
                         help="Show program (or specified module) help")
     parser.add_argument("--log",
@@ -314,6 +313,7 @@ def get_main_args_parser():
     blocklist.add_argument("-b", "--external-blocklist", action="append",
                            help="Supplemental external blocklist file/db (can be used multiple times)")
 
+    parser.set_defaults(**defaults)
     args = parser.parse_args(other_args, namespace=initial_args)
     return args, parser
 
