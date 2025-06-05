@@ -21,6 +21,7 @@ class Target:
         if not self._ip:
             host = self.get_host()
             self._ip = resolve_ip(host)
+        return self._ip
 
     def get_hash(self):
         if not self._hash:

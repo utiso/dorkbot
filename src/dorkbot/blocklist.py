@@ -133,15 +133,18 @@ class Blocklist(Database):
         self.close()
 
     def match(self, target):
-        if self.regex and self.regex.match(target.url):
-            return True
+        if self.regex:
+            if match := self.regex.match(target.url):
+                return match.expand(r"\g<0>")
 
-        if target.get_host() in self.host_set:
-            return True
+        if host := target.get_host():
+            if host in self.host_set:
+                return host
 
-        for ip_net in self.ip_set:
-            if target.get_ip() in ip_net:
-                return True
+        if ip := target.get_ip():
+            for ip_net in self.ip_set:
+                if ip in ip_net:
+                    return ip_net
 
         return False
 

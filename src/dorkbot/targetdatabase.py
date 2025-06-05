@@ -99,11 +99,17 @@ class TargetDatabase(Database):
 
         return sql, parameters
 
-    def matches_blocklists(self, url, blocklists):
+    def matches_blocklists(self, url, blocklists, args=None):
         target = Target(url)
         for blocklist in blocklists:
-            if blocklist.match(target):
-                return True
+            try:
+                if match := blocklist.match(target):
+                    logging.debug(f"Matches blocklist: {url} ({match=})")
+                    return match
+            except Exception as e:
+                if args and args.delete_on_error:
+                    self.delete_target(url)
+                return None
         return False
 
     def get_next_target(self, args, blocklists=[]):
@@ -117,15 +123,11 @@ class TargetDatabase(Database):
                 break
             url, target_id, fingerprint_id, fingerprint, *_ = row
 
-            try:
-                if self.matches_blocklists(url, blocklists):
-                    logging.debug(f"Deleting (matches blocklist pattern): {url}")
-                    self.delete_target(url)
-                    continue
-            except Exception:
-                if args.delete_on_error:
-                    self.delete_target(url)
-                    continue
+            if match := self.matches_blocklists(url, blocklists, args=args):
+                self.delete_target(url)
+                continue
+            elif match is None:
+                continue
 
             if fingerprint_id:
                 logging.debug(f"Found unique fingerprint: {url}")
@@ -156,12 +158,9 @@ class TargetDatabase(Database):
         return target
 
     def add_target(self, url, source=None, blocklists=[]):
-        try:
-            if self.matches_blocklists(url, blocklists):
-                logging.debug(f"Ignoring (matches blocklist pattern): {url}")
-                return
-        except Exception:
-            pass
+        match = self.matches_blocklists(url, blocklists)
+        if match or match is None:
+            return
 
         logging.debug(f"Adding target {url}")
         if source:
@@ -176,7 +175,6 @@ class TargetDatabase(Database):
                      (get_parsed_url(url), source_id))
 
     def add_targets(self, urls, source=None, blocklists=[], chunk_size=1000):
-        logging.debug(f"Adding {len(urls)} targets")
         if source:
             source_id = self.get_source_id(source)
             if not source_id:
@@ -184,21 +182,18 @@ class TargetDatabase(Database):
         else:
             source_id = None
 
-        for x in range(0, len(urls), chunk_size):
-            urls_chunk = urls[x:x + chunk_size]
-            urls_chunk_add = []
-            for url in urls_chunk:
-                try:
-                    if self.matches_blocklists(url, blocklists):
-                        logging.debug(f"Ignoring (matches blocklist pattern): {url}")
-                        continue
-                except Exception:
-                    pass
-                urls_chunk_add.append(get_parsed_url(url))
+        valid_urls = []
+        for url in urls:
+            match = self.matches_blocklists(url, blocklists)
+            if not match and match is not None:
+                valid_urls.append(get_parsed_url(url))
 
+        logging.debug(f"Adding {len(valid_urls)} targets")
+        for x in range(0, len(valid_urls), chunk_size):
+            urls_chunk = valid_urls[x:x + chunk_size]
             self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
                          % (self.insert, self.param, self.param, self.conflict),
-                         [(url, source_id) for url in urls_chunk_add])
+                         [(url, source_id) for url in urls_chunk])
 
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
@@ -270,14 +265,9 @@ class TargetDatabase(Database):
         while targets:
             url, target_id, fingerprint_id, fingerprint, *_ = targets.pop()
 
-            try:
-                if self.matches_blocklists(url, blocklists):
-                    logging.debug(f"Deleting (matches blocklist pattern): {url}")
-                    self.delete_target(url)
-            except Exception:
-                if args.delete_on_error:
-                    self.delete_target(url)
-                    continue
+            if self.matches_blocklists(url, blocklists, args=args):
+                self.delete_target(url)
+                continue
 
             if fingerprint_id:
                 if fingerprint in fingerprints:
