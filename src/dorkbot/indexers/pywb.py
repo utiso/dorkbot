@@ -70,7 +70,7 @@ def run_pywb(args, source, data={}):
 
 def issue_request(args, url):
     response = ""
-    for i in range(args.retries + 1):
+    for i in range(args.http_retries + 1):
         try:
             logging.debug(url)
             response = urlopen(url).read().decode("utf-8")
@@ -83,11 +83,11 @@ def issue_request(args, url):
                     message = str(e)
                 logging.error(f"Request failed - {message}")
                 raise
-            elif i == args.retries:
+            elif i == args.http_retries:
                 logging.error(f"Request failed - {str(e)}")
                 raise
             else:
-                logging.debug(f"Request failed (attempt {i + 1} of {args.retries}) - {str(e)}")
+                logging.debug(f"Request failed (attempt {i + 1} of {args.http_retries}) - {str(e)}")
                 time.sleep(2**i)
                 continue
         break

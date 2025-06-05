@@ -206,6 +206,12 @@ These options are applicable regardless of module chosen:
 
 Indexer Modules
 ===============
+### General Options ###
+<pre>
+  http-retries RETRIES     number of times to retry fetching results on error
+  threads THREADS          number of concurrent requests to commoncrawl.org
+</pre>
+
 ### bing_api ###
 <pre>
   Searches bing.com
@@ -219,10 +225,9 @@ Indexer Modules
   Searches commoncrawl.org crawl data
 
   domain DOMAIN       pull all results for given domain or subdomain
-  index INDEX         search a specific index, e.g. CC-MAIN-2019-22 (default: latest)
+  index INDEX         search a specific index
   filter FILTER       query filter to apply to the search
-  retries RETRIES     number of times to retry fetching results on error
-  threads THREADS     number of concurrent requests to commoncrawl.org
+  page-size PAGE_SIZE number of results to request per page
 </pre>
 
 ### google_api ###
@@ -244,9 +249,10 @@ Indexer Modules
   cdx-api-suffix CDX_API_SUFFIX
                       suffix after index for index api
   index INDEX         search a specific index
+  field FIELD         field (fl) to query
   filter FILTER       query filter to apply to the search
-  retries RETRIES     number of times to retry fetching results on error
-  threads THREADS     number of concurrent requests to wayback.org
+  page-size PAGE_SIZE
+                      number of results to request per page
 </pre>
 
 ### stdin ###
@@ -260,10 +266,9 @@ Indexer Modules
 
   domain DOMAIN       pull all results for given domain or subdomain
   filter FILTER       query filter to apply to the search
+  page-size PAGE_SIZE number of results to request per page
   from FROM           beginning timestamp
   to TO               end timestamp
-  retries RETRIES     number of times to retry fetching results on error
-  threads THREADS     number of concurrent requests to wayback.org
 </pre>
 
 Scanner Modules
