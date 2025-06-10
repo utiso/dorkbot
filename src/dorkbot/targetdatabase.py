@@ -109,7 +109,7 @@ class TargetDatabase(Database):
             except Exception as e:
                 if args and args.delete_on_error:
                     self.delete_target(url)
-                return None
+                    return None
         return False
 
     def get_next_target(self, args, blocklists=[]):
