@@ -60,7 +60,8 @@ def main():
             tables = {"drop_tables": args.drop_tables, "create_tables": True}
             db = TargetDatabase(args.database, **tables, **retry)
             blocklist = Blocklist(db.address, **tables, **retry)
-        except Exception:
+        except Exception as e:
+            logging.error(f"Failed to load database - {str(e)}")
             sys.exit(1)
 
         blocklists = [blocklist]
