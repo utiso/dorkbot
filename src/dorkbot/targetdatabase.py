@@ -106,7 +106,7 @@ class TargetDatabase(Database):
                 if match := blocklist.match(target):
                     logging.debug(f"Matches blocklist: {url} ({match=})")
                     return match
-            except Exception as e:
+            except Exception:
                 if args and args.delete_on_error:
                     self.delete_target(url)
                     return None
