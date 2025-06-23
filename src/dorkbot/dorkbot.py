@@ -188,17 +188,47 @@ def load_module(category, name):
     return module
 
 
-def get_initial_args_parser():
+def get_defaults(config_file, section, parser, defaults=None):
+    if not defaults:
+        defaults = {}
+    config = configparser.ConfigParser()
+    try:
+        config.read(config_file)
+        config_items = dict(config.items(section))
+    except configparser.NoSectionError as e:
+        config_items = {}
+        logging.debug(e)
+    for action in parser._actions:
+        if action.dest in config_items:
+            if action.type:
+                defaults[action.dest] = (action.type)(config_items[action.dest])
+            else:
+                defaults[action.dest] = config_items[action.dest]
+    return defaults
+
+
+def get_config_args(args=None):
     config_dir = os.path.abspath(os.path.expanduser(
         os.environ.get("XDG_CONFIG_HOME")
         or os.environ.get("APPDATA")
         or os.path.join(os.environ["HOME"], ".config")
     ))
+    default_config = os.path.join(config_dir, "dorkbot", "dorkbot.ini")
+
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument("-c", "--config", default=default_config)
+    config_args, _ = config_parser.parse_known_args(args)
+
+    return config_args
+
+
+def get_initial_args_parser(args=None):
+    config_args = get_config_args(args=args)
 
     initial_parser = argparse.ArgumentParser(
         description="dorkbot", add_help=False)
     initial_parser.add_argument("-c", "--config",
-                                default=os.path.join(config_dir, "dorkbot", "dorkbot.ini"),
+                                default=config_args.config,
                                 help="Configuration file")
     initial_parser.add_argument("-r", "--directory",
                                 default=os.getcwd(),
@@ -212,34 +242,23 @@ def get_initial_args_parser():
                                    help="number of targets to retrieve (0/unset = all)")
     retrieval_options.add_argument("--random", action="store_true",
                                    help="retrieve targets in random order")
-    initial_args, other_args = initial_parser.parse_known_args()
+
+    defaults = get_defaults(config_args.config, "dorkbot", initial_parser)
+    initial_parser.set_defaults(**defaults)
+    initial_args, other_args = initial_parser.parse_known_args(args)
 
     return initial_args, other_args, initial_parser
 
 
-def get_main_args_parser():
-    initial_args, other_args, initial_parser = get_initial_args_parser()
-
-    defaults = {
-        "database": os.path.join(initial_args.directory, "dorkbot.db"),
-    }
-
-    if os.path.isfile(initial_args.config):
-        config = configparser.ConfigParser()
-        config.read(initial_args.config)
-        try:
-            config_items = config.items("dorkbot")
-            defaults.update(dict(config_items))
-        except KeyError:
-            pass
-        except configparser.NoSectionError as e:
-            logging.debug(e)
+def get_main_args_parser(args=None):
+    initial_args, other_args, initial_parser = get_initial_args_parser(args=args)
 
     if initial_args.show_defaults:
-        parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False,
-                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter = argparse.ArgumentDefaultsHelpFormatter
     else:
-        parser = argparse.ArgumentParser(parents=[initial_parser], add_help=False)
+        formatter = argparse.HelpFormatter
+    parser = argparse.ArgumentParser(
+        parents=[initial_parser], add_help=False, formatter_class=formatter)
 
     parser.add_argument("-h", "--help", action="store_true",
                         help="Show program (or specified module) help")
@@ -314,36 +333,15 @@ def get_main_args_parser():
     blocklist.add_argument("-b", "--external-blocklist", action="append",
                            help="Supplemental external blocklist file/db (can be used multiple times)")
 
+    seed_defaults = {"database": os.path.join(initial_args.directory, "dorkbot.db")}
+    defaults = get_defaults(initial_args.config, "dorkbot", parser, seed_defaults)
     parser.set_defaults(**defaults)
-    args = parser.parse_args(other_args, namespace=initial_args)
-    return args, parser
+    parsed_args = parser.parse_args(other_args, namespace=initial_args)
+    return parsed_args, parser
 
 
-def get_module_parser(module, parent_parser=None):
-    initial_args, other_args, initial_parser = get_initial_args_parser()
-
-    defaults = {}
-    module_defaults = {}
-
-    if os.path.isfile(initial_args.config):
-        config = configparser.ConfigParser()
-        config.read(initial_args.config)
-
-        try:
-            config_items = config.items("dorkbot")
-            defaults.update(dict(config_items))
-        except KeyError:
-            pass
-        except configparser.NoSectionError as e:
-            logging.debug(e)
-
-        try:
-            module_config_items = config.items(module.__name__)
-            module_defaults.update(dict(module_config_items))
-        except KeyError:
-            pass
-        except configparser.NoSectionError as e:
-            logging.debug(e)
+def get_module_parser(module, parent_parser=None, args=None):
+    initial_args, other_args, initial_parser = get_initial_args_parser(args)
 
     if parent_parser:
         initial_parser = parent_parser
@@ -352,13 +350,18 @@ def get_module_parser(module, parent_parser=None):
     epilog = "NOTE: module args are passed via -o/-p as key=value and do not themselves require hyphens"
 
     if initial_args.show_defaults:
-        parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False,
-                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter = argparse.ArgumentDefaultsHelpFormatter
     else:
-        parser = argparse.ArgumentParser(parents=[initial_parser], usage=usage, epilog=epilog, add_help=False)
+        formatter = argparse.HelpFormatter
+    parser = argparse.ArgumentParser(
+        parents=[initial_parser], usage=usage, epilog=epilog, add_help=False, formatter_class=formatter)
 
+    defaults = get_defaults(initial_args.config, "dorkbot", parser)
     parser.set_defaults(**defaults)
+
     module.populate_parser(initial_args, parser)
+    module_section = ("" if __package__ else "dorkbot.") + module.__name__
+    module_defaults = get_defaults(initial_args.config, module_section, parser)
     parser.set_defaults(**module_defaults)
 
     return parser, other_args
