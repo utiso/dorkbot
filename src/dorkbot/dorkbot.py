@@ -14,6 +14,7 @@ else:
 import argparse
 import configparser
 import importlib
+import json
 import logging
 import os
 import signal
@@ -200,9 +201,9 @@ def get_defaults(config_file, section, parser, defaults=None):
         logging.debug(e)
     for action in parser._actions:
         if action.dest in config_items:
-            if action.type:
-                defaults[action.dest] = (action.type)(config_items[action.dest])
-            else:
+            try:
+                defaults[action.dest] = json.loads(config_items[action.dest])
+            except json.decoder.JSONDecodeError:
                 defaults[action.dest] = config_items[action.dest]
     return defaults
 
