@@ -141,9 +141,10 @@ def graceful_shutdown(*_):
 
 def initialize_logger(log_file, verbose):
     log = logging.getLogger()
+    log.handlers = []
 
-    log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
     if log_file:
+        log_formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z")
         try:
             os.makedirs(os.path.dirname(os.path.abspath(log_file)), exist_ok=True)
             log_filehandler = WatchedFileHandler(log_file, mode="a", encoding="utf-8")
