@@ -64,7 +64,7 @@ class TargetDatabase(Database):
             urls.append(url)
         return urls
 
-    def get_targets_query(self, args, unscanned_only=False, count=0):
+    def get_targets_query(self, args, unscanned_only=False, count_only=False, count=0):
         fields = ["t.url", "t.id", "t.fingerprint_id", "f.fingerprint"]
         join = [("LEFT", "fingerprints f ON f.id = t.fingerprint_id")]
         where = []
@@ -84,17 +84,21 @@ class TargetDatabase(Database):
             join.append((join_type, "sources s ON s.id = t.source_id"))
 
         sql = "SELECT "
-        for i, field in enumerate(fields):
-            sql += "" if i == 0 else ", "
-            sql += field
+        if count_only:
+            sql += "COUNT(*)"
+        else:
+            for i, field in enumerate(fields):
+                sql += "" if i == 0 else ", "
+                sql += field
         sql += " FROM targets t"
         for join_type, join_criteria in join:
             sql += f" {join_type} JOIN {join_criteria}"
         for i, clause in enumerate(where):
             sql += " WHERE " if i == 0 else " AND "
             sql += clause
-        sql += " ORDER BY "
-        sql += "RANDOM()" if args.random else "t.id ASC"
+        if not count_only:
+            sql += " ORDER BY "
+            sql += "RANDOM()" if args.random else "t.id ASC"
         sql += f" LIMIT {count}" if count else ""
 
         return sql, parameters
@@ -222,6 +226,15 @@ class TargetDatabase(Database):
     def get_sources(self):
         rows = self.execute("SELECT source FROM sources ORDER BY id ASC", fetch=True)
         return [row[0] for row in rows] if rows else []
+
+    def get_target_count(self, args, unscanned_only=False):
+        sql, parameters = self.get_targets_query(args, unscanned_only, count_only=True)
+        row = self.execute(sql, parameters, fetch=1)
+        return 0 if not row else row[0]
+
+    def get_fingerprint_count(self):
+        row = self.execute("SELECT COUNT(*) FROM fingerprints", fetch=1)
+        return 0 if not row else row[0]
 
     def add_fingerprint(self, fingerprint, scanned=False):
         logging.debug(f"Adding fingerprint {fingerprint}")

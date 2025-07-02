@@ -53,7 +53,7 @@ def main():
             or args.list_blocklist or args.flush_blocklist \
             or args.add_blocklist_item or args.delete_blocklist_item \
             or args.flush_fingerprints or args.generate_fingerprints \
-            or args.reset_scanned or args.list_sources:
+            or args.reset_scanned or args.list_sources or args.show_stats:
 
         retry = {"retries": args.retries, "retry_on": args.retry_on}
 
@@ -127,6 +127,14 @@ def main():
             sources = db.get_sources()
             for source in sources:
                 print(source)
+
+        if args.show_stats:
+            target_count = db.get_target_count(args)
+            unscanned_count = db.get_target_count(args, unscanned_only=True)
+            fingerprint_count = db.get_fingerprint_count()
+            print(f"targets: {target_count}\n"
+                  f"unscanned: {unscanned_count}\n"
+                  f"fingerprints: {fingerprint_count}")
 
         db.close()
     else:
@@ -282,6 +290,8 @@ def get_main_args_parser(args=None):
                           help="Number of retries when an operation fails")
     database.add_argument("--retry-on", action="append", default=[],
                           help="Error strings that should result in a retry (can be used multiple times)")
+    database.add_argument("--show-stats", action="store_true",
+                          help="Show the total/unscanned target and fingerprint counts")
 
     targets = parser.add_argument_group('targets')
     targets.add_argument("-l", "--list-targets", action="store_true",
