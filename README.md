@@ -35,10 +35,11 @@ Usage
 usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                [--show-defaults] [--count COUNT] [--random] [-h] [--log LOG]
                [-v] [-V] [-d DATABASE] [-u] [--drop-tables]
-               [--retries RETRIES] [--retry-on RETRY_ON] [-l] [-n]
-               [--list-sources] [--add-target TARGET] [--delete-target TARGET]
-               [--flush-targets] [-e] [-i INDEXER] [-o INDEXER_ARG]
-               [-s SCANNER] [-p SCANNER_ARG] [-t] [-x] [-g] [-f]
+               [--retries RETRIES] [--retry-on RETRY_ON] [--show-stats] [-l]
+               [-n] [--list-sources] [--add-target TARGET]
+               [--delete-target TARGET] [--flush-targets] [-e] [-i INDEXER]
+               [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-t] [-x]
+               [--mark-unscanned MARK_UNSCANNED] [-g] [-f]
                [--fingerprint-max FINGERPRINT_MAX] [--list-blocklist]
                [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
                [--flush-blocklist] [-b EXTERNAL_BLOCKLIST]
@@ -68,6 +69,7 @@ database:
   --retries RETRIES     Number of retries when an operation fails
   --retry-on RETRY_ON   Error strings that should result in a retry (can be
                         used multiple times)
+  --show-stats          Show the total/unscanned target and fingerprint counts
 
 targets:
   -l, --list-targets    List targets in database
@@ -95,6 +97,8 @@ scanning:
                         multiple times)
   -t, --test            Fetch next scannable target but do not mark it scanned
   -x, --reset-scanned   Reset scanned status of all targets
+  --mark-unscanned MARK_UNSCANNED
+                        Reset scanned status of given target
 
 fingerprints:
   -g, --generate-fingerprints
@@ -102,7 +106,8 @@ fingerprints:
   -f, --flush-fingerprints
                         Delete all generated fingerprints
   --fingerprint-max FINGERPRINT_MAX
-                        Maximum matches per fingerprint before deleting new matches
+                        Maximum matches per fingerprint before deleting new
+                        matches
 
 blocklist:
   --list-blocklist      List internal blocklist entries
