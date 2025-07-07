@@ -53,7 +53,8 @@ def main():
             or args.list_blocklist or args.flush_blocklist \
             or args.add_blocklist_item or args.delete_blocklist_item \
             or args.flush_fingerprints or args.generate_fingerprints \
-            or args.reset_scanned or args.list_sources or args.show_stats:
+            or args.reset_scanned or args.list_sources or args.show_stats \
+            or args.mark_unscanned:
 
         retry = {"retries": args.retries, "retry_on": args.retry_on}
 
@@ -94,6 +95,8 @@ def main():
             db.add_target(args.add_target, source=args.source, blocklists=blocklists)
         if args.delete_target:
             db.delete_target(args.delete_target)
+        if args.mark_unscanned:
+            db.mark_unscanned(args.mark_unscanned)
 
         if args.indexer:
             indexer_module = load_module("indexers", args.indexer)
@@ -324,6 +327,8 @@ def get_main_args_parser(args=None):
                           help="Fetch next scannable target but do not mark it scanned")
     scanning.add_argument("-x", "--reset-scanned", action="store_true",
                           help="Reset scanned status of all targets")
+    scanning.add_argument("--mark-unscanned",
+                          help="Reset scanned status of given target")
 
     fingerprints = parser.add_argument_group('fingerprints')
     fingerprints.add_argument("-g", "--generate-fingerprints", action="store_true",

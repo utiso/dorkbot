@@ -202,6 +202,9 @@ class TargetDatabase(Database):
     def mark_target_scanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
 
+    def mark_target_unscanned(self, target_id):
+        self.execute("UPDATE targets SET scanned = 0 WHERE id = %s" % self.param, (target_id,))
+
     def delete_target(self, url):
         logging.debug(f"Deleting target {url}")
         self.execute("DELETE FROM targets WHERE url = %s" % self.param, (url,))
@@ -210,6 +213,20 @@ class TargetDatabase(Database):
         logging.info("Flushing targets")
         self.execute("DELETE FROM targets")
         self.execute("DELETE FROM sources")
+
+    def get_target_id(self, target):
+        row = self.execute("SELECT id FROM targets WHERE url = %s"
+                           % self.param, (target,), fetch=1)
+        return row if not row else row[0]
+
+    def mark_unscanned(self, target):
+        row = self.execute("SELECT id, fingerprint_id FROM targets WHERE url = %s"
+                           % self.param, (target,), fetch=1)
+        if row:
+            target_id = row[0]
+            self.mark_target_unscanned(target_id)
+            if fingerprint_id := row[1]:
+                self.mark_fingerprint_unscanned(fingerprint_id)
 
     def add_source(self, source):
         logging.debug(f"Adding source {source}")
@@ -265,6 +282,9 @@ class TargetDatabase(Database):
 
     def mark_fingerprint_scanned(self, fingerprint_id):
         self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
+
+    def mark_fingerprint_unscanned(self, fingerprint_id):
+        self.execute("UPDATE fingerprints SET scanned = 0 WHERE id = %s" % self.param, (fingerprint_id,))
 
     def prune(self, blocklists, args):
         logging.info("Pruning database")
