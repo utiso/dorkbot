@@ -71,7 +71,8 @@ def main():
             for external_blocklist in args.external_blocklist:
                 try:
                     blocklists.append(Blocklist(external_blocklist, **retry))
-                except Exception:
+                except Exception as e:
+                    logging.error(f"Failed to load blocklist - {str(e)}")
                     sys.exit(1)
 
         if args.flush_blocklist:
