@@ -37,9 +37,9 @@ usage: dorkbot [-c CONFIG] [-r DIRECTORY] [--source [SOURCE]]
                [-v] [-V] [-d DATABASE] [-u] [--drop-tables]
                [--retries RETRIES] [--retry-on RETRY_ON] [--show-stats] [-l]
                [-n] [--list-sources] [--add-target TARGET]
-               [--delete-target TARGET] [--flush-targets] [-e] [-i INDEXER]
-               [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG] [-t] [-x]
-               [--mark-unscanned MARK_UNSCANNED] [-g] [-f]
+               [--delete-target TARGET] [--flush-targets] [-m] [-e]
+               [-i INDEXER] [-o INDEXER_ARG] [-s SCANNER] [-p SCANNER_ARG]
+               [-t] [-x] [--mark-unscanned MARK_UNSCANNED] [-g] [-f]
                [--fingerprint-max FINGERPRINT_MAX] [--list-blocklist]
                [--add-blocklist-item ITEM] [--delete-blocklist-item ITEM]
                [--flush-blocklist] [-b EXTERNAL_BLOCKLIST]
@@ -79,6 +79,8 @@ targets:
   --delete-target TARGET
                         Delete a url from the target database
   --flush-targets       Delete all targets
+  -m, --delete-on-match
+                        Delete target if it matches blocklist item
   -e, --delete-on-error
                         Delete target if error encountered while processing it
 

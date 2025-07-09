@@ -103,17 +103,12 @@ class TargetDatabase(Database):
 
         return sql, parameters
 
-    def matches_blocklists(self, url, blocklists, args=None):
+    def matches_blocklists(self, url, blocklists):
         target = Target(url)
         for blocklist in blocklists:
-            try:
-                if match := blocklist.match(target):
-                    logging.debug(f"Matches blocklist: {url} ({match=})")
-                    return match
-            except Exception:
-                if args and args.delete_on_error:
-                    self.delete_target(url)
-                    return None
+            if match := blocklist.match(target):
+                logging.debug(f"Matches blocklist: {url} ({match=})")
+                return match
         return False
 
     def get_next_target(self, args, blocklists=[]):
@@ -127,10 +122,17 @@ class TargetDatabase(Database):
                 break
             url, target_id, fingerprint_id, fingerprint, *_ = row
 
-            if match := self.matches_blocklists(url, blocklists, args=args):
-                self.delete_target(url)
-                continue
-            elif match is None:
+            try:
+                match = self.matches_blocklists(url, blocklists)
+            except Exception:
+                match = None
+            if match or match is None:
+                if match and args.delete_on_match:
+                    self.delete_target(target_id)
+                elif match is None and args.delete_on_error:
+                    self.delete_target(target_id)
+                else:
+                    self.mark_target_scanned(target_id)
                 continue
 
             if fingerprint_id:
@@ -161,24 +163,7 @@ class TargetDatabase(Database):
                 break
         return target
 
-    def add_target(self, url, source=None, blocklists=[]):
-        match = self.matches_blocklists(url, blocklists)
-        if match or match is None:
-            return
-
-        logging.debug(f"Adding target {url}")
-        if source:
-            source_id = self.get_source_id(source)
-            if not source_id:
-                source_id = self.add_source(source)
-        else:
-            source_id = None
-
-        self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
-                     % (self.insert, self.param, self.param, self.conflict),
-                     (get_parsed_url(url), source_id))
-
-    def add_targets(self, urls, source=None, blocklists=[], chunk_size=1000):
+    def add_targets(self, urls, source=None, blocklists=[], chunk_size=1000, skip_on_match=False, skip_on_error=False):
         if source:
             source_id = self.get_source_id(source)
             if not source_id:
@@ -188,11 +173,15 @@ class TargetDatabase(Database):
 
         valid_urls = []
         for url in urls:
-            match = self.matches_blocklists(url, blocklists)
-            if not match and match is not None:
-                valid_urls.append(get_parsed_url(url))
+            try:
+                if self.matches_blocklists(url, blocklists) and skip_on_match:
+                    continue
+            except Exception:
+                if skip_on_error:
+                    continue
+            valid_urls.append(get_parsed_url(url))
 
-        logging.debug(f"Adding {len(valid_urls)} targets")
+        logging.info(f"Adding {len(valid_urls)} targets")
         for x in range(0, len(valid_urls), chunk_size):
             urls_chunk = valid_urls[x:x + chunk_size]
             self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
@@ -205,9 +194,8 @@ class TargetDatabase(Database):
     def mark_target_unscanned(self, target_id):
         self.execute("UPDATE targets SET scanned = 0 WHERE id = %s" % self.param, (target_id,))
 
-    def delete_target(self, url):
-        logging.debug(f"Deleting target {url}")
-        self.execute("DELETE FROM targets WHERE url = %s" % self.param, (url,))
+    def delete_target(self, target_id):
+        self.execute("DELETE FROM targets WHERE id = %s" % self.param, (target_id,))
 
     def flush_targets(self):
         logging.info("Flushing targets")
@@ -298,8 +286,17 @@ class TargetDatabase(Database):
         while targets:
             url, target_id, fingerprint_id, fingerprint, *_ = targets.pop()
 
-            if self.matches_blocklists(url, blocklists, args=args):
-                self.delete_target(url)
+            try:
+                match = self.matches_blocklists(url, blocklists)
+            except Exception:
+                match = None
+            if match or match is None:
+                if match and args.delete_on_match:
+                    self.delete_target(target_id)
+                elif match is None and args.delete_on_error:
+                    self.delete_target(target_id)
+                else:
+                    self.mark_target_scanned(target_id)
                 continue
 
             if fingerprint_id:
@@ -307,7 +304,7 @@ class TargetDatabase(Database):
                     fingerprint_id, fingerprint_count = fingerprints[fingerprint]
                     if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
                         logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
-                        self.delete_target(url)
+                        self.delete_target(target_id)
                     else:
                         logging.debug(f"Skipping (matches existing fingerprint): {url}")
                         fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
@@ -324,7 +321,7 @@ class TargetDatabase(Database):
                     fingerprint_id, fingerprint_count = fingerprints[fingerprint]
                     if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
                         logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
-                        self.delete_target(url)
+                        self.delete_target(target_id)
                     else:
                         logging.debug(f"Skipping (matches existing fingerprint): {url}")
                         fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
@@ -374,7 +371,7 @@ class TargetDatabase(Database):
                 fingerprint_id, fingerprint_count = fingerprints[fingerprint]
                 if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
                     logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
-                    self.delete_target(url)
+                    self.delete_target(target_id)
                     continue
                 else:
                     fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)

@@ -93,9 +93,11 @@ def main():
         if args.flush_targets:
             db.flush_targets()
         if args.add_target:
-            db.add_target(args.add_target, source=args.source, blocklists=blocklists)
+            skip = {"skip_on_match": args.delete_on_match, "skip_on_error": args.delete_on_error}
+            db.add_targets([args.add_target], source=args.source, blocklists=blocklists, **skip)
         if args.delete_target:
-            db.delete_target(args.delete_target)
+            if target_id := db.get_target_id(args.delete_target):
+                db.delete_target(target_id)
         if args.mark_unscanned:
             db.mark_unscanned(args.mark_unscanned)
 
@@ -310,6 +312,8 @@ def get_main_args_parser(args=None):
                          help="Delete a url from the target database")
     targets.add_argument("--flush-targets", action="store_true",
                          help="Delete all targets")
+    targets.add_argument("-m", "--delete-on-match", action="store_true",
+                         help="Delete target if it matches blocklist item")
     targets.add_argument("-e", "--delete-on-error", action="store_true",
                          help="Delete target if error encountered while processing it")
 
@@ -407,7 +411,8 @@ def index(db, blocklists, indexer, args, indexer_args):
         source = args.source
     else:
         source = module_source
-    db.add_targets(urls, source=source, blocklists=blocklists)
+    skip = {"skip_on_match": args.delete_on_match, "skip_on_error": args.delete_on_error}
+    db.add_targets(urls, source=source, blocklists=blocklists, **skip)
 
 
 def scan(db, blocklists, scanner, args, scanner_args):
