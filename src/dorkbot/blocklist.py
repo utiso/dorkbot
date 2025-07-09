@@ -74,15 +74,11 @@ class Blocklist(Database):
             elif item.startswith("host:"):
                 self.host_set.add(item.split(":")[1])
             elif item.startswith("regex:"):
-                self.regex_set.add(item.split(":")[1])
+                pattern = item.split(":")[1]
+                regex = re.compile(pattern)
+                self.regex_set.add((pattern, regex))
             else:
                 logging.warning(f"Could not parse blocklist item - {item}")
-
-        pattern = "|".join(self.regex_set)
-        if pattern:
-            self.regex = re.compile(pattern)
-        else:
-            self.regex = None
 
     def get_parsed_items(self):
         parsed_ip_set = set()
@@ -94,7 +90,7 @@ class Blocklist(Database):
 
         return ["ip:" + item for item in parsed_ip_set] + \
                ["host:" + item for item in self.host_set] + \
-               ["regex:" + item for item in self.regex_set]
+               ["regex:" + item for item, _ in self.regex_set]
 
     def read_items(self):
         if self.database:
@@ -119,7 +115,9 @@ class Blocklist(Database):
         elif item.startswith("host:"):
             self.host_set.add(item.split(":")[1])
         elif item.startswith("regex:"):
-            self.regex_set.add(item.split(":")[1])
+            pattern = item.split(":")[1]
+            regex = re.compile(pattern)
+            self.regex_set.add((pattern, regex))
         else:
             logging.error("Could not parse blocklist item - %s", item)
             raise
@@ -133,9 +131,9 @@ class Blocklist(Database):
         self.close()
 
     def match(self, target):
-        if self.regex:
-            if match := self.regex.match(target.url):
-                return match.expand(r"\g<0>")
+        for pattern, regex in self.regex_set:
+            if regex.match(target.url):
+                return pattern
 
         if host := target.get_host():
             if host in self.host_set:
@@ -159,7 +157,6 @@ class Blocklist(Database):
                 logging.error(f"Failed to delete blocklist file - {str(e)}")
                 raise
 
-        self.regex = None
         self.regex_set = set()
         self.ip_set = set()
         self.host_set = set()
