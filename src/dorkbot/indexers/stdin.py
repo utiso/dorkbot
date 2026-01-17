@@ -5,7 +5,9 @@ from urllib.parse import urlparse
 
 
 def populate_parser(args, parser):
-    module_group = parser.add_argument_group(__name__, "Accepts urls from stdin, one per line")  # noqa:F841
+    module_group = parser.add_argument_group(
+        __name__, "Accepts urls from stdin, one per line"
+    )  # noqa:F841
 
 
 def run(args):

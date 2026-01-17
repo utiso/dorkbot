@@ -8,10 +8,8 @@ from urllib.request import Request, urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches bing.com")
-    module_group.add_argument("--key", required=True,
-                              help="API key")
-    module_group.add_argument("--query", required=True,
-                              help="search query")
+    module_group.add_argument("--key", required=True, help="API key")
+    module_group.add_argument("--query", required=True, help="search query")
 
 
 def run(args):
@@ -24,9 +22,7 @@ def run(args):
 
 
 def get_results(key, query):
-    data = {"q": query,
-            "count": 50,
-            "offset": 0}
+    data = {"q": query, "count": 50, "offset": 0}
 
     results = []
     while data["offset"] < 1000:
@@ -55,7 +51,12 @@ def issue_request(data, key):
             if e.code == 429:
                 time.sleep(0.5)
 
-    if "webPages" not in response or response["webPages"]["totalEstimatedMatches"] < data["offset"]:
+    if (
+        "webPages" not in response
+        or response["webPages"]["totalEstimatedMatches"] < data["offset"]
+    ):
         return []
 
-    return [urlparse(item["url"].strip()).geturl() for item in response["webPages"]["value"]]
+    return [
+        urlparse(item["url"].strip()).geturl() for item in response["webPages"]["value"]
+    ]

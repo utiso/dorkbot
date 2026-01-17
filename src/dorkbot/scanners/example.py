@@ -9,10 +9,15 @@ else:
 
 def populate_parser(args, parser):
     scanner = __name__.split(".")[-1]
-    module_group = parser.add_argument_group(__name__, f"Scans with the {scanner} command-line scanner")
+    module_group = parser.add_argument_group(
+        __name__, f"Scans with the {scanner} command-line scanner"
+    )
     populate_general_options(args, module_group)
-    module_group.add_argument("--path", default=os.path.join(args.directory, "tools", scanner, "bin"),
-                              help="path to scanner binary")
+    module_group.add_argument(
+        "--path",
+        default=os.path.join(args.directory, "tools", scanner, "bin"),
+        help="path to scanner binary",
+    )
 
     return parser
 

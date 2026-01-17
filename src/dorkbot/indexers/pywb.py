@@ -17,24 +17,25 @@ else:
 
 
 def populate_pywb_options(module_group):
-    module_group.add_argument("--server", required=True,
-                              help="pywb server url")
-    module_group.add_argument("--domain", required=True,
-                              help="pull all results for given domain or subdomain")
-    module_group.add_argument("--cdx-api-suffix", default="/cdx",
-                              help="suffix after index for index api")
-    module_group.add_argument("--index",
-                              help="search a specific index")
-    module_group.add_argument("--field", default="url",
-                              help="field (fl) to query")
-    module_group.add_argument("--filter",
-                              help="query filter to apply to the search")
-    module_group.add_argument("--page-size", type=int,
-                              help="number of results to request per page")
+    module_group.add_argument("--server", required=True, help="pywb server url")
+    module_group.add_argument(
+        "--domain", required=True, help="pull all results for given domain or subdomain"
+    )
+    module_group.add_argument(
+        "--cdx-api-suffix", default="/cdx", help="suffix after index for index api"
+    )
+    module_group.add_argument("--index", help="search a specific index")
+    module_group.add_argument("--field", default="url", help="field (fl) to query")
+    module_group.add_argument("--filter", help="query filter to apply to the search")
+    module_group.add_argument(
+        "--page-size", type=int, help="number of results to request per page"
+    )
 
 
 def populate_parser(_, parser):
-    module_group = parser.add_argument_group(__name__, "Searches a given pywb server's crawl data")
+    module_group = parser.add_argument_group(
+        __name__, "Searches a given pywb server's crawl data"
+    )
     populate_general_options(module_group)
     populate_pywb_options(module_group)
 
@@ -87,7 +88,9 @@ def issue_request(args, url):
                 logging.error(f"Request failed - {str(e)}")
                 raise
             else:
-                logging.debug(f"Request failed (attempt {i + 1} of {args.http_retries}) - {str(e)}")
+                logging.debug(
+                    f"Request failed (attempt {i + 1} of {args.http_retries}) - {str(e)}"
+                )
                 time.sleep(2**i)
                 continue
         break
@@ -201,7 +204,9 @@ def get_results(args, data, num_pages):
                 results.update(get_page(args, data, page))
         else:
             with ThreadPoolExecutor(max_workers=args.threads) as executor:
-                threads = executor.map(get_page, repeat(args), repeat(data), range(num_pages))
+                threads = executor.map(
+                    get_page, repeat(args), repeat(data), range(num_pages)
+                )
                 for result in threads:
                     results.update(result)
     except Exception:

@@ -9,14 +9,10 @@ from urllib.request import urlopen
 
 def populate_parser(args, parser):
     module_group = parser.add_argument_group(__name__, "Searches google.com")
-    module_group.add_argument("--key", required=True,
-                              help="API key")
-    module_group.add_argument("--engine", required=True,
-                              help="CSE id")
-    module_group.add_argument("--query", required=True,
-                              help="search query")
-    module_group.add_argument("--domain",
-                              help="limit searches to specified domain")
+    module_group.add_argument("--key", required=True, help="API key")
+    module_group.add_argument("--engine", required=True, help="CSE id")
+    module_group.add_argument("--query", required=True, help="search query")
+    module_group.add_argument("--domain", help="limit searches to specified domain")
 
 
 def run(args):
@@ -67,7 +63,9 @@ def issue_request(data):
             elif "Request contains an invalid argument" in response["error"]["message"]:
                 return []
             for error in response["error"]["errors"]:
-                logging.error("%s::%s::%s", error["domain"], error["reason"], error["message"])
+                logging.error(
+                    "%s::%s::%s", error["domain"], error["reason"], error["message"]
+                )
             if "User Rate Limit Exceeded" in response["error"]["message"]:
                 time.sleep(5)
                 continue
@@ -76,13 +74,16 @@ def issue_request(data):
                 time.sleep(3600)
                 continue
             else:
-                logging.error("Failed to fetch results - %d %s", response["error"]["code"],
-                              response["error"]["message"])
+                logging.error(
+                    "Failed to fetch results - %d %s",
+                    response["error"]["code"],
+                    response["error"]["message"],
+                )
                 sys.exit(1)
 
     items = []
     # https://developers.google.com/custom-search/v1/reference/rest/v1/Search
-    if int(response['searchInformation'].get('totalResults', 0)) == 0:
+    if int(response["searchInformation"].get("totalResults", 0)) == 0:
         return []
     for item in response["items"]:
         items.append(urlparse(item["link"]).geturl())

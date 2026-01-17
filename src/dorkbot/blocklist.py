@@ -3,6 +3,7 @@ import ipaddress
 import logging
 import os
 import re
+
 if __package__:
     from dorkbot.database import Database
 else:
@@ -10,7 +11,9 @@ else:
 
 
 class Blocklist(Database):
-    def __init__(self, address, drop_tables=False, create_tables=False, retries=0, retry_on=[]):
+    def __init__(
+        self, address, drop_tables=False, create_tables=False, retries=0, retry_on=[]
+    ):
         Database.__init__(self, address, retries, retry_on)
         self.ip_set = set()
         self.host_set = set()
@@ -19,9 +22,13 @@ class Blocklist(Database):
         if self.database:
             if address.startswith("sqlite3://"):
                 try:
-                    os.makedirs(os.path.dirname(os.path.abspath(self.database)), exist_ok=True)
+                    os.makedirs(
+                        os.path.dirname(os.path.abspath(self.database)), exist_ok=True
+                    )
                 except OSError as e:
-                    logging.error(f"Failed to create parent directory for database file - {str(e)}")
+                    logging.error(
+                        f"Failed to create parent directory for database file - {str(e)}"
+                    )
                     raise
 
             self.connect()
@@ -31,13 +38,17 @@ class Blocklist(Database):
                 self.execute("DROP TABLE IF EXISTS blocklist")
 
             if create_tables:
-                self.execute("CREATE TABLE IF NOT EXISTS blocklist"
-                             f" (id {self.id_type},"
-                             " item VARCHAR)")
+                self.execute(
+                    "CREATE TABLE IF NOT EXISTS blocklist"
+                    f" (id {self.id_type},"
+                    " item VARCHAR)"
+                )
 
         else:
             try:
-                os.makedirs(os.path.dirname(os.path.abspath(self.address)), exist_ok=True)
+                os.makedirs(
+                    os.path.dirname(os.path.abspath(self.address)), exist_ok=True
+                )
                 self.blocklist_file = open(self.address, "r")
             except OSError as e:
                 logging.error(f"Failed to open database file - {str(e)}")
@@ -88,13 +99,17 @@ class Blocklist(Database):
             else:
                 parsed_ip_set.add(str(ip_net))
 
-        return ["ip:" + item for item in parsed_ip_set] + \
-               ["host:" + item for item in self.host_set] + \
-               ["regex:" + item for item, _ in self.regex_set]
+        return (
+            ["ip:" + item for item in parsed_ip_set]
+            + ["host:" + item for item in self.host_set]
+            + ["regex:" + item for item, _ in self.regex_set]
+        )
 
     def read_items(self):
         if self.database:
-            rows = self.execute("SELECT item FROM blocklist ORDER BY id ASC", fetch=True)
+            rows = self.execute(
+                "SELECT item FROM blocklist ORDER BY id ASC", fetch=True
+            )
             items = [row[0] for row in rows] if rows else []
         else:
             items = self.blocklist_file.read().splitlines()
@@ -122,7 +137,9 @@ class Blocklist(Database):
             logging.error("Could not parse blocklist item - %s", item)
             raise
 
-        self.execute("%s INTO blocklist (item) VALUES (%s)" % (self.insert, self.param), (item,))
+        self.execute(
+            "%s INTO blocklist (item) VALUES (%s)" % (self.insert, self.param), (item,)
+        )
         self.close()
 
     def delete(self, item):

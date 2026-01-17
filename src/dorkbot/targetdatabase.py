@@ -12,7 +12,9 @@ import os
 
 
 class TargetDatabase(Database):
-    def __init__(self, address, drop_tables=False, create_tables=False, retries=0, retry_on=[]):
+    def __init__(
+        self, address, drop_tables=False, create_tables=False, retries=0, retry_on=[]
+    ):
         protocols = ["postgresql://", "sqlite3://"]
         if not any(address.startswith(protocol) for protocol in protocols):
             address = f"sqlite3://{address}"
@@ -20,9 +22,13 @@ class TargetDatabase(Database):
 
         if self.database and address.startswith("sqlite3://"):
             try:
-                os.makedirs(os.path.dirname(os.path.abspath(self.database)), exist_ok=True)
+                os.makedirs(
+                    os.path.dirname(os.path.abspath(self.database)), exist_ok=True
+                )
             except OSError as e:
-                logging.error(f"Failed to create parent directory for database file - {str(e)}")
+                logging.error(
+                    f"Failed to create parent directory for database file - {str(e)}"
+                )
                 raise
 
         self.connect()
@@ -35,22 +41,30 @@ class TargetDatabase(Database):
             self.execute("DROP TABLE IF EXISTS blocklist")
 
         if create_tables:
-            self.execute("CREATE TABLE IF NOT EXISTS targets"
-                         f" (id {self.id_type},"
-                         " url VARCHAR UNIQUE,"
-                         " source_id INTEGER,"
-                         " fingerprint_id INTEGER,"
-                         " scanned INTEGER DEFAULT 0)")
-            self.execute("CREATE TABLE IF NOT EXISTS sources"
-                         f" (id {self.id_type},"
-                         " source VARCHAR UNIQUE)")
-            self.execute("CREATE TABLE IF NOT EXISTS fingerprints"
-                         f" (id {self.id_type},"
-                         " fingerprint VARCHAR UNIQUE,"
-                         " scanned INTEGER DEFAULT 0)")
-            self.execute("CREATE TABLE IF NOT EXISTS blocklist"
-                         f" (id {self.id_type},"
-                         " item VARCHAR UNIQUE)")
+            self.execute(
+                "CREATE TABLE IF NOT EXISTS targets"
+                f" (id {self.id_type},"
+                " url VARCHAR UNIQUE,"
+                " source_id INTEGER,"
+                " fingerprint_id INTEGER,"
+                " scanned INTEGER DEFAULT 0)"
+            )
+            self.execute(
+                "CREATE TABLE IF NOT EXISTS sources"
+                f" (id {self.id_type},"
+                " source VARCHAR UNIQUE)"
+            )
+            self.execute(
+                "CREATE TABLE IF NOT EXISTS fingerprints"
+                f" (id {self.id_type},"
+                " fingerprint VARCHAR UNIQUE,"
+                " scanned INTEGER DEFAULT 0)"
+            )
+            self.execute(
+                "CREATE TABLE IF NOT EXISTS blocklist"
+                f" (id {self.id_type},"
+                " item VARCHAR UNIQUE)"
+            )
 
     def get_urls(self, args):
         options = {"unscanned_only": args.unscanned_only, "count": args.count}
@@ -71,7 +85,9 @@ class TargetDatabase(Database):
         parameters = ()
 
         if unscanned_only:
-            where.extend(["t.scanned = '0'", "(t.fingerprint_id IS NULL OR f.scanned = '0')"])
+            where.extend(
+                ["t.scanned = '0'", "(t.fingerprint_id IS NULL OR f.scanned = '0')"]
+            )
 
         if args.source:
             fields.append("s.source")
@@ -155,7 +171,9 @@ class TargetDatabase(Database):
                         fingerprints[fingerprint] = fingerprint_id
                     else:
                         logging.debug(f"Found unique fingerprint: {url}")
-                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=(not args.test))
+                        fingerprint_id = self.add_fingerprint(
+                            fingerprint, scanned=(not args.test)
+                        )
                         target = url
                 self.update_target_fingerprint(target_id, fingerprint_id)
 
@@ -163,7 +181,15 @@ class TargetDatabase(Database):
                 break
         return target
 
-    def add_targets(self, urls, source=None, blocklists=[], chunk_size=1000, skip_on_match=False, skip_on_error=False):
+    def add_targets(
+        self,
+        urls,
+        source=None,
+        blocklists=[],
+        chunk_size=1000,
+        skip_on_match=False,
+        skip_on_error=False,
+    ):
         if source:
             source_id = self.get_source_id(source)
             if not source_id:
@@ -183,16 +209,22 @@ class TargetDatabase(Database):
 
         logging.info(f"Adding {len(valid_urls)} targets")
         for x in range(0, len(valid_urls), chunk_size):
-            urls_chunk = valid_urls[x:x + chunk_size]
-            self.execute("%s INTO targets (url, source_id) VALUES (%s, %s) %s"
-                         % (self.insert, self.param, self.param, self.conflict),
-                         [(url, source_id) for url in urls_chunk])
+            urls_chunk = valid_urls[x : x + chunk_size]
+            self.execute(
+                "%s INTO targets (url, source_id) VALUES (%s, %s) %s"
+                % (self.insert, self.param, self.param, self.conflict),
+                [(url, source_id) for url in urls_chunk],
+            )
 
     def mark_target_scanned(self, target_id):
-        self.execute("UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,))
+        self.execute(
+            "UPDATE targets SET scanned = 1 WHERE id = %s" % self.param, (target_id,)
+        )
 
     def mark_target_unscanned(self, target_id):
-        self.execute("UPDATE targets SET scanned = 0 WHERE id = %s" % self.param, (target_id,))
+        self.execute(
+            "UPDATE targets SET scanned = 0 WHERE id = %s" % self.param, (target_id,)
+        )
 
     def delete_target(self, target_id):
         self.execute("DELETE FROM targets WHERE id = %s" % self.param, (target_id,))
@@ -203,13 +235,17 @@ class TargetDatabase(Database):
         self.execute("DELETE FROM sources")
 
     def get_target_id(self, target):
-        row = self.execute("SELECT id FROM targets WHERE url = %s"
-                           % self.param, (target,), fetch=1)
+        row = self.execute(
+            "SELECT id FROM targets WHERE url = %s" % self.param, (target,), fetch=1
+        )
         return row if not row else row[0]
 
     def mark_unscanned(self, target):
-        row = self.execute("SELECT id, fingerprint_id FROM targets WHERE url = %s"
-                           % self.param, (target,), fetch=1)
+        row = self.execute(
+            "SELECT id, fingerprint_id FROM targets WHERE url = %s" % self.param,
+            (target,),
+            fetch=1,
+        )
         if row:
             target_id = row[0]
             self.mark_target_unscanned(target_id)
@@ -218,14 +254,18 @@ class TargetDatabase(Database):
 
     def add_source(self, source):
         logging.debug(f"Adding source {source}")
-        row = self.execute("%s INTO sources (source) VALUES (%s) %s RETURNING id"
-                           % (self.insert, self.param, self.conflict),
-                           (source,), fetch=1)
+        row = self.execute(
+            "%s INTO sources (source) VALUES (%s) %s RETURNING id"
+            % (self.insert, self.param, self.conflict),
+            (source,),
+            fetch=1,
+        )
         return row if not row else row[0]
 
     def get_source_id(self, source):
-        row = self.execute("SELECT id FROM sources WHERE source = %s"
-                           % self.param, (source,), fetch=1)
+        row = self.execute(
+            "SELECT id FROM sources WHERE source = %s" % self.param, (source,), fetch=1
+        )
         return row if not row else row[0]
 
     def get_sources(self):
@@ -243,15 +283,21 @@ class TargetDatabase(Database):
 
     def add_fingerprint(self, fingerprint, scanned=False):
         logging.debug(f"Adding fingerprint {fingerprint}")
-        row = self.execute("%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s RETURNING id"
-                           % (self.insert, self.param, self.param, self.conflict),
-                           (fingerprint, 1 if scanned else 0), fetch=1)
+        row = self.execute(
+            "%s INTO fingerprints (fingerprint, scanned) VALUES (%s, %s) %s RETURNING id"
+            % (self.insert, self.param, self.param, self.conflict),
+            (fingerprint, 1 if scanned else 0),
+            fetch=1,
+        )
         return row if not row else row[0]
 
     def update_target_fingerprint(self, target_id, fingerprint_id):
         logging.debug(f"Updating target fingerprint id {target_id}->{fingerprint_id}")
-        self.execute("UPDATE targets SET fingerprint_id = %s WHERE id = %s"
-                     % (self.param, self.param), (fingerprint_id, target_id))
+        self.execute(
+            "UPDATE targets SET fingerprint_id = %s WHERE id = %s"
+            % (self.param, self.param),
+            (fingerprint_id, target_id),
+        )
 
     def flush_fingerprints(self):
         logging.info("Flushing fingerprints")
@@ -264,15 +310,24 @@ class TargetDatabase(Database):
         self.execute("UPDATE fingerprints SET scanned = 0")
 
     def get_fingerprint_id(self, fingerprint):
-        row = self.execute("SELECT id FROM fingerprints WHERE fingerprint = %s"
-                           % self.param, (fingerprint,), fetch=1)
+        row = self.execute(
+            "SELECT id FROM fingerprints WHERE fingerprint = %s" % self.param,
+            (fingerprint,),
+            fetch=1,
+        )
         return row if not row else row[0]
 
     def mark_fingerprint_scanned(self, fingerprint_id):
-        self.execute("UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param, (fingerprint_id,))
+        self.execute(
+            "UPDATE fingerprints SET scanned = 1 WHERE id = %s" % self.param,
+            (fingerprint_id,),
+        )
 
     def mark_fingerprint_unscanned(self, fingerprint_id):
-        self.execute("UPDATE fingerprints SET scanned = 0 WHERE id = %s" % self.param, (fingerprint_id,))
+        self.execute(
+            "UPDATE fingerprints SET scanned = 0 WHERE id = %s" % self.param,
+            (fingerprint_id,),
+        )
 
     def prune(self, blocklists, args):
         logging.info("Pruning database")
@@ -302,12 +357,20 @@ class TargetDatabase(Database):
             if fingerprint_id:
                 if fingerprint in fingerprints:
                     fingerprint_id, fingerprint_count = fingerprints[fingerprint]
-                    if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
-                        logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
+                    if (
+                        args.fingerprint_max
+                        and fingerprint_count >= args.fingerprint_max
+                    ):
+                        logging.debug(
+                            f"Deleting (exceeds max fingerprint count): {url}"
+                        )
                         self.delete_target(target_id)
                     else:
                         logging.debug(f"Skipping (matches existing fingerprint): {url}")
-                        fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
+                        fingerprints[fingerprint] = (
+                            fingerprint_id,
+                            fingerprint_count + 1,
+                        )
                         self.mark_target_scanned(target_id)
                 else:
                     logging.debug(f"Found unique fingerprint: {url}")
@@ -319,12 +382,20 @@ class TargetDatabase(Database):
 
                 if fingerprint in fingerprints:
                     fingerprint_id, fingerprint_count = fingerprints[fingerprint]
-                    if args.fingerprint_max and fingerprint_count >= args.fingerprint_max:
-                        logging.debug(f"Deleting (exceeds max fingerprint count): {url}")
+                    if (
+                        args.fingerprint_max
+                        and fingerprint_count >= args.fingerprint_max
+                    ):
+                        logging.debug(
+                            f"Deleting (exceeds max fingerprint count): {url}"
+                        )
                         self.delete_target(target_id)
                     else:
                         logging.debug(f"Skipping (matches existing fingerprint): {url}")
-                        fingerprints[fingerprint] = (fingerprint_id, fingerprint_count + 1)
+                        fingerprints[fingerprint] = (
+                            fingerprint_id,
+                            fingerprint_count + 1,
+                        )
                         self.mark_target_scanned(target_id)
                 else:
                     fingerprint_id = self.get_fingerprint_id(fingerprint)
@@ -332,7 +403,9 @@ class TargetDatabase(Database):
                         logging.debug(f"Skipping (matches existing fingerprint): {url}")
                     else:
                         logging.debug(f"Found unique fingerprint: {url}")
-                        fingerprint_id = self.add_fingerprint(fingerprint, scanned=False)
+                        fingerprint_id = self.add_fingerprint(
+                            fingerprint, scanned=False
+                        )
                     fingerprints[fingerprint] = (fingerprint_id, 1)
 
                 self.update_target_fingerprint(target_id, fingerprint_id)

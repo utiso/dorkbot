@@ -9,15 +9,22 @@ else:
 
 
 def populate_parser(_, parser):
-    module_group = parser.add_argument_group(__name__, "Searches archive.org crawl data")
+    module_group = parser.add_argument_group(
+        __name__, "Searches archive.org crawl data"
+    )
     populate_general_options(module_group)
     populate_pywb_options(module_group)
-    module_group.add_argument("--from", dest="from_", metavar="FROM",
-                              help="beginning timestamp")
-    module_group.add_argument("--to",
-                              help="end timestamp")
+    module_group.add_argument(
+        "--from", dest="from_", metavar="FROM", help="beginning timestamp"
+    )
+    module_group.add_argument("--to", help="end timestamp")
 
-    defaults = {"server": "https://web.archive.org", "cdx_api_suffix": "cdx/search/cdx", "field": "original", "index": False}
+    defaults = {
+        "server": "https://web.archive.org",
+        "cdx_api_suffix": "cdx/search/cdx",
+        "field": "original",
+        "index": False,
+    }
     module_group.set_defaults(**defaults)
     for action in module_group._actions:
         if action.dest in defaults.keys():

@@ -70,7 +70,9 @@ def get_database_module(address):
                 module_name = module
                 break
         if not module_name:
-            logging.error("Missing postgresql module - try: pip install psycopg[binary]")
+            logging.error(
+                "Missing postgresql module - try: pip install psycopg[binary]"
+            )
             raise
 
     elif address.startswith("sqlite3://"):
@@ -122,7 +124,7 @@ def write_report(report, scanner_args, hash=None):
         os.makedirs(os.path.abspath(scanner_args.report_dir), exist_ok=True)
         with open(filename, report_mode) as outfile:
             json.dump(report, outfile, indent=indent, sort_keys=True)
-            outfile.write('\n')
+            outfile.write("\n")
             logging.info("Report saved to: %s" % outfile.name)
     except OSError as e:
         logging.error(f"Failed to write report - {str(e)}")
