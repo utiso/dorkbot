@@ -1,11 +1,6 @@
 import argparse
-
-if __package__:
-    from .pywb import populate_pywb_options, run_pywb
-    from .general import populate_general_options
-else:
-    from indexers.pywb import populate_pywb_options, run_pywb
-    from indexers.general import populate_general_options
+from dorkbot.indexers.pywb import populate_pywb_options, run_pywb
+from dorkbot.indexers.general import populate_general_options
 
 
 def populate_parser(_, parser):

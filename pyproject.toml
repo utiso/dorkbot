@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dorkbot"
+version = "1.7.2+git"
 authors = [
     { name = "John Gordon", email = "jgor@utexas.edu" }
 ]
@@ -16,7 +17,6 @@ classifiers = [
     "License :: Free for non-commercial use",
     "Operating System :: OS Independent",
 ]
-dynamic = ["version"]
 
 [project.urls]
 Homepage = "http://dorkbot.io"

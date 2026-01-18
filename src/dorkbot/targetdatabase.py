@@ -1,12 +1,6 @@
-#!/usr/bin/env python3
-if __package__:
-    from dorkbot.database import Database
-    from dorkbot.target import Target
-    from dorkbot.util import generate_fingerprint, get_parsed_url
-else:
-    from database import Database
-    from target import Target
-    from util import generate_fingerprint, get_parsed_url
+from dorkbot.database import Database
+from dorkbot.target import Target
+from dorkbot.util import generate_fingerprint, get_parsed_url
 import logging
 import os
 

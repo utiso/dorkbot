@@ -6,11 +6,7 @@ import platform
 import subprocess
 import sys
 import tempfile
-
-if __package__:
-    from .general import populate_general_options
-else:
-    from scanners.general import populate_general_options
+from dorkbot.scanners.general import populate_general_options
 
 
 def populate_parser(args, parser):

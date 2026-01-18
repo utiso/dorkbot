@@ -1,12 +1,8 @@
-#!/usr/bin/env python3
-if __package__:
-    from dorkbot.util import get_database_module
-else:
-    from util import get_database_module
 import logging
 import os
 import time
 from contextlib import closing
+from dorkbot.util import get_database_module
 
 
 class Database:

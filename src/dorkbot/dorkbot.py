@@ -1,16 +1,8 @@
-#!/usr/bin/env python3
-if __package__:
-    from ._version import __version__
-    from dorkbot.target import Target
-    from dorkbot.targetdatabase import TargetDatabase
-    from dorkbot.blocklist import Blocklist
-    from dorkbot.util import generate_timestamp, generate_report, write_report
-else:
-    from _version import __version__
-    from target import Target
-    from targetdatabase import TargetDatabase
-    from blocklist import Blocklist
-    from util import generate_timestamp, generate_report, write_report
+from dorkbot import __version__
+from dorkbot.target import Target
+from dorkbot.targetdatabase import TargetDatabase
+from dorkbot.blocklist import Blocklist
+from dorkbot.util import generate_timestamp, generate_report, write_report
 import argparse
 import configparser
 import importlib
@@ -219,11 +211,8 @@ def initialize_logger(log_file, verbose):
 
 
 def load_module(category, name):
-    module_name = "%s.%s" % (category, name)
-    if __package__:
-        module_name = "." + module_name
     try:
-        module = importlib.import_module(module_name, package=__package__)
+        module = importlib.import_module(f"dorkbot.{category}.{name}")
     except ImportError:
         logging.error("Module not found")
         raise
@@ -519,8 +508,7 @@ def get_module_parser(module, parent_parser=None, args=None):
     parser.set_defaults(**defaults)
 
     module.populate_parser(initial_args, parser)
-    module_section = ("" if __package__ else "dorkbot.") + module.__name__
-    module_defaults = get_defaults(initial_args.config, module_section, parser)
+    module_defaults = get_defaults(initial_args.config, module.__name__, parser)
     parser.set_defaults(**module_defaults)
 
     return parser, other_args

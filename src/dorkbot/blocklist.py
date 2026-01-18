@@ -1,13 +1,8 @@
-#!/usr/bin/env python3
 import ipaddress
 import logging
 import os
 import re
-
-if __package__:
-    from dorkbot.database import Database
-else:
-    from database import Database
+from dorkbot.database import Database
 
 
 class Blocklist(Database):

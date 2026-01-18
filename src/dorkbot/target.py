@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-if __package__:
-    from dorkbot.util import generate_hash, parse_host, resolve_ip
-else:
-    from util import generate_hash, parse_host, resolve_ip
+from dorkbot.util import generate_hash, parse_host, resolve_ip
 
 
 class Target:
