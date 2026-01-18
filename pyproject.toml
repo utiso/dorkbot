@@ -24,6 +24,3 @@ GitHub = "https://github.com/utiso/dorkbot"
 
 [project.scripts]
 dorkbot = "dorkbot.dorkbot:main"
-
-[tool.setuptools.dynamic]
-version = {attr = "dorkbot._version.__version__"}
