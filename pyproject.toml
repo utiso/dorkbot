@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dorkbot"
-version = "1.7.2+git"
+version = "1.8.0+git"
 authors = [
     { name = "John Gordon", email = "jgor@utexas.edu" }
 ]
@@ -24,3 +24,8 @@ GitHub = "https://github.com/utiso/dorkbot"
 
 [project.scripts]
 dorkbot = "dorkbot.dorkbot:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
