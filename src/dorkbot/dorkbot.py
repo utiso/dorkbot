@@ -212,7 +212,7 @@ def initialize_logger(log_file, verbose):
 
 def load_module(category, name):
     try:
-        module = importlib.import_module(f"dorkbot.{category}.{name}")
+        module = importlib.import_module(f".{category}.{name}", package=__package__)
     except ImportError:
         logging.error("Module not found")
         raise
