@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dorkbot"
-version = "1.9.0+git"
+version = "1.9.1+git"
 authors = [
     { name = "John Gordon", email = "jgor@utexas.edu" }
 ]
