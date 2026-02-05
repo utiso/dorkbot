@@ -50,7 +50,7 @@ def run(args, target):
             e
         ) or "The system cannot find the file specified" in str(e):
             logging.critical(
-                f"Could not find {scanner}. If not in PATH, extract or symlink as [directory]/tools/{scanner}"
+                f"Could not find {scanner}. If not in PATH, extract or symlink as [directory]/tools/{scanner} "
                 "or set path option to correct directory."
             )
             sys.exit(1)
