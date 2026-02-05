@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 from urllib.parse import urlparse, urlunparse, urljoin
-from dorkbot.scanners.general import populate_general_options
+from .general import populate_general_options
 
 
 def populate_parser(args, parser):

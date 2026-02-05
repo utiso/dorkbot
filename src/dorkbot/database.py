@@ -2,7 +2,7 @@ import logging
 import os
 import time
 from contextlib import closing
-from dorkbot.util import get_database_module
+from .util import get_database_module
 
 
 class Database:

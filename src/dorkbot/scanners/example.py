@@ -1,6 +1,6 @@
 import os
 import subprocess
-from dorkbot.scanners.general import populate_general_options
+from .general import populate_general_options
 
 
 def populate_parser(args, parser):

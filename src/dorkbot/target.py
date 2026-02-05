@@ -1,4 +1,4 @@
-from dorkbot.util import generate_hash, parse_host, resolve_ip
+from .util import generate_hash, parse_host, resolve_ip
 
 
 class Target:

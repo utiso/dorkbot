@@ -1,8 +1,8 @@
-from dorkbot import __version__
-from dorkbot.target import Target
-from dorkbot.targetdatabase import TargetDatabase
-from dorkbot.blocklist import Blocklist
-from dorkbot.util import generate_timestamp, generate_report, write_report
+from . import __version__
+from .target import Target
+from .targetdatabase import TargetDatabase
+from .blocklist import Blocklist
+from .util import generate_timestamp, generate_report, write_report
 import argparse
 import configparser
 import importlib

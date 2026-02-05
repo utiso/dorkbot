@@ -2,7 +2,7 @@ import ipaddress
 import logging
 import os
 import re
-from dorkbot.database import Database
+from .database import Database
 
 
 class Blocklist(Database):

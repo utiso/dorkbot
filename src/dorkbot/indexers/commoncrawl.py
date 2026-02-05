@@ -1,6 +1,6 @@
 import argparse
-from dorkbot.indexers.pywb import populate_pywb_options, run_pywb
-from dorkbot.indexers.general import populate_general_options
+from .pywb import populate_pywb_options, run_pywb
+from .general import populate_general_options
 
 
 def populate_parser(_, parser):

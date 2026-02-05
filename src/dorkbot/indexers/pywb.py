@@ -9,7 +9,7 @@ from itertools import repeat
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
-from dorkbot.indexers.general import populate_general_options
+from .general import populate_general_options
 
 
 def populate_pywb_options(module_group):

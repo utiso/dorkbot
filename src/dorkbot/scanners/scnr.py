@@ -6,7 +6,7 @@ import platform
 import subprocess
 import sys
 import tempfile
-from dorkbot.scanners.general import populate_general_options
+from .general import populate_general_options
 
 
 def populate_parser(args, parser):
