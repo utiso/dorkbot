@@ -122,7 +122,7 @@ class TargetDatabase(Database):
         return False
 
     def get_next_target(self, args, blocklists=[]):
-        options = {"unscanned_only": True}
+        options = {"unscanned_only": True, "count": 1}
         sql, parameters = self.get_targets_query(args, **options)
         target = None
         fingerprints = {}
