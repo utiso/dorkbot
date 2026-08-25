@@ -59,6 +59,11 @@ class TargetDatabase(Database):
                 f" (id {self.id_type},"
                 " item VARCHAR UNIQUE)"
             )
+            self.execute(
+                "CREATE INDEX IF NOT EXISTS idx_targets_unscanned"
+                " ON targets (fingerprint_id)"
+                " WHERE scanned = 0"
+            )
 
     def get_urls(self, args):
         options = {"unscanned_only": args.unscanned_only, "count": args.count}
