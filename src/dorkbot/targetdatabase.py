@@ -78,7 +78,7 @@ class TargetDatabase(Database):
         return urls
 
     def get_targets_query(self, args, unscanned_only=False, count_only=False, count=0):
-        fields = ["t.url", "t.id", "t.fingerprint_id", "f.fingerprint"]
+        fields = ["t.url", "t.id", "t.fingerprint_id", "f.fingerprint", "t.scanned"]
         join = [("LEFT", "fingerprints f ON f.id = t.fingerprint_id")]
         where = []
         parameters = ()
@@ -338,7 +338,7 @@ class TargetDatabase(Database):
         targets.reverse()
         fingerprints = {}
         while targets:
-            url, target_id, fingerprint_id, fingerprint, *_ = targets.pop()
+            url, target_id, fingerprint_id, fingerprint, scanned, *_ = targets.pop()
 
             try:
                 match = self.matches_blocklists(url, blocklists)
@@ -351,6 +351,9 @@ class TargetDatabase(Database):
                     self.delete_target(target_id)
                 else:
                     self.mark_target_scanned(target_id)
+                continue
+
+            if scanned:
                 continue
 
             if fingerprint_id:

@@ -200,7 +200,7 @@ The first item will remove any target that doesn't contain a question mark, in o
 
 Prune
 =====
-The prune flag iterates through all targets, computes the fingerprints, and marks subsequent matching targets as scanned. It also marks blocklist matches as scanned. The result is a database where --list-targets --unscanned-only returns only scannable urls. It honors the **random** flag to process fingerprints in random order and the **unscanned-only** flag to skip scanned targets which necessarily already have fingerprints. The blocklist check honors --delete-on-match to delete the target rather than marking it scanned, and --delete-on-error to delete any entry that fails to parse a valid hostname or resolve the hostname to ip address.
+The prune flag iterates through all targets, computes the fingerprints, and marks subsequent matching targets as scanned, leaving one unscanned target per fingerprint unmodified. It also marks blocklist matches as scanned. The result is a database where --list-targets --unscanned-only returns only scannable urls. It honors the **random** flag to process fingerprints in random order and the **unscanned-only** flag to scope the blocklist / delete actions. The blocklist check honors --delete-on-match to delete the target rather than marking it scanned, and --delete-on-error to delete any entry that fails to parse a valid hostname or resolve the hostname to ip address.
 
 General Options
 ===============
